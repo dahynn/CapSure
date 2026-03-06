@@ -1,70 +1,35 @@
-# Getting Started with Create React App
+# 🚀 프로젝트 실행 매뉴얼
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+로컬 환경에서 프론트엔드 페이지를 직접 띄워보려면 아래 가이드를 참고해주세요.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 1. pnpm 설치
 
-### `pnpm start`
+이 프로젝트는 패키지 매니저로 **`pnpm`**을 사용합니다. 시스템에 먼저 `pnpm`을 설치해주세요.
+(이미 컴퓨터에 Node.js가 설치되어 있다면 npm을 이용하는 것이 가장 간편합니다.)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```bash
+# npm을 통한 전역 설치
+npm install -g pnpm
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+> 추가적인 설치 방법(Windows PowerShell, Homebrew 등)은 [pnpm 공식 문서](https://pnpm.io/ko/installation)를 참고해주세요.
 
-### `pnpm test`
+## 2. 패키지(의존성) 설치
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+프론트엔드 디렉토리(`Frontend` 폴더) 위치에서 터미널을 열고 다음 명령어를 실행하여 필요한 패키지를 모두 내려받습니다.
 
-### `pnpm run build`
+```bash
+pnpm install
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 3. 개발 서버 실행
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+패키지 설치가 완료되면, 아래 명령어를 통해 프론트엔드 개발 서버를 시작합니다.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+pnpm run dev
+```
 
-### `pnpm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `pnpm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+서버가 실행되면 터미널에 접속 가능한 로컬 주소(예: `http://localhost:5173/`)가 출력됩니다(만약 5173 포트 사용시, 5174.. 등 다른 포트에서 실행될 수 있음).해당 링크를 브라우저에 입력하여 페이지를 확인하실 수 있습니다.
