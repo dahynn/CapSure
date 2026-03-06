@@ -33,8 +33,8 @@ const AuthPage = () => {
                 <div className="bg-primary-600 p-8 text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                     <ShieldAlert className="w-16 h-16 text-white mx-auto mb-4 relative z-10" />
-                    <h1 className="text-3xl font-black text-white tracking-tight relative z-10">BlockCover</h1>
-                    <p className="text-primary-100 mt-2 text-sm relative z-10">블록으로 조립하는 나만의 보험</p>
+                    <h1 className="text-3xl font-black text-white tracking-tight relative z-10">CapsuleCover</h1>
+                    <p className="text-primary-100 mt-2 text-sm relative z-10">캡슐처럼 조립하는 나만의 보험</p>
                 </div>
 
                 {/* Content Area */}

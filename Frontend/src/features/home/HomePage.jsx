@@ -13,7 +13,7 @@ const HomePage = () => {
     ];
 
     const quickLinks = [
-        { title: '내 맘대로 조립하는', subtitle: '블록 보험', path: '/block-insurance', color: 'from-primary-500 to-primary-600' },
+        { title: '내 맘대로 조립하는', subtitle: '캡슐 보험', path: '/capsule-insurance', color: 'from-primary-500 to-primary-600' },
         { title: '단 하루만 필요할 땐', subtitle: '일일 보험', path: '/daily-insurance', color: 'from-emerald-500 to-teal-600' },
     ];
 

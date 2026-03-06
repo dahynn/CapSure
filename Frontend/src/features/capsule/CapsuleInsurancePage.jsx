@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Plus, Check, ArrowRight, Info, GripHorizontal } from 'lucide-react';
 
-const BlockInsurancePage = () => {
+const CapsuleInsurancePage = () => {
     const [hasSubscription, setHasSubscription] = useState(false); // Toggle for dummy logic
     const [view, setView] = useState('prologue'); // prologue, create, grid-maker, subscribed-this, subscribed-next
     const [targetAmount, setTargetAmount] = useState('');
 
-    // Dummy Block Categories
+    // Dummy Capsule Categories
     const categories = [
         { id: 'disease', name: '질병 블록', color: 'bg-rose-100 border-rose-300 text-rose-700' },
         { id: 'liability', name: '배상 블록', color: 'bg-blue-100 border-blue-300 text-blue-700' },
         { id: 'pet', name: '펫 블록', color: 'bg-amber-100 border-amber-300 text-amber-700' },
     ];
 
-    const handleCreateBlock = (e) => {
+    const handleCreateCapsule = (e) => {
         e.preventDefault();
         if (targetAmount) {
             setView('grid-maker');
@@ -71,7 +71,7 @@ const BlockInsurancePage = () => {
                         <h2 className="text-2xl font-bold text-slate-800 mb-2">얼마만큼 혜택을 받고 싶으신가요?</h2>
                         <p className="text-slate-500 mb-8">목표 금액을 설정하면 그에 맞는 블록 판이 생성됩니다.</p>
 
-                        <form onSubmit={handleCreateBlock} className="space-y-6">
+                        <form onSubmit={handleCreateCapsule} className="space-y-6">
                             <div className="flex items-center justify-center gap-4 text-3xl font-black text-slate-800">
                                 <span>저는 보험을</span>
                                 <div className="relative w-32 border-b-4 border-slate-200 focus-within:border-primary-500 transition-colors">
@@ -204,7 +204,7 @@ const BlockInsurancePage = () => {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Left Box - Blocks Display */}
+                        {/* Left Box - Capsules Display */}
                         <div className="bg-white p-6 rounded-3xl shadow-md border border-slate-100 min-h-[400px]">
                             <h3 className="font-bold text-slate-800 mb-6 flex items-center justify-between">
                                 <span>내 블록 판</span>
@@ -285,4 +285,4 @@ const BlockInsurancePage = () => {
     );
 };
 
-export default BlockInsurancePage;
+export default CapsuleInsurancePage;

@@ -74,7 +74,7 @@ const DailyInsurancePage = () => {
                         </div>
                     </section>
 
-                    {/* Block Daily Products by Price Tabs */}
+                    {/* Capsule Daily Products by Price Tabs */}
                     <section className="bg-white rounded-3xl p-6 shadow-md border border-slate-100">
                         <h2 className="text-lg font-bold text-slate-800 mb-6">금액대별 맞춤 블록 일일보험</h2>
 

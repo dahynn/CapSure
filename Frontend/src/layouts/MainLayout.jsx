@@ -9,10 +9,8 @@ const MainLayout = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
 
     const navItems = [
-        { name: '홈', path: '/home' },
-        { name: '블록 보험', path: '/block-insurance' },
+        { name: '블록 보험', path: '/capsule-insurance' },
         { name: '일일 보험', path: '/daily-insurance' },
-        { name: '가족 블록 보험', path: '/family-block' },
     ];
 
     return (
@@ -28,7 +26,7 @@ const MainLayout = () => {
                     >
                         <ShieldAlert className="w-8 h-8 text-primary-600" />
                         <span className="text-xl font-black tracking-tight text-slate-800">
-                            BlockCover
+                            CapsuleCover
                         </span>
                     </div>
 
