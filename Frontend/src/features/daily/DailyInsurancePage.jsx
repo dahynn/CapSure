@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
-import { Zap, Car, Map, Dumbbell, ShieldAlert, ChevronRight, CheckCircle2, Navigation } from 'lucide-react';
+import { Zap, Car, Map, Dumbbell, ShieldAlert, ChevronRight, CheckCircle2, Navigation, Compass, HeartPulse } from 'lucide-react';
+import DailyInsuranceQuickJoinItem from './components/DailyInsuranceQuickJoinItem';
+import DailyInsuranceTabPanel from './components/DailyInsuranceTabPanel';
 
 const DailyInsurancePage = () => {
     const [view, setView] = useState('list'); // list, quick-join-1, quick-join-2, quick-join-3, success
-    const [activeTab, setActiveTab] = useState('1만원'); // 5천원, 1만원, 3만원
+    const [activeTab, setActiveTab] = useState('원데이 자동차');
 
     // Dummy Data
-    const quickJoins = [
-        { title: '엄마차 자동차 일일보험', type: '자동차', icon: Car, bg: 'bg-blue-100' },
-        { title: '제주도 2박3일 여행보험', type: '여행', icon: Map, bg: 'bg-emerald-100' }
+    const favoriteInsurances = [
+        { title: '엄마차 자동차 일일보험', type: '자동차 • 즐겨찾기', icon: Car, bg: 'bg-blue-100' },
     ];
 
-    const categories = [
-        { title: '자동차 일일 보험', icon: Car },
-        { title: '여행자 보험', icon: Map },
-        { title: '스포츠 보험', icon: Dumbbell },
+    const recentInsurances = [
+        { title: '제주도 2박3일 여행보험', type: '여행 • 최근 가입', icon: Map, bg: 'bg-emerald-100' },
+        { title: '자전거 국토종주 보험', type: '레저 • 최근 가입', icon: Dumbbell, bg: 'bg-purple-100' },
     ];
+
+    const categoryTabs = ['원데이 자동차', '레저/스포츠', '산책/외출 펫', '단기 여행자', '미니 상해'];
 
     const handleQuickJoin = () => {
         setView('quick-join-1');
@@ -30,83 +32,61 @@ const DailyInsurancePage = () => {
 
                     {/* Quick Join Section */}
                     <section>
-                        <div className="flex items-center gap-2 mb-4">
-                            <Zap className="w-6 h-6 text-amber-500 fill-amber-500" />
-                            <h2 className="text-xl font-bold text-slate-800">나의 퀵 가입 보험</h2>
-                        </div>
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 space-y-8">
+                            <div className="flex items-center gap-2 mb-6">
+                                <Zap className="w-6 h-6 text-amber-500 fill-amber-500" />
+                                <h2 className="text-2xl font-bold text-slate-800">원클릭 보험 가입</h2>
+                            </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {quickJoins.map((item, idx) => (
-                                <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-shadow">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`p-3 rounded-xl ${item.bg}`}>
-                                            <item.icon className="w-6 h-6 text-slate-700" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-slate-800">{item.title}</h3>
-                                            <p className="text-sm text-slate-500">{item.type} • 즐겨찾기</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={handleQuickJoin}
-                                        className="px-4 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-colors"
-                                    >
-                                        퀵 가입
-                                    </button>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800 mb-4 text-left">내가 즐겨찾기한 일일 보험</h3>
+                                <div className="flex flex-col gap-3">
+                                    {favoriteInsurances.map((item, idx) => (
+                                        <DailyInsuranceQuickJoinItem key={idx} item={item} onClick={handleQuickJoin} />
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
+
+                            <div className="h-px bg-slate-100 w-full" />
+
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800 mb-4 text-left">최근에 가입한 일일보험</h3>
+                                <div className="flex flex-col gap-3">
+                                    {recentInsurances.map((item, idx) => (
+                                        <DailyInsuranceQuickJoinItem key={idx} item={item} onClick={handleQuickJoin} />
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </section>
 
                     {/* Daily Insurance Categories */}
                     <section>
-                        <h2 className="text-xl font-bold text-slate-800 mb-4">일일 보험 둘러보기</h2>
-                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                            {categories.map((cat, idx) => (
-                                <button
-                                    key={idx}
-                                    className="min-w-[140px] flex-shrink-0 bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:border-primary-500 transition-colors"
-                                >
-                                    <cat.icon className="w-8 h-8 text-primary-500" />
-                                    <span className="font-bold text-slate-700 text-sm">{cat.title}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </section>
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                            <div className="flex items-center gap-2 mb-6">
+                                <Compass className="w-6 h-6 text-primary-500" />
+                                <h2 className="text-2xl font-bold text-slate-800">일일 보험 둘러보기</h2>
+                            </div>
 
-                    {/* Capsule Daily Products by Price Tabs */}
-                    <section className="bg-white rounded-3xl p-6 shadow-md border border-slate-100">
-                        <h2 className="text-lg font-bold text-slate-800 mb-6">금액대별 맞춤 블록 일일보험</h2>
-
-                        <div className="flex bg-slate-100 p-1.5 rounded-xl mb-6">
-                            {['5천원', '1만원', '3만원'].map(tab => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === tab ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="space-y-4 animate-in slide-in-from-right-4">
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 rounded-2xl border border-slate-100 hover:border-primary-200 transition-colors gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center font-black text-slate-400">
-                                            사
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-slate-800">{activeTab} 안심 보장팩 {i}</h4>
-                                            <p className="text-sm text-slate-500 line-clamp-1">교통사고 처리 1억 • 자동차 손해 1억 • 대인/대물</p>
-                                        </div>
-                                    </div>
-                                    <button className="w-full md:w-auto px-6 py-2 bg-primary-50 text-primary-600 font-bold rounded-xl hover:bg-primary-100 transition-colors">
-                                        상세보기
-                                    </button>
+                            {/* Grouping container for tabs and panel */}
+                            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                                <div className="flex bg-slate-50 p-1.5 overflow-x-auto scrollbar-hide border-b border-slate-200">
+                                    {categoryTabs.map((tab) => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setActiveTab(tab)}
+                                            className={`flex-1 min-w-[120px] py-2.5 text-sm rounded-xl transition-all ${activeTab === tab
+                                                ? 'bg-white text-primary-600 shadow-sm font-bold border border-slate-100'
+                                                : 'text-slate-500 hover:text-slate-700 font-medium'
+                                                }`}
+                                        >
+                                            <h3 className="m-0 text-inherit font-inherit">{tab}</h3>
+                                        </button>
+                                    ))}
                                 </div>
-                            ))}
+
+                                <DailyInsuranceTabPanel tabName={activeTab} />
+                            </div>
                         </div>
                     </section>
                 </div>
