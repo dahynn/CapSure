@@ -75,7 +75,7 @@ const MyCapsuleInsurance = () => {
                         <div className="flex justify-between items-center w-full mb-6 relative">
                             <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                                 <Box className="w-5 h-5 text-primary-500" />
-                                현재 내 블록 판
+                                현재 내 캡슐 판
                             </h3>
                             <div className="flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
                                 <span className="text-xs font-bold text-slate-500">구독 액수</span>

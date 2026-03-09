@@ -79,7 +79,7 @@ const InsuranceInfoConfirm = ({ selectedCells, onNext, onPrev }) => {
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
             <div className="text-center py-6">
                 <h2 className="text-2xl font-bold text-slate-800">보험 정보 확인</h2>
-                <p className="text-slate-500 mt-2">선택하신 맞춤형 블록 보험의 보장 내역을 확인해주세요.</p>
+                <p className="text-slate-500 mt-2">선택하신 맞춤형 캡슐 보험의 보장 내역을 확인해주세요.</p>
             </div>
 
             <div className="space-y-6">

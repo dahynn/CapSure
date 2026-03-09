@@ -129,9 +129,9 @@ const CapsuleInsurancePage = () => {
                         <div className="w-20 h-20 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mx-auto mb-6">
                             <ShieldCheck className="w-10 h-10" />
                         </div>
-                        <h1 className="text-3xl font-black text-slate-900">구독형 블록 보험이란?</h1>
+                        <h1 className="text-3xl font-black text-slate-900">구독형 캡슐 보험이란?</h1>
                         <p className="text-lg text-slate-600 leading-relaxed max-w-lg mx-auto">
-                            레고 블록을 조립하듯, 나에게 필요한 보장만 골라 담아
+                            레고 캡슐을 조립하듯, 나에게 필요한 보장만 골라 담아
                             매월 결제하는 신개념 맞춤형 보험 서비스입니다.
                         </p>
                     </div>
@@ -156,7 +156,7 @@ const CapsuleInsurancePage = () => {
                             onClick={() => setView('create')}
                             className="w-full mt-8 py-4 rounded-xl font-bold text-white bg-primary-600 hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all flex justify-center items-center gap-2 group"
                         >
-                            "블록 보험" 만들기
+                            "캡슐 보험" 만들기
                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
@@ -168,7 +168,7 @@ const CapsuleInsurancePage = () => {
                 <div className="max-w-xl mx-auto pt-12 animate-in zoom-in-95 duration-300">
                     <div className="bg-white p-8 rounded-3xl shadow-2xl glass-panel text-center">
                         <h2 className="text-2xl font-bold text-slate-800 mb-2">얼마만큼 혜택을 받고 싶으신가요?</h2>
-                        <p className="text-slate-500 mb-8">목표 금액을 설정하면 그에 맞는 블록 판이 생성됩니다.</p>
+                        <p className="text-slate-500 mb-8">목표 금액을 설정하면 그에 맞는 캡슐 판이 생성됩니다.</p>
 
                         <form onSubmit={handleCreateCapsule} className="space-y-6">
                             <div className="flex items-center justify-center gap-4 text-3xl font-black text-slate-800">
@@ -212,7 +212,7 @@ const CapsuleInsurancePage = () => {
                     <div className="flex justify-between items-end">
                         <div>
                             <h2 className="text-2xl font-bold text-slate-800">캡슐 조합하기</h2>
-                            <p className="text-slate-500">원하는 카테고리의 블록을 선택하여 채워주세요.</p>
+                            <p className="text-slate-500">원하는 카테고리의 캡슐을 선택하여 채워주세요.</p>
                         </div>
                         <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
                             <span className="text-sm font-bold text-slate-600">목표:</span>
@@ -251,7 +251,7 @@ const CapsuleInsurancePage = () => {
                                     onClick={handleSubscribeConfirm}
                                     className="px-8 py-3 bg-primary-600 text-white font-bold rounded-xl shadow-lg hover:bg-primary-700 transition-colors"
                                 >
-                                    블록 보험 구독하기
+                                    캡슐 보험 구독하기
                                 </button>
                             </div>
                         </div>
@@ -398,7 +398,7 @@ const CapsuleInsurancePage = () => {
                 <div className="space-y-6 animate-in slide-in-from-bottom-4">
                     <div className="flex justify-between items-end mb-8">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-800">나의 블록 보험</h2>
+                            <h2 className="text-2xl font-bold text-slate-800">나의 캡슐 보험</h2>
                             <p className="text-slate-500 text-sm mt-1">현재 적용 중인 맞춤형 보장 내역입니다.</p>
                         </div>
                         {/* Tabs */}
@@ -407,7 +407,7 @@ const CapsuleInsurancePage = () => {
                                 onClick={() => setView('subscribed-this')}
                                 className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${view !== 'subscribed-next' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                                이번달 적용 블록
+                                이번달 적용 캡슐
                             </button>
                             <button
                                 onClick={() => setView('subscribed-next')}
@@ -422,7 +422,7 @@ const CapsuleInsurancePage = () => {
                         {/* Left Box - Capsules Display */}
                         <div className="bg-white p-6 rounded-3xl shadow-md border border-slate-100 min-h-[400px]">
                             <h3 className="font-bold text-slate-800 mb-6 flex items-center justify-between">
-                                <span>내 블록 판</span>
+                                <span>내 캡슐 판</span>
                                 <span className="text-sm font-normal text-slate-400">총 5만원</span>
                             </h3>
 
@@ -467,8 +467,8 @@ const CapsuleInsurancePage = () => {
                                 <div className="flex flex-col h-full">
                                     <h3 className="font-bold text-slate-800 mb-4">다음달 보험 수정하기</h3>
                                     <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-                                        오른쪽의 카테고리에서 원하는 블록을 드래그하거나 클릭하여 추가하세요.
-                                        왼쪽의 적용된 블록을 클릭하면 제거할 수 있습니다.
+                                        오른쪽의 카테고리에서 원하는 캡슐을 드래그하거나 클릭하여 추가하세요.
+                                        왼쪽의 적용된 캡슐을 클릭하면 제거할 수 있습니다.
                                     </p>
 
                                     {/* Category Selection Mini */}

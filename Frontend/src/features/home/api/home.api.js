@@ -53,7 +53,7 @@ export const agreeMyData = async () => {
 export const getCoverageAnalysis = async () => {
     return new Promise((resolve) => {
         setTimeout(() => {
-            resolve({ name: '김블록', percentile: 18 });
+            resolve({ name: '김캡슐', percentile: 18 });
         }, 300);
     });
 };

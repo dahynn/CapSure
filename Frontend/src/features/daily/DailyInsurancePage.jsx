@@ -152,7 +152,7 @@ const DailyInsurancePage = () => {
                         </div>
                         <div className="flex justify-between">
                             <span className="text-slate-500 font-medium">피보험자</span>
-                            <span className="font-bold text-slate-800">김블록</span>
+                            <span className="font-bold text-slate-800">김캡슐</span>
                         </div>
                         <div className="h-px bg-slate-200" />
                         <div className="flex justify-between text-lg">

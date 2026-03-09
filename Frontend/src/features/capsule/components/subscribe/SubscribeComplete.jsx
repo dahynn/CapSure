@@ -18,7 +18,7 @@ const SubscribeComplete = ({ selectedCells, onNext }) => {
 
                 <h2 className="text-4xl font-black text-slate-800 tracking-tight">보험 가입 완료</h2>
                 <p className="text-lg text-slate-500 leading-relaxed max-w-sm mx-auto">
-                    성공적으로 맞춤형 블록 보험 구독을 시작했습니다!
+                    성공적으로 맞춤형 캡슐 보험 구독을 시작했습니다!
                     아래 구독 내역을 확인해 보세요.
                 </p>
             </div>

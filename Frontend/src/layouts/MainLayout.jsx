@@ -9,7 +9,7 @@ const MainLayout = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
 
     const navItems = [
-        { name: '블록 보험', path: '/capsule-insurance' },
+        { name: '캡슐 보험', path: '/capsule-insurance' },
         { name: '일일 보험', path: '/daily-insurance' },
     ];
 

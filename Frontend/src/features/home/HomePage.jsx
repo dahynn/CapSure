@@ -26,7 +26,7 @@ const HomePage = () => {
             <div className="flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-                        반갑습니다 김블록님 👋
+                        반갑습니다 김캡슐님 👋
                     </h1>
                     <p className="text-slate-500 mt-1">오늘도 안전한 하루 되세요</p>
                 </div>

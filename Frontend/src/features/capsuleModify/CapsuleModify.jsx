@@ -84,7 +84,7 @@ const CapsuleModify = () => {
             newCells[firstEmptyIndex] = { ...item, category: cat, groupId: `mod-${Date.now()}` };
             setSelectedCells(newCells);
         } else {
-            alert('모든 블록이 채워졌습니다. 기존 블록을 제거한 후 다시 시도해주세요.');
+            alert('모든 캡슐이 채워졌습니다. 기존 캡슐을 제거한 후 다시 시도해주세요.');
         }
     };
 
@@ -134,7 +134,7 @@ const CapsuleModify = () => {
                     <div className="flex justify-between items-end border-b border-slate-200 pb-4 mb-6">
                         <div>
                             <h2 className="text-2xl font-bold text-slate-800">다음달 구독 변경 예약하기</h2>
-                            <p className="text-slate-500 mt-1">원하는 블록을 추가/제거하여 다음달 보험을 새롭게 구성해보세요.</p>
+                            <p className="text-slate-500 mt-1">원하는 캡슐을 추가/제거하여 다음달 보험을 새롭게 구성해보세요.</p>
                         </div>
                         <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200">
                             <span className="text-sm font-bold text-slate-600">구독 금액:</span>

@@ -101,7 +101,7 @@ const CapsuleCancelPage = () => {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-black text-slate-900">캡슐 보험 중도 취소</h1>
-                                <p className="text-slate-500 mt-1">취소할 보장 블록을 <strong>선택</strong>해 주세요.</p>
+                                <p className="text-slate-500 mt-1">취소할 보장 캡슐을 <strong>선택</strong>해 주세요.</p>
                             </div>
                         </div>
                         <button onClick={() => navigate(-1)} className="px-4 py-2 font-medium text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
@@ -218,8 +218,8 @@ const CapsuleCancelPage = () => {
                                         disabled={!isAllTermsAgreed || isCanceling}
                                         onClick={handleExecuteCancel}
                                         className={`w-full py-4 font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 ${isAllTermsAgreed
-                                                ? 'bg-red-500 text-white hover:bg-red-600'
-                                                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                            ? 'bg-red-500 text-white hover:bg-red-600'
+                                            : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                                             }`}
                                     >
                                         {isCanceling ? (

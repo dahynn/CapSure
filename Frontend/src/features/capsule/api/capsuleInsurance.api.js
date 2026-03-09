@@ -1,7 +1,7 @@
 1// src/features/capsule/api/capsuleInsurance.api.js
 
 /**
- * 캡슐 조합(블록 보험)에서 사용하는 Mock API
+ * 캡슐 조합(캡슐 보험)에서 사용하는 Mock API
  */
 
 const dummyCapsuleItems = [
