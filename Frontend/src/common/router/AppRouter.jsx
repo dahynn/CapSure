@@ -10,6 +10,7 @@ import DailyInsurancePage from '@/features/daily/DailyInsurancePage';
 import Profile from '@/features/mypage/Profile';
 import MyCapsuleInsurance from '@/features/mypage/MyCapsuleInsurance';
 import InsuranceHistory from '@/features/mypage/InsuranceHistory';
+import CapsuleCancelPage from '@/features/capsuleCancel/CapsuleCancelPage';
 
 const AppRouter = () => {
     return (
@@ -25,6 +26,9 @@ const AppRouter = () => {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/my-capsule" element={<MyCapsuleInsurance />} />
                     <Route path="/my-history" element={<InsuranceHistory />} />
+
+                    {/* Extra Flows */}
+                    <Route path="/capsule-cancel" element={<CapsuleCancelPage />} />
 
                     <Route path="/" element={<Navigate to="/home" replace />} />
                 </Route>
