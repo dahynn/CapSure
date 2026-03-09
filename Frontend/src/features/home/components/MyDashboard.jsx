@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { getMyDataStatus, agreeMyData } from '../api/home.api.js';
 
+import CoverageAnalysis from './dashboard/CoverageAnalysis';
+import SubscriptionSummary from './dashboard/SubscriptionSummary';
+import BenefitTracker from './dashboard/BenefitTracker';
+import MyInsurances from './dashboard/MyInsurances';
+
 const MyDashboard = () => {
     const [isMyDataAgreed, setIsMyDataAgreed] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -62,11 +67,13 @@ const MyDashboard = () => {
                     </button>
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center py-8 px-4 bg-slate-50 rounded-2xl border border-slate-100 text-center gap-3 animate-in fade-in duration-500">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                        <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                <div className="flex flex-col gap-4 animate-in fade-in duration-500 mt-2">
+                    <CoverageAnalysis />
+                    <SubscriptionSummary />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <BenefitTracker />
+                        <MyInsurances />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800">마이데이터 동의가 완료됨</h3>
                 </div>
             )}
         </div>
