@@ -54,3 +54,86 @@ export const getCapsuleItems = async (categoryId, maxPrice = null) => {
         }, 400); // 0.4s delay Network Mocking
     });
 };
+
+/**
+ * 보험 ID 배열을 받아서 각 보험별 보장 내용을 반환
+ * @param {Array<string>} insuranceIds
+ */
+export const getInsuranceCoverages = async (insuranceIds) => {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            const coverages = insuranceIds.map(id => {
+                const item = dummyCapsuleItems.find(i => i.id === id);
+                if (!item) return null;
+
+                // Mock dynamic coverages based on category/price
+                const detail = [
+                    { label: '입원 일당', amount: item.price * 100 + '만원' },
+                    { label: '수술비 지원', amount: item.price * 300 + '만원' },
+                ];
+                if (item.categoryId === 'pet') {
+                    detail.push({ label: '개물림 사고 처벌 벌금 지원', amount: '300만원' });
+                } else if (item.categoryId === 'disease') {
+                    detail.push({ label: '사망', amount: '2000만원' });
+                    detail.push({ label: '진료비', amount: '500만원' });
+                }
+
+                return {
+                    id: item.id,
+                    title: `${item.name} - ${item.company}`,
+                    details: detail
+                };
+            }).filter(Boolean);
+
+            resolve(coverages);
+        }, 300);
+    });
+};
+
+/**
+ * 보험 ID 배열을 받아서 각 보험별 약관 내용을 반환
+ * @param {Array<string>} insuranceIds
+ */
+export const getInsuranceTerms = async (insuranceIds) => {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            const terms = insuranceIds.map(id => {
+                const item = dummyCapsuleItems.find(i => i.id === id);
+                if (!item) return null;
+
+                return {
+                    id: item.id,
+                    title: `${item.name} - ${item.company}`,
+                    termsList: [
+                        { id: `${id}-t1`, title: '가입 동의서 및 주요 내용 설명서', content: '본 약관은 보험계약자와 보험회사 간의 권리와 의무를 규정합니다. 엄청 긴 내용의 약관이 여기에 포함되어 확인이 필요합니다. \n\n제1조 (목적)\n이 약관은 당사와 보험계약자 사이에 체결된 보험계약에 대하여 적용됩니다...\n제2조 (용어의 정의)\n이 약관에서 사용하는 용어의 정의는 다음과 같습니다...' },
+                        { id: `${id}-t2`, title: '개인정보 수집 및 이용 동의', content: '당사는 보험계약의 체결 및 이행을 위하여 아래와 같이 개인정보를 수집 및 이용합니다. \n1. 수집항목: 성명, 주민등록번호, 연락처 등\n2. 수집목적: 보험계약 체결, 심사, 유지, 보험금 지급 등...\n3. 보유 및 이용기간: 거래 종료일로부터 5년' },
+                        { id: `${id}-t3`, title: '민감정보 수집 및 이용 동의', content: '당사는 보험계약과 관련하여 질병, 상해 등에 관한 민감정보를 질병 위험도 평가, 보험금 지급 심사 목적으로 수집합니다. \n이에 동의하셔야 보험 계약 체결이 가능합니다.' },
+                    ]
+                };
+            }).filter(Boolean);
+
+            resolve(terms);
+        }, 300);
+    });
+};
+
+/**
+ * 내(구독 중인) 캡슐 보험 정보 조회
+ */
+export const getMyCapsuleInsurance = async () => {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            // Mock response: User has subscribed to some initial dummy data
+            resolve({
+                targetAmount: 5,
+                selectedCells: [
+                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, name: '암 진단비 집중 (3만)', company: '한화생명', groupId: 'g1' },
+                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, name: '암 진단비 집중 (3만)', company: '한화생명', groupId: 'g1' },
+                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, name: '암 진단비 집중 (3만)', company: '한화생명', groupId: 'g1' },
+                    { category: { id: 'liability', name: '생활 배상 보험', color: 'bg-blue-100 border-blue-300 text-blue-700' }, name: '자전거/킥보드 배상 (2만)', company: 'DB손해보험', groupId: 'g2' },
+                    { category: { id: 'liability', name: '생활 배상 보험', color: 'bg-blue-100 border-blue-300 text-blue-700' }, name: '자전거/킥보드 배상 (2만)', company: 'DB손해보험', groupId: 'g2' },
+                ]
+            });
+        }, 300);
+    });
+};

@@ -4,6 +4,14 @@ import TextModal from '@/common/components/ui/modal/TextModal';
 import CustomModal from '@/common/components/ui/modal/CustomModal';
 import { getCapsuleItems } from './api/capsuleInsurance.api';
 
+// Subscribe Flow Components
+import InsuranceInfoConfirm from './components/subscribe/InsuranceInfoConfirm';
+import PersonalInfoForm from './components/subscribe/PersonalInfoForm';
+import TermsCheck from './components/subscribe/TermsCheck';
+import Payment from './components/subscribe/Payment';
+import SubscribeComplete from './components/subscribe/SubscribeComplete';
+import MyCapsuleInsurance from './components/MyCapsuleInsurance';
+
 const CapsuleInsurancePage = () => {
     const [hasSubscription, setHasSubscription] = useState(false);
     const [view, setView] = useState('prologue');
@@ -101,13 +109,14 @@ const CapsuleInsurancePage = () => {
         if (filledCellsCount < amount) {
             setIsConfirmModalOpen(true);
         } else {
-            setHasSubscription(true);
+            setView('step-info'); // Go to first step of subscription
         }
     };
 
     const performSubscription = () => {
         setIsConfirmModalOpen(false);
-        setHasSubscription(true);
+        // Navigate to the first step of the subscription flow instead of directly finishing
+        setView('step-info');
     };
 
     return (
@@ -337,8 +346,54 @@ const CapsuleInsurancePage = () => {
                 </div>
             )}
 
-            {/* ----------------- SUBSCRIBED VIEW ----------------- */}
-            {hasSubscription && (
+            {/* ----------------- SUBSCRIBE FLOW VIEWS ----------------- */}
+            {view === 'step-info' && (
+                <InsuranceInfoConfirm
+                    selectedCells={selectedCells}
+                    onNext={() => setView('step-personal')}
+                    onPrev={() => setView('grid-maker')}
+                />
+            )}
+
+            {view === 'step-personal' && (
+                <PersonalInfoForm
+                    onNext={() => setView('step-terms')}
+                    onPrev={() => setView('step-info')}
+                />
+            )}
+
+            {view === 'step-terms' && (
+                <TermsCheck
+                    selectedCells={selectedCells}
+                    onNext={() => setView('step-pay')}
+                    onPrev={() => setView('step-personal')}
+                />
+            )}
+
+            {view === 'step-pay' && (
+                <Payment
+                    onNext={() => {
+                        setHasSubscription(true); // User effectively paid and subscribed
+                        setView('step-complete');
+                    }}
+                    onPrev={() => setView('step-terms')}
+                />
+            )}
+
+            {view === 'step-complete' && (
+                <SubscribeComplete
+                    selectedCells={selectedCells}
+                    onNext={() => setView('my-capsule')}
+                />
+            )}
+
+            {/* ----------------- MY CAPSULE VIEW ----------------- */}
+            {view === 'my-capsule' && (
+                <MyCapsuleInsurance />
+            )}
+
+            {/* ----------------- SUBSCRIBED VIEW (Legacy - kept if needed for toggle) ----------------- */}
+            {hasSubscription && ['subscribed-this', 'subscribed-next'].includes(view) && (
                 <div className="space-y-6 animate-in slide-in-from-bottom-4">
                     <div className="flex justify-between items-end mb-8">
                         <div>
