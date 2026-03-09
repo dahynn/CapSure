@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Plus, Check, ArrowRight, Info, GripHorizontal } from 'lucide-react';
+import TextModal from '../../common/components/ui/modal/TextModal';
 
 const CapsuleInsurancePage = () => {
     const [hasSubscription, setHasSubscription] = useState(false); // Toggle for dummy logic
     const [view, setView] = useState('prologue'); // prologue, create, grid-maker, subscribed-this, subscribed-next
     const [targetAmount, setTargetAmount] = useState('');
+    const [selectedCells, setSelectedCells] = useState([]); // Array to track filled cells
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false); // Modal state
 
     // Dummy Capsule Categories
     const categories = [
@@ -15,9 +18,48 @@ const CapsuleInsurancePage = () => {
 
     const handleCreateCapsule = (e) => {
         e.preventDefault();
-        if (targetAmount) {
+        const amount = Number(targetAmount);
+        if (amount > 0) {
+            setSelectedCells(Array(amount).fill(null)); // Initialize N cells with null
             setView('grid-maker');
         }
+    };
+
+    const handleAddItem = (category, price) => {
+        const emptyCellsCount = selectedCells.filter(cell => cell === null).length;
+
+        if (emptyCellsCount < price) {
+            alert("선택한 금액보다 많은 보험을 담았어요.");
+            return;
+        }
+
+        // Fill empty cells with the selected category item
+        let filledCount = 0;
+        const newCells = selectedCells.map(cell => {
+            if (cell === null && filledCount < price) {
+                filledCount++;
+                return { category, name: `${category.name.replace('블록', '')} (${price}만)`, id: Date.now() + Math.random() };
+            }
+            return cell;
+        });
+
+        setSelectedCells(newCells);
+    };
+
+    const handleSubscribeConfirm = () => {
+        const filledCellsCount = selectedCells.filter(cell => cell !== null).length;
+        const amount = Number(targetAmount);
+
+        if (filledCellsCount < amount) {
+            setIsConfirmModalOpen(true);
+        } else {
+            setHasSubscription(true);
+        }
+    };
+
+    const performSubscription = () => {
+        setIsConfirmModalOpen(false);
+        setHasSubscription(true);
     };
 
     return (
@@ -112,8 +154,8 @@ const CapsuleInsurancePage = () => {
                 <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
                     <div className="flex justify-between items-end">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-800">블록 맞추기</h2>
-                            <p className="text-slate-500">원하는 카테고리의 블록을 드래그하여 채워주세요.</p>
+                            <h2 className="text-2xl font-bold text-slate-800">캡슐 조합하기</h2>
+                            <p className="text-slate-500">원하는 카테고리의 블록을 선택하여 채워주세요.</p>
                         </div>
                         <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
                             <span className="text-sm font-bold text-slate-600">목표:</span>
@@ -125,10 +167,18 @@ const CapsuleInsurancePage = () => {
                         {/* Grid Area */}
                         <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-slate-200 min-h-[500px] flex flex-col">
                             <div className="bg-slate-100 rounded-2xl flex-1 border-2 border-dashed border-slate-300 p-8 grid grid-cols-5 gap-2 content-start">
-                                {/* Dummy Grid Cells based on targetAmount (e.g. 5 cells) */}
-                                {Array.from({ length: Math.min(Number(targetAmount) || 5, 20) }).map((_, i) => (
-                                    <div key={i} className="aspect-square bg-white/50 rounded-xl border border-slate-200 flex items-center justify-center">
-                                        <Plus className="w-6 h-6 text-slate-300" />
+                                {/* Dynamic Grid Cells based on targetAmount and selection */}
+                                {selectedCells.map((cell, i) => (
+                                    <div
+                                        key={i}
+                                        className={`aspect-square rounded-xl border flex items-center justify-center transition-all ${cell ? cell.category.color : 'bg-white/50 border-slate-200'
+                                            }`}
+                                    >
+                                        {cell ? (
+                                            <span className="font-bold text-xs text-center px-1">{cell.name}</span>
+                                        ) : (
+                                            <Plus className="w-6 h-6 text-slate-300" />
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -138,7 +188,7 @@ const CapsuleInsurancePage = () => {
                                     <Info className="w-4 h-4" /> 남은 칸을 모두 채워주세요
                                 </div>
                                 <button
-                                    onClick={() => setHasSubscription(true)}
+                                    onClick={handleSubscribeConfirm}
                                     className="px-8 py-3 bg-primary-600 text-white font-bold rounded-xl shadow-lg hover:bg-primary-700 transition-colors"
                                 >
                                     블록 보험 구독하기
@@ -161,7 +211,11 @@ const CapsuleInsurancePage = () => {
                                         </summary>
                                         <div className="p-4 space-y-3">
                                             {[1, 3, 5].map((price) => (
-                                                <div key={price} className={`p-3 border-2 rounded-xl flex items-center justify-between cursor-grab active:cursor-grabbing ${cat.color}`}>
+                                                <div
+                                                    key={price}
+                                                    onClick={() => handleAddItem(cat, price)}
+                                                    className={`p-3 border-2 rounded-xl flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity ${cat.color}`}
+                                                >
                                                     <div className="flex items-center gap-3">
                                                         <GripHorizontal className="w-4 h-4 opacity-50" />
                                                         <span className="font-bold">{price}만원 상품</span>
@@ -281,6 +335,14 @@ const CapsuleInsurancePage = () => {
                 </div>
             )}
 
+            <TextModal
+                isOpen={isConfirmModalOpen}
+                onClose={() => setIsConfirmModalOpen(false)}
+                onConfirm={performSubscription}
+                contents="선택한 금액보다 적은 보험을 담았어요. 진행할까요?"
+                confirmText="확인"
+                cancelText="취소"
+            />
         </div>
     );
 };
