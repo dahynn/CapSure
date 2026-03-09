@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getMyCapsuleInsurance } from '../api/capsuleInsurance.api';
+import { getMyCapsuleInsurance } from '../capsule/api/capsuleInsurance.api';
 import { Loader2, ShieldCheck, Box } from 'lucide-react';
 
 const MyCapsuleInsurance = () => {

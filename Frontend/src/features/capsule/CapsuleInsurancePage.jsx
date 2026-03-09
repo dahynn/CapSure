@@ -10,7 +10,7 @@ import PersonalInfoForm from './components/subscribe/PersonalInfoForm';
 import TermsCheck from './components/subscribe/TermsCheck';
 import Payment from './components/subscribe/Payment';
 import SubscribeComplete from './components/subscribe/SubscribeComplete';
-import MyCapsuleInsurance from './components/MyCapsuleInsurance';
+import MyCapsuleInsurance from '@/features/mypage/MyCapsuleInsurance';
 
 const CapsuleInsurancePage = () => {
     const [hasSubscription, setHasSubscription] = useState(false);
