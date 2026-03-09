@@ -1,20 +1,50 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Plus, Check, ArrowRight, Info, GripHorizontal } from 'lucide-react';
-import TextModal from '../../common/components/ui/modal/TextModal';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Plus, Check, ArrowRight, Info, GripHorizontal, SlidersHorizontal, Loader2 } from 'lucide-react';
+import TextModal from '@/common/components/ui/modal/TextModal';
+import CustomModal from '@/common/components/ui/modal/CustomModal';
+import { getCapsuleItems } from './api/capsuleInsurance.api';
 
 const CapsuleInsurancePage = () => {
-    const [hasSubscription, setHasSubscription] = useState(false); // Toggle for dummy logic
-    const [view, setView] = useState('prologue'); // prologue, create, grid-maker, subscribed-this, subscribed-next
+    const [hasSubscription, setHasSubscription] = useState(false);
+    const [view, setView] = useState('prologue');
     const [targetAmount, setTargetAmount] = useState('');
-    const [selectedCells, setSelectedCells] = useState([]); // Array to track filled cells
-    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false); // Modal state
+    const [selectedCells, setSelectedCells] = useState([]);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
-    // Dummy Capsule Categories
+    // Filter & Category State
+    const [activeCategory, setActiveCategory] = useState(null);
+    const [activeFilter, setActiveFilter] = useState(null); // null(All), 1, 3, 5
+    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+    const [categoryItems, setCategoryItems] = useState([]);
+    const [isItemsLoading, setIsItemsLoading] = useState(false);
+
+    // Updated Capsule Categories
     const categories = [
-        { id: 'disease', name: '질병 블록', color: 'bg-rose-100 border-rose-300 text-rose-700' },
-        { id: 'liability', name: '배상 블록', color: 'bg-blue-100 border-blue-300 text-blue-700' },
-        { id: 'pet', name: '펫 블록', color: 'bg-amber-100 border-amber-300 text-amber-700' },
+        { id: 'shilson', name: '실손 보험', color: 'bg-teal-100 border-teal-300 text-teal-700' },
+        { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' },
+        { id: 'liability', name: '생활 배상 보험', color: 'bg-blue-100 border-blue-300 text-blue-700' },
+        { id: 'pet', name: '펫 보험', color: 'bg-amber-100 border-amber-300 text-amber-700' },
+        { id: 'driver', name: '상시 운전자 보험', color: 'bg-indigo-100 border-indigo-300 text-indigo-700' },
     ];
+
+    // Effect to fetch items when category or filter changes
+    useEffect(() => {
+        if (!activeCategory) return;
+
+        const fetchItems = async () => {
+            setIsItemsLoading(true);
+            try {
+                const items = await getCapsuleItems(activeCategory, activeFilter);
+                setCategoryItems(items);
+            } catch (error) {
+                console.error("Failed to fetch capsule items:", error);
+            } finally {
+                setIsItemsLoading(false);
+            }
+        };
+
+        fetchItems();
+    }, [activeCategory, activeFilter]);
 
     const handleCreateCapsule = (e) => {
         e.preventDefault();
@@ -25,7 +55,8 @@ const CapsuleInsurancePage = () => {
         }
     };
 
-    const handleAddItem = (category, price) => {
+    const handleAddItem = (category, item) => {
+        const price = item.price;
         const emptyCellsCount = selectedCells.filter(cell => cell === null).length;
 
         if (emptyCellsCount < price) {
@@ -35,14 +66,31 @@ const CapsuleInsurancePage = () => {
 
         // Fill empty cells with the selected category item
         let filledCount = 0;
+        const groupId = Date.now() + Math.random(); // Unique ID for this block group
         const newCells = selectedCells.map(cell => {
             if (cell === null && filledCount < price) {
                 filledCount++;
-                return { category, name: `${category.name.replace('블록', '')} (${price}만)`, id: Date.now() + Math.random() };
+                return {
+                    category,
+                    name: `${item.name} (${price}만)`,
+                    groupId,
+                    company: item.company
+                };
             }
             return cell;
         });
 
+        setSelectedCells(newCells);
+    };
+
+    const handleRemoveItem = (groupId) => {
+        if (!groupId) return;
+        const newCells = selectedCells.map(cell => {
+            if (cell && cell.groupId === groupId) {
+                return null; // Empty the cell
+            }
+            return cell;
+        });
         setSelectedCells(newCells);
     };
 
@@ -171,11 +219,14 @@ const CapsuleInsurancePage = () => {
                                 {selectedCells.map((cell, i) => (
                                     <div
                                         key={i}
-                                        className={`aspect-square rounded-xl border flex items-center justify-center transition-all ${cell ? cell.category.color : 'bg-white/50 border-slate-200'
+                                        onClick={() => cell && handleRemoveItem(cell.groupId)}
+                                        className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all ${cell ? `${cell.category.color} cursor-pointer hover:opacity-80` : 'bg-white/50 border-slate-200'
                                             }`}
                                     >
                                         {cell ? (
-                                            <span className="font-bold text-xs text-center px-1">{cell.name}</span>
+                                            <>
+                                                <span className="font-bold text-[10px] sm:text-xs text-center px-1 leading-tight">{cell.name}</span>
+                                            </>
                                         ) : (
                                             <Plus className="w-6 h-6 text-slate-300" />
                                         )}
@@ -198,34 +249,88 @@ const CapsuleInsurancePage = () => {
 
                         {/* Selection Area */}
                         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-6">
-                            <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                                보험 카테고리 <span className="text-xs font-normal px-2 py-0.5 bg-slate-100 rounded-full text-slate-500">선택</span>
-                            </h3>
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                    보험 카테고리 <span className="text-xs font-normal px-2 py-0.5 bg-slate-100 rounded-full text-slate-500">선택</span>
+                                </h3>
+                            </div>
 
-                            <div className="space-y-4">
-                                {categories.map((cat) => (
-                                    <details key={cat.id} className="group">
-                                        <summary className="flex items-center justify-between p-4 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors list-none font-bold text-slate-700">
-                                            {cat.name}
-                                            <ArrowRight className="w-4 h-4 text-slate-400 group-open:rotate-90 transition-transform" />
-                                        </summary>
-                                        <div className="p-4 space-y-3">
-                                            {[1, 3, 5].map((price) => (
-                                                <div
-                                                    key={price}
-                                                    onClick={() => handleAddItem(cat, price)}
-                                                    className={`p-3 border-2 rounded-xl flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity ${cat.color}`}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <GripHorizontal className="w-4 h-4 opacity-50" />
-                                                        <span className="font-bold">{price}만원 상품</span>
-                                                    </div>
-                                                    <span className="text-xs font-bold bg-white/50 px-2 py-1 rounded-md">{price}칸 차지</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </details>
+                            {/* Filter Bar */}
+                            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                                <button
+                                    onClick={() => setIsFilterModalOpen(true)}
+                                    className="flex-shrink-0 flex items-center justify-center w-10 h-10 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
+                                >
+                                    <SlidersHorizontal className="w-5 h-5" />
+                                </button>
+
+                                <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
+                                {[1, 3, 5].map(price => (
+                                    <button
+                                        key={price}
+                                        onClick={() => setActiveFilter(activeFilter === price ? null : price)}
+                                        className={`flex-shrink-0 px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-colors border ${activeFilter === price
+                                            ? 'bg-slate-800 text-white border-slate-800'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {price}만원 이하
+                                    </button>
                                 ))}
+                            </div>
+
+                            {/* Category Accordion List */}
+                            <div className="space-y-3 mt-2 flex-col overflow-y-auto max-h-[400px] pr-2">
+                                {categories.map((cat) => {
+                                    const isOpen = activeCategory === cat.id;
+
+                                    return (
+                                        <div key={cat.id} className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                                            {/* Category Header */}
+                                            <button
+                                                onClick={() => setActiveCategory(isOpen ? null : cat.id)}
+                                                className={`w-full flex items-center justify-between p-4 transition-colors font-bold ${isOpen ? 'bg-primary-50 text-primary-700' : 'bg-white text-slate-700 hover:bg-slate-50'
+                                                    }`}
+                                            >
+                                                {cat.name}
+                                                <ArrowRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90 text-primary-500' : 'text-slate-400'}`} />
+                                            </button>
+
+                                            {/* Category Body (Items) */}
+                                            {isOpen && (
+                                                <div className="p-3 bg-slate-50/50 flex flex-col gap-3">
+                                                    {isItemsLoading ? (
+                                                        <div className="flex justify-center py-6">
+                                                            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+                                                        </div>
+                                                    ) : categoryItems.length > 0 ? (
+                                                        categoryItems.map((item) => (
+                                                            <div
+                                                                key={item.id}
+                                                                onClick={() => handleAddItem(cat, item)}
+                                                                className={`p-3 border-2 rounded-xl flex items-center justify-between cursor-pointer hover:scale-[1.02] transition-transform bg-white ${cat.color}`}
+                                                            >
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span className="font-bold text-slate-800 leading-tight">{item.name}</span>
+                                                                    <span className="text-xs font-medium text-slate-500">{item.company}</span>
+                                                                </div>
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    <span className="font-bold text-sm">{item.price}만원</span>
+                                                                    <span className="text-[10px] font-bold bg-white/60 px-2 py-0.5 rounded-md">{item.price}칸 차지</span>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="py-6 text-center text-sm font-medium text-slate-500">
+                                                            조회된 보험 상품이 없습니다.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -343,6 +448,18 @@ const CapsuleInsurancePage = () => {
                 confirmText="확인"
                 cancelText="취소"
             />
+
+            <CustomModal
+                isOpen={isFilterModalOpen}
+                onClose={() => setIsFilterModalOpen(false)}
+                onConfirm={() => setIsFilterModalOpen(false)}
+                hideCancel={true}
+            >
+                <div className="text-center py-6">
+                    <h2 className="text-xl font-bold text-slate-800">필터 커스텀 모달</h2>
+                    <p className="text-sm text-slate-500 mt-2">이곳에 복잡한 필터 폼이 들어갑니다.</p>
+                </div>
+            </CustomModal>
         </div>
     );
 };
