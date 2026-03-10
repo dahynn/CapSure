@@ -59,4 +59,18 @@ export const authApi = {
             }, 300);
         });
     },
+
+    /**
+     * 로그인 세션 연장
+     */
+    extendSession: async () => {
+        // 실제 API 연동 시 주석 해제
+        // const response = await httpClient.post('/auth/extend-session');
+        // return response.data;
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({ success: true, message: '세션이 연장되었습니다.' });
+            }, 500);
+        });
+    },
 };
