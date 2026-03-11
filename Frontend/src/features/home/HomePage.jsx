@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame, HeartPulse, Dog, Car, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { Flame, HeartPulse, Dog, Car, ArrowRight, ShieldCheck } from 'lucide-react';
+import ValidDailyInsurance from './components/ValidDailyInsurance';
+import MyDashboard from './components/MyDashboard';
 
 const HomePage = () => {
     const navigate = useNavigate();
@@ -24,33 +26,17 @@ const HomePage = () => {
             <div className="flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-                        반갑습니다 김블록님 👋
+                        반갑습니다 김캡슐님 👋
                     </h1>
                     <p className="text-slate-500 mt-1">오늘도 안전한 하루 되세요</p>
                 </div>
             </div>
 
-            {/* Main Banner - Product Recommendation */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-primary-900 p-8 text-white shadow-2xl group cursor-pointer animate-in fade-in duration-700">
-                <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity duration-500 group-hover:scale-110 transform">
-                    <ShieldCheck className="w-48 h-48" />
-                </div>
+            {/* Valid Daily Insurance Section */}
+            <ValidDailyInsurance />
 
-                <div className="relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-sm font-semibold mb-4">
-                        <Sparkles className="w-4 h-4 text-yellow-300" />
-                        <span>AI 맞춤 추천</span>
-                    </div>
-                    <h2 className="text-3xl font-bold mb-2">나에게 딱 맞는<br />맞춤형 보험 찾기</h2>
-                    <p className="text-indigo-200 mb-6 max-w-sm">
-                        복잡한 보험, 이제 AI가 분석해서 꼭 필요한 보장만 추천해드려요.
-                    </p>
-                    <button className="bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors flex items-center gap-2 group-hover:gap-4">
-                        추천받기
-                        <ArrowRight className="w-5 h-5" />
-                    </button>
-                </div>
-            </div>
+            {/* My Dashboard Section */}
+            <MyDashboard />
 
             {/* Grid Layout - Insurance Menus */}
             <div>
