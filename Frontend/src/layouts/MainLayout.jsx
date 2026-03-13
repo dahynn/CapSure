@@ -12,7 +12,7 @@ const MainLayout = () => {
 
     const navItems = [
         { name: '캡슐 보험', path: '/capsule-insurance' },
-        { name: '일일 보험', path: '/daily-insurance' },
+        { name: '보험 탐색', path: '/search-insurance' },
     ];
 
     return (
