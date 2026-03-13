@@ -7,7 +7,7 @@ import { getCapsuleItems } from './api/capsuleInsurance.api';
 // Subscribe Flow Components
 import InsuranceInfoConfirm from './components/subscribe/InsuranceInfoConfirm';
 import PersonalInfoForm from './components/subscribe/PersonalInfoForm';
-import TermsCheck from '@/common/components/insurance/TermsCheck';
+import TermsCheck from './components/subscribe/TermsCheck';
 import Payment from './components/subscribe/Payment';
 import SubscribeComplete from './components/subscribe/SubscribeComplete';
 import MyCapsuleInsurance from '@/features/mypage/MyCapsuleInsurance';

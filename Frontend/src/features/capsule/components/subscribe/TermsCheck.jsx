@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { getInsuranceTerms } from '../../api/capsuleInsurance.api';
+import { getInsuranceTerms } from '@/features/capsule/api/capsuleInsurance.api';
 import { Loader2, ArrowRight, CheckCircle2, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
 
-const TermsCheck = ({ selectedCells, onNext, onPrev }) => {
+const TermsCheck = ({ selectedCells, onNext, onPrev, buttonText = "다음" }) => {
     const [termsData, setTermsData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [openAccordion, setOpenAccordion] = useState(null);
@@ -165,11 +165,11 @@ const TermsCheck = ({ selectedCells, onNext, onPrev }) => {
                     onClick={onNext}
                     disabled={!isAllChecked()}
                     className={`px-8 py-3 font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2 group ${isAllChecked()
-                            ? 'bg-primary-600 text-white hover:bg-primary-700'
-                            : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                        ? 'bg-primary-600 text-white hover:bg-primary-700'
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                         }`}
                 >
-                    다음
+                    {buttonText}
                     <ArrowRight className={`w-5 h-5 ${isAllChecked() ? 'group-hover:translate-x-1 transition-transform' : ''}`} />
                 </button>
             </div>
