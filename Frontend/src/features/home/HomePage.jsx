@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Flame, HeartPulse, Dog, Car, ArrowRight, ShieldCheck } from 'lucide-react';
-import ValidDailyInsurance from './components/ValidDailyInsurance';
 import MyDashboard from './components/MyDashboard';
 
 const HomePage = () => {
@@ -32,29 +31,8 @@ const HomePage = () => {
                 </div>
             </div>
 
-            {/* Valid Daily Insurance Section */}
-            <ValidDailyInsurance />
-
             {/* My Dashboard Section */}
             <MyDashboard />
-
-            {/* Grid Layout - Insurance Menus */}
-            <div>
-                <h3 className="text-lg font-bold text-slate-800 mb-4 px-1">보험 카테고리</h3>
-                <div className="grid grid-cols-4 gap-4">
-                    {insuranceMenus.map((menu, idx) => (
-                        <div
-                            key={idx}
-                            className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer hover:-translate-y-1 transform duration-200"
-                        >
-                            <div className={`p-4 rounded-2xl ${menu.bg}`}>
-                                <menu.icon className={`w-8 h-8 ${menu.color}`} />
-                            </div>
-                            <span className="text-sm font-bold text-slate-700">{menu.title}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
 
             {/* Main Feature Links */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">

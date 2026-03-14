@@ -78,7 +78,10 @@ const SubscriptionSummary = () => {
                     </div>
 
                     <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end">
-                        <button className="text-sm text-slate-500 hover:text-primary-600 font-medium flex items-center gap-1 transition-colors">
+                        <button 
+                            onClick={() => window.location.href = '/my-capsule'}
+                            className="text-sm text-slate-500 hover:text-primary-600 font-medium flex items-center gap-1 transition-colors"
+                        >
                             더 자세히 보러가기 <ArrowRight className="w-4 h-4" />
                         </button>
                     </div>
