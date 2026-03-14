@@ -13,6 +13,7 @@ import MyCapsuleInsurance from "@/features/mypage/MyCapsuleInsurance";
 import InsuranceHistory from "@/features/mypage/InsuranceHistory";
 import CapsuleCancelPage from "@/features/capsuleCancel/CapsuleCancelPage";
 import SearchInsurancePage from "@/features/searchInsurance/SearchInsurancePage";
+import OnboardingPage from "@/features/onboarding/components/OnboardingPage";
 
 const AppRouter = () => {
     return (
@@ -23,6 +24,7 @@ const AppRouter = () => {
                     <Route path="/signup" element={<SignupPage />} />
                 </Route>
                 <Route element={<MainLayout />}>
+                    <Route path="/onboarding" element={<OnboardingPage />} />
                     <Route path="/home" element={<HomePage />} />
                     <Route
                         path="/capsule-insurance"

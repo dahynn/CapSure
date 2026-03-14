@@ -13,7 +13,14 @@ const LoginPage = () => {
         e.preventDefault();
         try {
             await authApi.login(loginForm);
-            navigate('/home');
+            
+            // 로그인 완료 후 온보딩 대상인지 확인
+            const { isFirstLogin } = await authApi.checkFirstLogin();
+            if (isFirstLogin) {
+                navigate('/onboarding');
+            } else {
+                navigate('/home');
+            }
         } catch (error) {
             alert('로그인에 실패했습니다.');
         }
