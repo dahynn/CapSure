@@ -16,18 +16,19 @@ const MainLayout = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center">
-            {/* Centered Desktop Container */}
-            <div className="w-full max-w-5xl flex flex-col min-h-screen bg-white shadow-2xl relative overflow-hidden">
+        <div className="min-h-screen bg-white flex flex-col">
+            {/* Full-width Container */}
+            <div className="w-full flex flex-col min-h-screen relative overflow-hidden">
 
                 {/* Header Navigation */}
-                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-                    <div
-                        className="flex items-center gap-2 cursor-pointer"
-                        onClick={() => navigate('/home')}
-                    >
-                        <ShieldAlert className="w-8 h-8 text-primary-600" />
-                        <span className="text-xl font-black tracking-tight text-slate-800">
+                <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-lg border-b border-slate-200 flex justify-center">
+                    <div className="w-full max-w-5xl px-6 py-4 flex items-center justify-between">
+                        <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            onClick={() => navigate('/home')}
+                        >
+                            <ShieldAlert className="w-8 h-8 text-primary-600" />
+                            <span className="text-xl font-black tracking-tight text-slate-800">
                             CapsuleCover
                         </span>
                     </div>
@@ -96,11 +97,12 @@ const MainLayout = () => {
                             )}
                         </div>
                     </div>
+                    </div>
                 </header>
 
                 {/* Main Content Area */}
                 <main className="flex-1 w-full bg-slate-50 relative flex flex-col">
-                    <div className="flex-1">
+                    <div className="flex-1 w-full">
                         <Outlet />
                     </div>
                     {/* Footer */}

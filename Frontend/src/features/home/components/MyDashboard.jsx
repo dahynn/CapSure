@@ -25,8 +25,10 @@ const MyDashboard = () => {
                 마이 대시보드
             </h2>
 
-            <div className="flex flex-col gap-4 animate-in fade-in duration-500 mt-2">
-                <CoverageAnalysis />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-500 mt-2">
+                <div className="md:col-span-2">
+                    <CoverageAnalysis />
+                </div>
                 <SubscriptionSummary />
                 <MyInsurances />
             </div>
