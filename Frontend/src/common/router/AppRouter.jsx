@@ -13,6 +13,7 @@ import MyCapsuleInsurance from "@/features/mypage/MyCapsuleInsurance";
 import InsuranceHistory from "@/features/mypage/InsuranceHistory";
 import CapsuleCancelPage from "@/features/capsuleCancel/CapsuleCancelPage";
 import SearchInsurancePage from "@/features/searchInsurance/SearchInsurancePage";
+import InsuranceDetailPage from "@/features/searchInsurance/InsuranceDetailPage";
 import OnboardingPage from "@/features/onboarding/components/OnboardingPage";
 
 const AppRouter = () => {
@@ -33,6 +34,10 @@ const AppRouter = () => {
                     <Route
                         path="/search-insurance"
                         element={<SearchInsurancePage />}
+                    />
+                    <Route
+                        path="/search-insurance/:id"
+                        element={<InsuranceDetailPage />}
                     />
 
                     {/* MyPage Routes */}

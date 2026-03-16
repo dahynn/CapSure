@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import * as Icons from "lucide-react";
 import { getInsuranceCategories, getInsuranceProductsByCategory } from "./api/searchInsurance.api";
 
@@ -6,6 +7,36 @@ import { getInsuranceCategories, getInsuranceProductsByCategory } from "./api/se
 const DynamicIcon = ({ name, className }) => {
     const IconComponent = Icons[name] || Icons.HelpCircle;
     return <IconComponent className={className} />;
+};
+
+// ProductCard component for displaying individual insurance products
+const ProductCard = ({ product }) => {
+    const navigate = useNavigate();
+
+    return (
+        <div
+            key={product.id}
+            className="flex items-center justify-between cursor-pointer group"
+            onClick={() => navigate(`/search-insurance/${product.id}`)}
+        >
+            <div className="flex items-center space-x-4">
+                <div className={`w-[48px] h-[48px] rounded-[18px] ${product.iconBg} flex items-center justify-center border border-gray-50`}>
+                    <DynamicIcon name={product.icon} className={`w-6 h-6 ${product.iconColor}`} />
+                    {/* In case there's an inner plus icon or something, simulating typical insurance UI */}
+                    {product.categoryId === 'life' && (
+                        <div className="absolute ml-5 mt-5 bg-white rounded-full">
+                            <Icons.PlusCircle className="w-3 h-3 text-blue-400 fill-white" />
+                        </div>
+                    )}
+                </div>
+                <div className="flex flex-col justify-center">
+                    <h3 className="text-[16px] font-bold text-gray-900 mb-0.5">{product.title}</h3>
+                    <p className="text-[13px] text-gray-500 leading-snug">{product.description}</p>
+                </div>
+            </div>
+            <Icons.ChevronRight className="w-5 h-5 text-gray-300" />
+        </div>
+    );
 };
 
 const SearchInsurancePage = () => {
@@ -135,27 +166,11 @@ const SearchInsurancePage = () => {
 
                 {/* Products List */}
                 <div className="space-y-6">
-                    {products.map((product) => (
-                        <div key={product.id} className="flex items-center justify-between cursor-pointer group">
-                            <div className="flex items-center space-x-4">
-                                <div className={`w-[48px] h-[48px] rounded-[18px] ${product.iconBg} flex items-center justify-center border border-gray-50`}>
-                                    <DynamicIcon name={product.icon} className={`w-6 h-6 ${product.iconColor}`} />
-                                    {/* In case there's an inner plus icon or something, simulating typical insurance UI */}
-                                    {product.categoryId === 'life' && (
-                                        <div className="absolute ml-5 mt-5 bg-white rounded-full">
-                                            <Icons.PlusCircle className="w-3 h-3 text-blue-400 fill-white" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex flex-col justify-center">
-                                    <h3 className="text-[16px] font-bold text-gray-900 mb-0.5">{product.title}</h3>
-                                    <p className="text-[13px] text-gray-500 leading-snug">{product.description}</p>
-                                </div>
-                            </div>
-                            <Icons.ChevronRight className="w-5 h-5 text-gray-300" />
-                        </div>
-                    ))}
-                    {products.length === 0 && (
+                    {products.length > 0 ? (
+                        products.map(product => (
+                            <ProductCard key={product.id} product={product} />
+                        ))
+                    ) : (
                         <div className="text-center py-10 text-gray-400 text-[14px]">
                             해당 카테고리의 상품이 없습니다.
                         </div>
@@ -202,16 +217,6 @@ const SearchInsurancePage = () => {
                 </div>
             </div>
 
-            {/* CSS to hide scrollbar */}
-            <style jsx>{`
-                .hide-scrollbar::-webkit-scrollbar {
-                    display: none;
-                }
-                .hide-scrollbar {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
         </div>
     );
 };
