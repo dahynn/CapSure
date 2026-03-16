@@ -20,7 +20,7 @@ const CapsuleInsurancePage = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
     // Filter & Category State
-    const [activeCategory, setActiveCategory] = useState(null);
+    const [activeCategory, setActiveCategory] = useState('shilson');
     const [activeFilter, setActiveFilter] = useState(null); // null(All), 1, 3, 5
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [categoryItems, setCategoryItems] = useState([]);
@@ -264,6 +264,22 @@ const CapsuleInsurancePage = () => {
                                 </h3>
                             </div>
 
+                            {/* Horizontal Category Scroll */}
+                            <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-none">
+                                {categories.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setActiveCategory(cat.id)}
+                                        className={`flex-shrink-0 px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-colors border ${activeCategory === cat.id
+                                            ? 'bg-primary-50 text-primary-700 border-primary-200'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </div>
+
                             {/* Filter Bar */}
                             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                                 <button
@@ -289,57 +305,45 @@ const CapsuleInsurancePage = () => {
                                 ))}
                             </div>
 
-                            {/* Category Accordion List */}
+                            {/* Items List */}
                             <div className="space-y-3 mt-2 flex-col overflow-y-auto max-h-[400px] pr-2">
-                                {categories.map((cat) => {
-                                    const isOpen = activeCategory === cat.id;
-
-                                    return (
-                                        <div key={cat.id} className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                                            {/* Category Header */}
-                                            <button
-                                                onClick={() => setActiveCategory(isOpen ? null : cat.id)}
-                                                className={`w-full flex items-center justify-between p-4 transition-colors font-bold ${isOpen ? 'bg-primary-50 text-primary-700' : 'bg-white text-slate-700 hover:bg-slate-50'
-                                                    }`}
-                                            >
-                                                {cat.name}
-                                                <ArrowRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90 text-primary-500' : 'text-slate-400'}`} />
-                                            </button>
-
-                                            {/* Category Body (Items) */}
-                                            {isOpen && (
-                                                <div className="p-3 bg-slate-50/50 flex flex-col gap-3">
-                                                    {isItemsLoading ? (
-                                                        <div className="flex justify-center py-6">
-                                                            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+                                {activeCategory ? (
+                                    <div className="flex flex-col gap-3">
+                                        {isItemsLoading ? (
+                                            <div className="flex justify-center py-6">
+                                                <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+                                            </div>
+                                        ) : categoryItems.length > 0 ? (
+                                            categoryItems.map((item) => {
+                                                const cat = categories.find(c => c.id === activeCategory);
+                                                return (
+                                                    <div
+                                                        key={item.id}
+                                                        onClick={() => handleAddItem(cat, item)}
+                                                        className={`p-3 border-2 rounded-xl flex items-center justify-between cursor-pointer hover:scale-[1.02] transition-transform bg-white ${cat.color}`}
+                                                    >
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="font-bold text-slate-800 leading-tight">{item.name}</span>
+                                                            <span className="text-xs font-medium text-slate-500">{item.company}</span>
                                                         </div>
-                                                    ) : categoryItems.length > 0 ? (
-                                                        categoryItems.map((item) => (
-                                                            <div
-                                                                key={item.id}
-                                                                onClick={() => handleAddItem(cat, item)}
-                                                                className={`p-3 border-2 rounded-xl flex items-center justify-between cursor-pointer hover:scale-[1.02] transition-transform bg-white ${cat.color}`}
-                                                            >
-                                                                <div className="flex flex-col gap-1">
-                                                                    <span className="font-bold text-slate-800 leading-tight">{item.name}</span>
-                                                                    <span className="text-xs font-medium text-slate-500">{item.company}</span>
-                                                                </div>
-                                                                <div className="flex flex-col items-end gap-1">
-                                                                    <span className="font-bold text-sm">{item.price}만원</span>
-                                                                    <span className="text-[10px] font-bold bg-white/60 px-2 py-0.5 rounded-md">{item.price}칸 차지</span>
-                                                                </div>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <div className="py-6 text-center text-sm font-medium text-slate-500">
-                                                            조회된 보험 상품이 없습니다.
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <span className="font-bold text-sm">{item.price}만원</span>
+                                                            <span className="text-[10px] font-bold bg-white/60 px-2 py-0.5 rounded-md">{item.price}칸 차지</span>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="py-6 text-center text-sm font-medium text-slate-500">
+                                                조회된 보험 상품이 없습니다.
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="py-6 text-center text-sm font-medium text-slate-500">
+                                        카테고리를 선택해주세요.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
