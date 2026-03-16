@@ -1,0 +1,22 @@
+#Demo Setting
+# 백엔드 전용 ignore파일
+.idea/
+.gradle/
+.gradle-local/
+build/
+out/
+*.iml
+*.log
+.DS_Store
+Thumbs.db
+
+
+src/main/resources/db/manual/*.sql
+!src/main/resources/db/manual/.gitkeep
+
+# 협업용 .md파일은 무시
+docs/*.md
+.editorconfig
+src/main/resources/application-local.yml
+src/main/resources/application.yml
+src/main/resources/application-test.yml
