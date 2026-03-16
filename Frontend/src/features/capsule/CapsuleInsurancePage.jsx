@@ -3,6 +3,8 @@ import { ShieldCheck, Plus, Check, ArrowRight, Info, GripHorizontal, SlidersHori
 import TextModal from '@/common/components/ui/modal/TextModal';
 import CustomModal from '@/common/components/ui/modal/CustomModal';
 import { getCapsuleItems } from './api/capsuleInsurance.api';
+import CapsuleGridMaker from './components/CapsuleGridMaker';
+import CapsuleItemExplorer from './components/CapsuleItemExplorer';
 
 // Subscribe Flow Components
 import InsuranceInfoConfirm from './components/subscribe/InsuranceInfoConfirm';
@@ -214,187 +216,55 @@ const CapsuleInsurancePage = () => {
             {/* ----------------- GRID MAKER VIEW ----------------- */}
             {!hasSubscription && view === 'grid-maker' && (
                 <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
-                    <div className="flex justify-between items-end">
+                    <div className="flex justify-between items-end mb-6">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-800">캡슐 조합하기</h2>
-                            <p className="text-slate-500">원하는 카테고리의 캡슐을 선택하여 채워주세요.</p>
-                        </div>
-                        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
-                            <span className="text-sm font-bold text-slate-600">목표:</span>
-                            <span className="text-xl font-black text-primary-600">{targetAmount}만원</span>
+                            <h2 className="text-2xl font-bold text-slate-800">캡슐 구성하기</h2>
+                            <p className="text-slate-500 mt-1">왼쪽에서 목표 금액을 확인하고, 오른쪽에서 보험을 탐색하여 채워주세요.</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Grid Area */}
-                        <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-slate-200 min-h-[500px] flex flex-col">
-                            <div className="bg-slate-100 rounded-2xl flex-1 border-2 border-dashed border-slate-300 p-8 grid grid-cols-5 gap-2 content-start">
-                                {/* Dynamic Grid Cells based on targetAmount and selection */}
-                                {selectedCells.map((cell, i) => (
-                                    <div
-                                        key={i}
-                                        onClick={() => cell && handleRemoveItem(cell.groupId)}
-                                        className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all ${cell ? `${cell.category.color} cursor-pointer hover:opacity-80` : 'bg-white/50 border-slate-200'
-                                            }`}
-                                    >
-                                        {cell ? (
-                                            <>
-                                                <span className="font-bold text-[10px] sm:text-xs text-center px-1 leading-tight">{cell.name}</span>
-                                            </>
-                                        ) : (
-                                            <Plus className="w-6 h-6 text-slate-300" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-6 flex justify-between items-center">
-                                <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-                                    <Info className="w-4 h-4" /> 남은 칸을 모두 채워주세요
-                                </div>
-                                <button
-                                    onClick={handleSubscribeConfirm}
-                                    className="px-8 py-3 bg-primary-600 text-white font-bold rounded-xl shadow-lg hover:bg-primary-700 transition-colors"
-                                >
-                                    캡슐 보험 구독하기
-                                </button>
-                            </div>
+                    <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 h-full min-h-[600px]">
+                        {/* Left Side: Grid Area (60%) */}
+                        <div className="h-full xl:col-span-3">
+                            <CapsuleGridMaker
+                                selectedCells={selectedCells}
+                                handleRemoveItem={handleRemoveItem}
+                                targetAmount={targetAmount}
+                            />
                         </div>
 
-                        {/* Selection Area */}
-                        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                                    보험 카테고리 <span className="text-xs font-normal px-2 py-0.5 bg-slate-100 rounded-full text-slate-500">선택</span>
-                                </h3>
-                            </div>
-
-                            {/* Horizontal Category Scroll */}
-                            <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-none">
-                                {categories.map((cat) => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setActiveCategory(cat.id)}
-                                        className={`flex-shrink-0 px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-colors border ${activeCategory === cat.id
-                                            ? 'bg-primary-50 text-primary-700 border-primary-200'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        {cat.name}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Filter Bar */}
-                            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                                <button
-                                    onClick={() => setIsFilterModalOpen(true)}
-                                    className="flex-shrink-0 flex items-center justify-center w-10 h-10 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
-                                >
-                                    <SlidersHorizontal className="w-5 h-5" />
-                                </button>
-
-                                <div className="h-6 w-px bg-slate-200 mx-1"></div>
-
-                                {[1, 3, 5].map(price => (
-                                    <button
-                                        key={price}
-                                        onClick={() => setActiveFilter(activeFilter === price ? null : price)}
-                                        className={`flex-shrink-0 px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-colors border ${activeFilter === price
-                                            ? 'bg-slate-800 text-white border-slate-800'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        {price}만원 이하
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Items List */}
-                            <div className="space-y-3 mt-2 flex-col overflow-y-auto max-h-[400px] pr-2">
-                                {activeCategory ? (
-                                    <div className="flex flex-col gap-3">
-                                        {isItemsLoading ? (
-                                            <div className="flex justify-center py-6">
-                                                <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
-                                            </div>
-                                        ) : categoryItems.length > 0 ? (
-                                            categoryItems.map((item) => {
-                                                const cat = categories.find(c => c.id === activeCategory);
-                                                const isExpanded = expandedItemId === item.id;
-                                                return (
-                                                    <div key={item.id} className={`border-2 rounded-xl overflow-hidden bg-white ${cat.color} mb-3`}>
-                                                        <div
-                                                            onClick={() => setExpandedItemId(isExpanded ? null : item.id)}
-                                                            className="p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
-                                                        >
-                                                            <div className="flex flex-col gap-1">
-                                                                <span className="font-bold text-slate-800 leading-tight">{item.name}</span>
-                                                                <span className="text-xs font-medium text-slate-500">{item.company}</span>
-                                                            </div>
-                                                            <div className="flex flex-col items-end gap-1">
-                                                                <span className="font-bold text-sm">{item.price}만원</span>
-                                                                <span className="text-[10px] font-bold bg-white/60 px-2 py-0.5 rounded-md">{item.price}칸 차지</span>
-                                                            </div>
-                                                        </div>
-
-                                                        {isExpanded && (
-                                                            <div className="px-4 pb-4 pt-1 bg-white border-t border-slate-100">
-                                                                <table className="w-full mb-3">
-                                                                    <thead>
-                                                                        <tr className="border-b border-slate-200">
-                                                                            <th className="py-2 text-left text-xs font-bold text-slate-500">보장 내용</th>
-                                                                            <th className="py-2 text-right text-xs font-bold text-slate-500">보장 금액</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {item.coverages?.map((cov, idx) => (
-                                                                            <tr key={idx} className="border-b border-slate-100 last:border-0">
-                                                                                <td className="py-2 text-sm text-slate-700">{cov.label}</td>
-                                                                                <td className="py-2 text-sm text-slate-900 font-bold text-right">{cov.amount}</td>
-                                                                            </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
-                                                                <div className="flex justify-end items-center mb-4">
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setSelectedTermsText(item.termsText);
-                                                                            setIsTermsModalOpen(true);
-                                                                        }}
-                                                                        className="text-xs text-primary-600 underline hover:text-primary-800 font-medium"
-                                                                    >
-                                                                        약관 상세보기
-                                                                    </button>
-                                                                </div>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleAddItem(cat, item);
-                                                                    }}
-                                                                    className="w-full py-2.5 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
-                                                                >
-                                                                    <Plus className="w-4 h-4" /> 담기
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })
-                                        ) : (
-                                            <div className="py-6 text-center text-sm font-medium text-slate-500">
-                                                조회된 보험 상품이 없습니다.
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="py-6 text-center text-sm font-medium text-slate-500">
-                                        카테고리를 선택해주세요.
-                                    </div>
-                                )}
-                            </div>
+                        {/* Right Side: Selection Area (40%) */}
+                        <div className="h-full xl:col-span-2">
+                            <CapsuleItemExplorer
+                                categories={categories}
+                                activeCategory={activeCategory}
+                                setActiveCategory={setActiveCategory}
+                                activeFilter={activeFilter}
+                                setActiveFilter={setActiveFilter}
+                                setIsFilterModalOpen={setIsFilterModalOpen}
+                                isItemsLoading={isItemsLoading}
+                                categoryItems={categoryItems}
+                                expandedItemId={expandedItemId}
+                                setExpandedItemId={setExpandedItemId}
+                                setSelectedTermsText={setSelectedTermsText}
+                                setIsTermsModalOpen={setIsTermsModalOpen}
+                                handleAddItem={handleAddItem}
+                            />
                         </div>
+                    </div>
+
+                    {/* Subscribe Button Area */}
+                    <div className="mt-8 flex justify-end items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                        <div className="flex items-center gap-3 text-sm text-slate-500 font-medium mr-6">
+                            <Info className="w-5 h-5 text-primary-500" />
+                            남은 칸을 모두 채워야만 구독을 진행할 수 있어요.
+                        </div>
+                        <button
+                            onClick={handleSubscribeConfirm}
+                            className="px-10 py-4 bg-primary-600 text-white text-lg font-bold rounded-xl shadow-lg hover:bg-primary-700 transition-colors"
+                        >
+                            캡슐 보험 구독하기
+                        </button>
                     </div>
                 </div>
             )}
