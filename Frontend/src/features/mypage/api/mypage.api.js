@@ -1,7 +1,7 @@
 /**
- * 가상(더미) 보험 가입 이력 반환
+ * 가상(더미) 결제 내역 반환
  */
-export const getInsuranceHistory = async () => {
+export const getPaymentHistory = async () => {
     return new Promise((resolve) => {
         setTimeout(() => {
             resolve([

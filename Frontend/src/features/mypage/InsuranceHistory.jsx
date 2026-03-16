@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getInsuranceHistory } from './api/mypage.api';
+import { getPaymentHistory } from './api/mypage.api';
 import { Loader2, Receipt, Calendar, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 
 const InsuranceHistory = () => {
@@ -11,7 +11,7 @@ const InsuranceHistory = () => {
         const fetchHistory = async () => {
             setIsLoading(true);
             try {
-                const data = await getInsuranceHistory();
+                const data = await getPaymentHistory();
                 setHistory(data);
             } catch (error) {
                 console.error("Failed to fetch history", error);
@@ -30,7 +30,7 @@ const InsuranceHistory = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[500px] space-y-4">
                 <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
-                <p className="text-slate-500 font-medium">가입 이력을 불러오는 중입니다...</p>
+                <p className="text-slate-500 font-medium">결제 내역을 불러오는 중입니다...</p>
             </div>
         );
     }
@@ -41,9 +41,9 @@ const InsuranceHistory = () => {
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
                         <Receipt className="w-8 h-8 text-primary-500" />
-                        보험 가입 이력
+                        결제 내역
                     </h1>
-                    <p className="text-slate-500 mt-2 font-medium">지금까지 구독하고 가입했던 보험 결제 내역입니다.</p>
+                    <p className="text-slate-500 mt-2 font-medium">지금까지 구독 및 취소한 보험의 결제 내역입니다.</p>
                 </div>
                 <div className="hidden sm:block text-sm font-bold text-slate-400 bg-slate-100 px-4 py-2 rounded-xl">
                     총 {history.length}건
@@ -52,7 +52,7 @@ const InsuranceHistory = () => {
 
             {history.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-3xl border border-slate-200">
-                    <p className="text-slate-500">결제 및 가입 이력이 없습니다.</p>
+                    <p className="text-slate-500">결제 내역이 없습니다.</p>
                 </div>
             ) : (
                 <div className="space-y-6">
