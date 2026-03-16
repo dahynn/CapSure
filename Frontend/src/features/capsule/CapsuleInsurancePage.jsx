@@ -26,6 +26,11 @@ const CapsuleInsurancePage = () => {
     const [categoryItems, setCategoryItems] = useState([]);
     const [isItemsLoading, setIsItemsLoading] = useState(false);
 
+    // Accordion & Terms state
+    const [expandedItemId, setExpandedItemId] = useState(null);
+    const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+    const [selectedTermsText, setSelectedTermsText] = useState("");
+
     // Updated Capsule Categories
     const categories = [
         { id: 'shilson', name: '실손 보험', color: 'bg-teal-100 border-teal-300 text-teal-700' },
@@ -316,20 +321,64 @@ const CapsuleInsurancePage = () => {
                                         ) : categoryItems.length > 0 ? (
                                             categoryItems.map((item) => {
                                                 const cat = categories.find(c => c.id === activeCategory);
+                                                const isExpanded = expandedItemId === item.id;
                                                 return (
-                                                    <div
-                                                        key={item.id}
-                                                        onClick={() => handleAddItem(cat, item)}
-                                                        className={`p-3 border-2 rounded-xl flex items-center justify-between cursor-pointer hover:scale-[1.02] transition-transform bg-white ${cat.color}`}
-                                                    >
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className="font-bold text-slate-800 leading-tight">{item.name}</span>
-                                                            <span className="text-xs font-medium text-slate-500">{item.company}</span>
+                                                    <div key={item.id} className={`border-2 rounded-xl overflow-hidden bg-white ${cat.color} mb-3`}>
+                                                        <div
+                                                            onClick={() => setExpandedItemId(isExpanded ? null : item.id)}
+                                                            className="p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                                                        >
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="font-bold text-slate-800 leading-tight">{item.name}</span>
+                                                                <span className="text-xs font-medium text-slate-500">{item.company}</span>
+                                                            </div>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <span className="font-bold text-sm">{item.price}만원</span>
+                                                                <span className="text-[10px] font-bold bg-white/60 px-2 py-0.5 rounded-md">{item.price}칸 차지</span>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex flex-col items-end gap-1">
-                                                            <span className="font-bold text-sm">{item.price}만원</span>
-                                                            <span className="text-[10px] font-bold bg-white/60 px-2 py-0.5 rounded-md">{item.price}칸 차지</span>
-                                                        </div>
+
+                                                        {isExpanded && (
+                                                            <div className="px-4 pb-4 pt-1 bg-white border-t border-slate-100">
+                                                                <table className="w-full mb-3">
+                                                                    <thead>
+                                                                        <tr className="border-b border-slate-200">
+                                                                            <th className="py-2 text-left text-xs font-bold text-slate-500">보장 내용</th>
+                                                                            <th className="py-2 text-right text-xs font-bold text-slate-500">보장 금액</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {item.coverages?.map((cov, idx) => (
+                                                                            <tr key={idx} className="border-b border-slate-100 last:border-0">
+                                                                                <td className="py-2 text-sm text-slate-700">{cov.label}</td>
+                                                                                <td className="py-2 text-sm text-slate-900 font-bold text-right">{cov.amount}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                                <div className="flex justify-end items-center mb-4">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedTermsText(item.termsText);
+                                                                            setIsTermsModalOpen(true);
+                                                                        }}
+                                                                        className="text-xs text-primary-600 underline hover:text-primary-800 font-medium"
+                                                                    >
+                                                                        약관 상세보기
+                                                                    </button>
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleAddItem(cat, item);
+                                                                    }}
+                                                                    className="w-full py-2.5 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+                                                                >
+                                                                    <Plus className="w-4 h-4" /> 담기
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             })
@@ -518,6 +567,21 @@ const CapsuleInsurancePage = () => {
                 <div className="text-center py-6">
                     <h2 className="text-xl font-bold text-slate-800">필터 커스텀 모달</h2>
                     <p className="text-sm text-slate-500 mt-2">이곳에 복잡한 필터 폼이 들어갑니다.</p>
+                </div>
+            </CustomModal>
+
+            <CustomModal
+                isOpen={isTermsModalOpen}
+                onClose={() => setIsTermsModalOpen(false)}
+                onConfirm={() => setIsTermsModalOpen(false)}
+                hideCancel={true}
+                confirmText="확인"
+            >
+                <div className="py-4">
+                    <h2 className="text-lg font-bold text-slate-800 mb-4">약관 상세</h2>
+                    <div className="text-sm text-slate-600 whitespace-pre-line max-h-60 overflow-y-auto pr-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        {selectedTermsText}
+                    </div>
                 </div>
             </CustomModal>
         </div>

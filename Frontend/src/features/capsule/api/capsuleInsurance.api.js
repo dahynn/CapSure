@@ -50,7 +50,26 @@ export const getCapsuleItems = async (categoryId, maxPrice = null) => {
                 filtered = filtered.filter(item => item.price <= maxPrice);
             }
 
-            resolve(filtered);
+            // Add coverages and terms text to each item
+            const enhanced = filtered.map(item => {
+                const coverages = [
+                    { label: '입원 일당', amount: item.price * 100 + '만원' },
+                    { label: '수술비 지원', amount: item.price * 300 + '만원' },
+                ];
+                if (item.categoryId === 'pet') {
+                    coverages.push({ label: '반려동물 치료비', amount: '300만원' });
+                } else if (item.categoryId === 'disease') {
+                    coverages.push({ label: '진단비', amount: '2000만원' });
+                }
+
+                return {
+                    ...item,
+                    coverages,
+                    termsText: `${item.name} 약관 상세 내용입니다.\n\n제1조(목적)\n이 약관은 보험계약자와 보험회사 간의 권리와 의무를 규정합니다.\n\n제2조(용어의 정의)\n1. "보험계약자"란 회사와 계약을 체결하고 보험료를 납입할 의무를 지는 사람을 말합니다.\n2. "피보험자"란 보험사고의 대상이 되는 사람을 말합니다.`
+                };
+            });
+
+            resolve(enhanced);
         }, 400); // 0.4s delay Network Mocking
     });
 };
