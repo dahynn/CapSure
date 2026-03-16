@@ -8,7 +8,6 @@ import CapsuleItemExplorer from './components/CapsuleItemExplorer';
 
 // Subscribe Flow Components
 import InsuranceInfoConfirm from './components/subscribe/InsuranceInfoConfirm';
-import PersonalInfoForm from './components/subscribe/PersonalInfoForm';
 import TermsCheck from './components/subscribe/TermsCheck';
 import Payment from './components/subscribe/Payment';
 import SubscribeComplete from './components/subscribe/SubscribeComplete';
@@ -273,15 +272,8 @@ const CapsuleInsurancePage = () => {
             {view === 'step-info' && (
                 <InsuranceInfoConfirm
                     selectedCells={selectedCells}
-                    onNext={() => setView('step-personal')}
-                    onPrev={() => setView('grid-maker')}
-                />
-            )}
-
-            {view === 'step-personal' && (
-                <PersonalInfoForm
                     onNext={() => setView('step-terms')}
-                    onPrev={() => setView('step-info')}
+                    onPrev={() => setView('grid-maker')}
                 />
             )}
 
@@ -289,7 +281,7 @@ const CapsuleInsurancePage = () => {
                 <TermsCheck
                     selectedCells={selectedCells}
                     onNext={() => setView('step-pay')}
-                    onPrev={() => setView('step-personal')}
+                    onPrev={() => setView('step-info')}
                     buttonText="다음"
                 />
             )}
