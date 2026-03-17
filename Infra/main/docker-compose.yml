@@ -45,5 +45,62 @@ services:
       postgres:
         condition: service_healthy
 
+  promtail:
+    image: grafana/promtail:3.6.7
+    container_name: main-promtail
+    restart: always
+    environment:
+      # TODO: monitor 서버(Mac mini)의 Loki 주소로 교체하세요.
+      LOKI_URL: http://MONITOR_SERVER_IP:3100/loki/api/v1/push
+    command:
+      - -config.file=/etc/promtail/config.yml
+      - -config.expand-env=true
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yml:ro
+      - ./promtail-data:/tmp/promtail
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - agent-net
+
+  node-exporter:
+    image: prom/node-exporter:v1.10.2
+    container_name: main-node-exporter
+    restart: always
+    pid: host
+    ports:
+      - "8100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+    networks:
+      - agent-net
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.56.2
+    container_name: main-cadvisor
+    restart: always
+    privileged: true
+    ports:
+      - "8080:8080"
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - agent-net
+
 volumes:
   postgres_data:
+
+networks:
+  agent-net:
+    driver: bridge
