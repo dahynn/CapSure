@@ -1,0 +1,51 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/promtail/positions.yaml
+
+clients:
+  # TODO: monitor 서버(Mac mini)의 Loki 주소로 교체하세요.
+  # 예) http://10.0.0.10:3100/loki/api/v1/push
+  - url: ${LOKI_URL:-http://MONITOR_SERVER_IP:3100/loki/api/v1/push}
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+
+    relabel_configs:
+      - target_label: server_type
+        replacement: main
+      - source_labels: [__meta_docker_container_name]
+        regex: "/(.*)"
+        target_label: app
+      - source_labels: [__meta_docker_container_log_stream]
+        target_label: stream
+      - source_labels: [__meta_docker_container_id]
+        target_label: container_id
+      - source_labels: [__meta_docker_container_id]
+        target_label: __path__
+        replacement: /var/lib/docker/containers/$1/$1-json.log
+
+    pipeline_stages:
+      - replace:
+          expression: '(?i)(authorization:\\s*bearer\\s+)[^\\s"]+'
+          replace: '${1}***'
+      - replace:
+          expression: '(?i)(token=)[^\\s&"]+'
+          replace: '${1}***'
+      - replace:
+          expression: '(?i)("password"\\s*:\\s*")[^"]+(")'
+          replace: '${1}***${2}'
+      - replace:
+          expression: '(?i)("secret"\\s*:\\s*")[^"]+(")'
+          replace: '${1}***${2}'
+
+      - drop:
+          expression: '(?i)\\b(/healthz?|/ready|/readiness|/live|/liveness|heartbeat|\\bpong\\b|\\bping\\b)\\b'
+
+      - drop:
+          expression: '(?i)\\b(level=debug|level=trace|"level"\\s*:\\s*"(debug|trace)")\\b'
