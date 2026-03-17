@@ -1,0 +1,44 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  # Docker Hub 또는 GitLab Registry 주소
+  IMAGE_FRONT: $DOCKER_USER/my-frontend
+  IMAGE_BACK: $DOCKER_USER/my-backend
+  IMAGE_MOCK: $DOCKER_USER/my-mock
+
+# 모든 job에 공통으로 적용될 설정
+before_script:
+  - docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
+
+# [Stage 1] 빌드 단계: Runner(DevOps 서버)에서 이미지 생성 및 푸시
+build-images:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"  # main 브랜치에 push(merge 포함)될 때만 실행
+  script:
+    - echo "Building Main Server Images..."
+    - docker build -t $IMAGE_FRONT:$CI_COMMIT_SHORT_SHA ./Frontend
+    - docker build -t $IMAGE_BACK:$CI_COMMIT_SHORT_SHA ./Backend
+    - docker push $IMAGE_FRONT:$CI_COMMIT_SHORT_SHA
+    - docker push $IMAGE_BACK:$CI_COMMIT_SHORT_SHA
+
+deploy-to-aws:
+  stage: deploy
+  tags:
+    - DevOps_and_Monitor
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  before_script:
+    # SSH 접속을 위한 환경 설정 (GitLab Variables에 SSH_PRIVATE_KEY 등록 필요)
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - echo "Deploying to AWS Server..."
+    # SSH로 AWS 서버에 접속하여 명령 실행
+    # AWS_HOST(서버 IP)와 프로젝트 경로를 변수로 관리한다.
+    - ssh -o StrictHostKeyChecking=no ubuntu@$AWS_HOST "cd /home/ubuntu/project && docker compose pull && docker compose up -d"
