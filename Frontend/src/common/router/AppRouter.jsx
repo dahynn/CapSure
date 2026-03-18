@@ -24,8 +24,11 @@ const AppRouter = () => {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/signup" element={<SignupPage />} />
                 </Route>
+
+                {/* 내비/푸터 없는 독립 경로 */}
+                <Route path="/onboarding" element={<OnboardingPage />} />
+
                 <Route element={<MainLayout />}>
-                    <Route path="/onboarding" element={<OnboardingPage />} />
                     <Route path="/home" element={<HomePage />} />
                     <Route
                         path="/capsule-insurance"

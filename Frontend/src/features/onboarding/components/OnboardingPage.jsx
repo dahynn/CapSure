@@ -39,42 +39,44 @@ const OnboardingPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[85vh] max-h-[800px]">
+        <div className="min-h-screen flex flex-col items-center px-6 py-6" style={{ backgroundColor: 'var(--color-bg)' }}>
+            <div className="w-full max-w-sm flex-1 flex flex-col">
                 
-                {/* 헤더 부분 (뒤로가기 & 진행 바) */}
-                <header className="px-6 py-4 flex flex-col gap-4 border-b border-slate-100 shrink-0">
-                    <div className="flex items-center justify-between">
-                        <button 
-                            onClick={handlePrevStep}
-                            className="p-2 -ml-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-full transition-colors"
-                        >
-                            <ChevronLeft className="w-6 h-6" />
-                        </button>
-                        
-                        <span className="text-sm font-semibold text-primary-600">
-                            {currentStep} / {TOTAL_STEPS}
-                        </span>
-                        
-                        <div className="w-10"></div> {/* 여백 맞추기용 더미 */}
-                    </div>
-
-                    {/* 진행 상태 바 */}
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-primary-500 transition-all duration-300 ease-out rounded-full"
-                            style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }}
-                        />
-                    </div>
+                {/* 상단 뒤로가기 (앱 내비게이션 역할) */}
+                <header className="pt-2 pb-6 flex items-center shrink-0">
+                    <button 
+                        onClick={handlePrevStep}
+                        className="p-2 -ml-2 text-white hover:opacity-70 transition-opacity"
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                    </button>
+                    {/* 필요 시 여기에 중앙 점선/점 인디케이터를 배치할 수 있습니다 */}
                 </header>
 
                 {/* 콘텐츠 (동적 렌더링) */}
-                <main className="flex-1 overflow-hidden p-6">
+                <main className="flex-1 flex flex-col pt-4 pb-0">
                     {currentStep === 1 && <DigitalSealStep onNext={handleNextStep} />}
                     {currentStep === 2 && <MyDataConsentStep onNext={handleNextStep} />}
                     {currentStep === 3 && <CategorySelectionStep onComplete={handleComplete} />}
                 </main>
 
+                {/* 하단 점 인디케이터 */}
+                <div className="flex justify-center items-center gap-2 pb-8 pt-4">
+                    {[1, 2, 3].map((step) => (
+                        <div
+                            key={step}
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                                currentStep === step
+                                    ? 'w-8'
+                                    : 'w-2 bg-slate-600'
+                            }`}
+                            style={currentStep === step ? { backgroundColor: 'var(--color-brand-yellow)' } : {}}
+                        />
+                    ))}
+                </div>
             </div>
         </div>
     );
