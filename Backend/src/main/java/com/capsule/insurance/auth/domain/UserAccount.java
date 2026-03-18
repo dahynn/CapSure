@@ -3,23 +3,28 @@ package com.capsule.insurance.auth.domain;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class UserAccount {
 
-    private final Long userId;
-    private final String email;
-    private final String passwordEncrypted;
-    private final String name;
-    private final String phone;
-    private final LocalDate birthDate;
-    private final Gender gender;
-    private final UserStatus userStatus;
-    private final LocalDateTime onboardingCompletedAt;
-    private final LocalDateTime withdrawnAt;
-    private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private Long userId;
+    private String email;
+    private String passwordEncrypted;
+    private String name;
+    private String phone;
+    private LocalDate birthDate;
+    private Gender gender;
+    private UserStatus userStatus;
+    private LocalDateTime onboardingCompletedAt;
+    private LocalDateTime withdrawnAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

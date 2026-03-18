@@ -1,0 +1,99 @@
+<!-- #Demo Setting -->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.capsule.insurance.mydata.infra.MyDataContractMapper">
+
+    <resultMap id="myDataContractResultMap" type="com.capsule.insurance.mydata.domain.MyDataContract">
+        <id property="myDataContractId" column="my_data_contract_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="insuNum" column="insu_num"/>
+        <result property="consent" column="is_consent"/>
+        <result property="businessType" column="business_type"/>
+        <result property="productName" column="product_name"/>
+        <result property="insuTypeCode" column="insu_type_code"/>
+        <result property="contractStatusCode" column="contract_status_code"/>
+        <result property="contractDate" column="contract_date"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="premiumAmount" column="premium_amount"/>
+        <result property="currencyCode" column="currency_code"/>
+        <result property="insuredListJson" column="insured_list_json"/>
+        <result property="prizeListJson" column="prize_list_json"/>
+        <result property="riderListJson" column="rider_list_json"/>
+        <result property="policyUri" column="policy_uri"/>
+        <result property="extraPayloadJson" column="extra_payload_json"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+
+        <!-- TODO: 지금은 계약 조회 후 담보를 nested select로 조립했다. -->
+        <!-- TODO: 마이데이터 적재 원칙과 업서트 키가 확정되면 조회/적재 전략을 함께 다시 정리한다. -->
+        <collection property="coverages"
+                    column="my_data_contract_id"
+                    select="findCoveragesByContractId"/>
+    </resultMap>
+
+    <resultMap id="myDataContractCoverageResultMap" type="com.capsule.insurance.mydata.domain.MyDataContractCoverage">
+        <id property="myDataContractCoverageId" column="my_data_contract_coverage_id"/>
+        <result property="myDataContractId" column="my_data_contract_id"/>
+        <result property="coverageNum" column="coverage_num"/>
+        <result property="coverageName" column="coverage_name"/>
+        <result property="coverageAmount" column="coverage_amount"/>
+        <result property="currencyCode" column="currency_code"/>
+        <result property="coverageStatus" column="coverage_status"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="coverageCode" column="coverage_code"/>
+        <result property="extraPayloadJson" column="extra_payload_json"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findContractsByUserId" resultMap="myDataContractResultMap">
+        select
+            myd_contract_id as my_data_contract_id,
+            user_id,
+            insu_num,
+            is_consent,
+            business_type,
+            product_name,
+            insu_type_code,
+            contract_status_code,
+            contract_date,
+            start_date,
+            end_date,
+            premium_amount,
+            currency_code,
+            insured_list_json,
+            prize_list_json,
+            rider_list_json,
+            policy_uri,
+            extra_payload_json,
+            created_at,
+            updated_at
+        from myd_contract
+        where user_id = #{userId}
+        order by myd_contract_id
+    </select>
+
+    <select id="findCoveragesByContractId" resultMap="myDataContractCoverageResultMap">
+        select
+            myd_contract_coverage_id as my_data_contract_coverage_id,
+            myd_contract_id as my_data_contract_id,
+            coverage_num,
+            coverage_name,
+            coverage_amount,
+            currency_code,
+            coverage_status,
+            start_date,
+            end_date,
+            coverage_code,
+            extra_payload_json,
+            created_at,
+            updated_at
+        from myd_contract_coverage
+        where myd_contract_id = #{myDataContractId}
+        order by myd_contract_coverage_id
+    </select>
+
+</mapper>

@@ -15,7 +15,7 @@ src/main/resources/db/manual/*.sql
 !src/main/resources/db/manual/.gitkeep
 
 # 협업용 .md파일은 무시
-docs/*.md
+docs/*
 .editorconfig
 src/main/resources/application-local.yml
 src/main/resources/application.yml

@@ -2,24 +2,28 @@
 package com.capsule.insurance.insurer.domain;
 
 import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class ReferenceCoverage {
 
-    private final String coverageCode;
-    private final CoverageDomain coverageDomain;
-    private final CoverageCategory coverageCategory;
-    private final String coverageName;
-    private final String duplicateGroupCode;
-    private final String description;
-    private final String searchKeywordsJson;
-    private final boolean active;
-    private final CompensationType compensationType;
-    private final DuplicateRuleCode duplicateRuleCode;
-    private final RecommendationRuleCode recommendationRuleCode;
-    private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private String coverageCode;
+    private CoverageCategory coverageCategory;
+    private String coverageName;
+    private String duplicateGroupCode;
+    private String description;
+    private String searchKeywordsJson;
+    private boolean active;
+    private CompensationType compensationType;
+    private DuplicateRuleCode duplicateRuleCode;
+    private RecommendationRuleCode recommendationRuleCode;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

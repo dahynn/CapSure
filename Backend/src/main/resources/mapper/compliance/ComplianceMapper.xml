@@ -1,0 +1,81 @@
+<!-- #Demo Setting -->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.capsule.insurance.compliance.infra.ComplianceMapper">
+
+    <resultMap id="digitalSealResultMap" type="com.capsule.insurance.compliance.domain.DigitalSeal">
+        <id property="sealId" column="seal_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="providerName" column="provider_name"/>
+        <result property="sealStatus" column="seal_status"/>
+        <result property="encryptedToken" column="encrypted_token"/>
+        <result property="keyVersion" column="key_version"/>
+        <result property="issuedAt" column="issued_at"/>
+        <result property="lastVerifiedAt" column="last_verified_at"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="revokedAt" column="revoked_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="userLegalEventResultMap" type="com.capsule.insurance.compliance.domain.UserLegalEvent">
+        <id property="legalEventId" column="legal_event_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="subscriptionId" column="subscription_id"/>
+        <result property="sealId" column="seal_id"/>
+        <result property="eventType" column="event_type"/>
+        <result property="eventResult" column="event_result"/>
+        <result property="eventAt" column="event_at"/>
+        <result property="termsVersion" column="terms_version"/>
+        <result property="evidenceJson" column="evidence_json"/>
+        <result property="requestId" column="request_id"/>
+        <result property="sessionId" column="session_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- TODO: 이 파트에서 디지털 인감 과거 이력 보존 방식이라는 논의점이 있는데, 우선 REGISTERED 상태를 우선하고 없으면 가장 최근 발급 row를 대표 인감으로 조회하도록 구현했음. -->
+    <select id="findRepresentativeSealByUserId" resultMap="digitalSealResultMap">
+        select
+            seal_id,
+            user_id,
+            provider_name,
+            seal_status,
+            encrypted_token,
+            key_version,
+            issued_at,
+            last_verified_at,
+            expires_at,
+            revoked_at,
+            created_at,
+            updated_at
+        from sec_digital_seal
+        where user_id = #{userId}
+        order by
+            case when seal_status = 'REGISTERED' then 0 else 1 end,
+            issued_at desc,
+            seal_id desc
+        limit 1
+    </select>
+
+    <!-- TODO: 이 파트에서 컴플라이언스 이벤트 보관 기간과 삭제 정책이라는 논의점이 있는데, 우선 사용자 기준 최신순 단순 조회로 구현했음. -->
+    <select id="findLegalEventsByUserId" resultMap="userLegalEventResultMap">
+        select
+            legal_event_id,
+            user_id,
+            subscription_id,
+            seal_id,
+            event_type,
+            event_result,
+            event_at,
+            terms_version,
+            evidence_json,
+            request_id,
+            session_id,
+            created_at
+        from comp_user_legal_event
+        where user_id = #{userId}
+        order by legal_event_id desc
+    </select>
+
+</mapper>
