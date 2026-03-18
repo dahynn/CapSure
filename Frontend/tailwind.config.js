@@ -6,6 +6,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // ✅ 메인 배경
+        bg: '#020715',
+        // ✅ 브랜드 대표 색상
+        brand: {
+          white:  '#FCFCFC', // 거의 흰색 (배경)
+          gray:   '#9D9DA4', // 중간 회색 (보조 텍스트)
+          blue:   '#82D8FC', // 하늘파랑 (포인트)
+          purple: '#F2BEF7', // 연보라 (강조)
+          yellow: '#F6CD3C', // 노랑 (CTA)
+        },
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',

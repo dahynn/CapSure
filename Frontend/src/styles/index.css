@@ -2,9 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ✅ 브랜드 대표 색상 변수 */
+:root {
+  --color-bg:           #020715; /* 메인 배경 (다크 네이비) */
+  --color-brand-white:  #FCFCFC; /* 거의 흰색 */
+  --color-brand-gray:   #9D9DA4; /* 중간 회색 (보조 텍스트) */
+  --color-brand-blue:   #82D8FC; /* 하늘파랑 (포인트) */
+  --color-brand-purple: #F2BEF7; /* 연보라 (강조) */
+  --color-brand-yellow: #F6CD3C; /* 노랑 (CTA) */
+}
+
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 font-sans;
+    background-color: var(--color-bg);
+    @apply text-white font-sans;
   }
 }
 
