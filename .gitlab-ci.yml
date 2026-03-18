@@ -20,8 +20,8 @@ build-images:
     - if: $CI_COMMIT_BRANCH == "main"  # main 브랜치에 push(merge 포함)될 때만 실행
   script:
     - echo "Building for AWS (linux/amd64) and pushing to Docker Hub..."
-    - docker buildx build --platform linux/amd64 -t $IMAGE_FRONT:$CI_COMMIT_SHORT_SHA:latest ./Frontend --push
-    - docker buildx build --platform linux/amd64 -t $IMAGE_BACK:$CI_COMMIT_SHORT_SHA:latest ./Backend --push
+    - docker buildx build --platform linux/amd64 -t $IMAGE_FRONT:latest ./Frontend --push
+    - docker buildx build --platform linux/amd64 -t $IMAGE_BACK:latest ./Backend --push
 
 deploy-to-aws:
   stage: deploy
