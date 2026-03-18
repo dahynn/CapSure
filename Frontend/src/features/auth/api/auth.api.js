@@ -47,6 +47,20 @@ export const authApi = {
     },
 
     /**
+     * 최초 로그인 여부 확인 모의 API
+     * @returns {Promise<{ isFirstLogin: boolean }>}
+     */
+    checkFirstLogin: async () => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    isFirstLogin: true // 테스트를 위해 항상 true 반환
+                });
+            }, 500);
+        });
+    },
+
+    /**
      * 로그아웃
      */
     logout: async () => {
