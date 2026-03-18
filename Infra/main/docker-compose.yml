@@ -1,0 +1,13 @@
+services:
+  frontend:
+    # 도커 허브 이미지 경로 (latest 태그를 사용하여 최신 버전 유지)
+    image: ${DOCKER_USER}/my-frontend:latest
+    container_name: frontend-service
+    ports:
+      - "80:80" # 외부 80포트를 컨테이너 80포트(Nginx)로 연결
+    restart: always
+    environment:
+      # 필요한 경우 런타임 환경변수 추가
+      - NODE_ENV=production
+
+  # TODO: Backend 추가
