@@ -96,7 +96,7 @@ deploy-test:
     - ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "mkdir -p /home/ubuntu/S14P21A308/Infra/main/test"
     - scp -o StrictHostKeyChecking=no -p 22 ./Infra/main/test/* ubuntu@$MAIN_AWS_HOST:/home/ubuntu/S14P21A308/Infra/main/test/
     - |
-      ssh -o StrictHostKeyChecking=no ubuntu@$MAIN_AWS_HOST "
+      ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "
         cd /home/ubuntu/S14P21A308/Infra/test && \
         echo 'DOCKER_USER=$DOCKER_USER' > .env && \
         docker compose pull && \
