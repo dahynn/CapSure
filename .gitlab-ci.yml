@@ -92,25 +92,24 @@ deploy-test:
     - chmod 700 ~/.ssh
   script:
     - echo "Deploying Test to AWS..."
+    # 1. 원격 서버 디렉토리 생성 및 설정 파일 복사
     - ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "mkdir -p /home/ubuntu/S14P21A308/Infra/main/test"
     - scp -o StrictHostKeyChecking=no -P 22 ./Infra/main/test/* ubuntu@$MAIN_AWS_HOST:/home/ubuntu/S14P21A308/Infra/main/test/
+    
+    # 2. 원격 서버 접속 후 일련의 명령 실행 (로그인 포함)
     - |
       ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "
-
+        # Docker Hub 로그인 (AWS 서버 내부 인증)
+        echo '$DOCKER_PASSWORD' | docker login -u '$DOCKER_USER' --password-stdin && \
+        
         cd /home/ubuntu/S14P21A308/Infra/main/test && \
-
+        
+        # .env 파일 생성 (필요한 변수 모두 기입)
         echo 'DOCKER_USER=$DOCKER_USER' > .env && \
-        echo 'DATABASE_PASSWORD=$DB_PASSWORD' >> .env \
-
+        echo 'DATABASE_PASSWORD=$DB_PASSWORD' >> .env && \
         chmod 600 .env && \
-
+        
+        # 배포 프로세스
         docker compose pull && \
-        docker compose up -d
-      "
-    - |
-      ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "
-        export DOCKER_USER=$DOCKER_USER && \ 
-        cd /home/ubuntu/S14P21A308/Infra/main/test && \ 
-        docker compose pull && \ 
         docker compose up -d
       "
