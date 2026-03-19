@@ -6,9 +6,7 @@ positions:
   filename: /tmp/promtail/positions.yaml
 
 clients:
-  # TODO: monitor 서버(Mac mini)의 Loki 주소로 교체하세요.
-  # 예) http://10.0.0.10:3100/loki/api/v1/push
-  - url: ${LOKI_URL:-http://MONITOR_SERVER_IP:3100/loki/api/v1/push}
+  - url: http://${MONITOR_DOMAIN:-MONITOR_DOMAIN}:3100/loki/api/v1/push
 
 scrape_configs:
   - job_name: docker
