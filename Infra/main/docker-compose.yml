@@ -81,7 +81,7 @@ services:
       - agent-net
 
   cadvisor:
-    image: ghcr.io/google/cadvisor:v0.56.2
+    image: ghcr.io/google/cadvisor:0.56.2
     container_name: main-cadvisor
     restart: always
     privileged: true
