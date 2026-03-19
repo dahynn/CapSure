@@ -57,7 +57,7 @@ const MainLayout = () => {
 
                 {/* Mobile Bottom Navigation */}
                 <nav 
-                    className="md:hidden sticky bottom-0 w-full z-50 rounded-t-[32px] px-8 py-5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-slate-800"
+                    className="md:hidden sticky bottom-0 w-full z-50 rounded-t-[32px] px-8 py-5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
                     style={{ backgroundColor: 'var(--color-bg)' }}
                 >
                     <div className="flex justify-between items-center max-w-full">
@@ -65,7 +65,7 @@ const MainLayout = () => {
                             { name: '홈', path: '/home', icon: Home },
                             { name: '캡슐', path: '/capsure-insurance', icon: Pill },
                             { name: '대시보드', path: '/dashboard', icon: LayoutDashboard },
-                            { name: '마이페이지', path: '/profile', icon: User },
+                            { name: '마이페이지', path: '/mypage', icon: User },
                         ].map((item) => {
                             const Icon = item.icon;
                             const isActive = item.path === '/home' 

@@ -48,14 +48,13 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     return (
         <div className="flex flex-col min-h-screen pb-28">
             {/* Header */}
-            <header className="sticky top-0 z-50 flex items-center justify-center p-4 bg-[#020715] border-b border-transparent">
+            <header className="sticky top-0 z-50 flex items-center justify-center p-4 bg-[#020715] border-b border-transparent min-h-[56px]">
                 <button 
                     onClick={() => navigate(-1)} 
                     className="absolute left-4 p-2 text-white hover:bg-slate-800 rounded-full transition-colors"
                 >
                     <ChevronLeft className="w-6 h-6" />
                 </button>
-                <h1 className="text-base font-bold text-white">나만의 캡슐 만들기</h1>
             </header>
 
             <div className="flex-1 overflow-y-auto hide-scrollbar">
@@ -81,7 +80,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
             </div>
 
             {/* Sticky Bottom Action */}
-            <div className="fixed bottom-0 left-0 right-0 max-w-[560px] mx-auto bg-[#0A0E17] p-6 border-t border-slate-800/80 z-50">
+            <div className="fixed bottom-[72px] left-0 right-0 max-w-[560px] mx-auto p-6 z-50">
                 <button 
                     onClick={onConfirm}
                     className="w-full py-4 rounded-xl font-bold text-[#020715] text-base bg-brand-blue shadow-[0_0_20px_rgba(130,216,252,0.2)] hover:bg-[#6BC1E6] active:scale-[0.98] transition-all"

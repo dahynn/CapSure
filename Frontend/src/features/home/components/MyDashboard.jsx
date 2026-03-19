@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { getMyDataStatus, agreeMyData } from '../api/home.api.js';
 
-import CoverageAnalysis from './dashboard/CoverageAnalysis';
-import SubscriptionSummary from './dashboard/SubscriptionSummary';
-import MyInsurances from './dashboard/MyInsurances';
+import CoverageAnalysis from '@/features/dashboard/components/HomeCoverageAnalysis';
+import SubscriptionSummary from '@/features/dashboard/components/HomeSubscriptionSummary';
+import MyInsurances from '@/features/dashboard/components/HomeMyInsurances';
 
 const MyDashboard = () => {
   const [isLoading, setIsLoading] = useState(false);

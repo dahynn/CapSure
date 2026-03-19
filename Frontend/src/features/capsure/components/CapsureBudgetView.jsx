@@ -8,10 +8,8 @@ const CapsureBudgetView = ({ onProceed }) => {
 
     return (
         <div className="flex flex-col min-h-screen">
-            {/* Header */}
-            <header className="flex items-center p-4">
+            <header className="flex items-center p-4 min-h-[56px] relative">
                 <button onClick={() => navigate(-1)} className="p-2 text-white"><ChevronLeft className="w-6 h-6"/></button>
-                <h1 className="flex-1 text-center pr-10 text-base font-bold text-white">나만의 캡슐 만들기</h1>
             </header>
 
             <div className="px-6 pt-6 animate-in slide-in-from-right-8 duration-300">
@@ -84,7 +82,7 @@ const CapsureBudgetView = ({ onProceed }) => {
             </div>
 
             {/* Sticky Bottom Button */}
-            <div className="fixed bottom-0 left-0 right-0 max-w-[560px] mx-auto bg-gradient-to-t from-[#0A0D14] via-[#0A0D14] to-transparent pt-16 px-6 pb-[100px] z-40">
+            <div className="fixed bottom-[72px] left-0 right-0 max-w-[560px] mx-auto pt-16 px-6 pb-8 z-40">
                 <button 
                     onClick={() => {
                         onProceed(Number(budgetInput) || 100000);

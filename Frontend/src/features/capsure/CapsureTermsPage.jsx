@@ -122,7 +122,7 @@ const CapsureTermsPage = () => {
             </div>
 
             {/* Bottom Sticky Action Area */}
-            <div className="fixed bottom-0 w-full max-w-[560px] p-6 bg-capsure-bg border-t border-slate-800 z-20">
+            <div className="fixed bottom-[72px] w-full max-w-[560px] p-6 z-20">
                 {/* 둥근 체크박스 영역 */}
                 <div className="bg-[#192235] border border-slate-700/60 rounded-2xl p-4 mb-4 flex items-start gap-3 cursor-pointer" onClick={handleToggleAll}>
                     <div className="mt-0.5">

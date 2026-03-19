@@ -10,9 +10,11 @@ import {
     ChevronRight,
     ChevronLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { getPaymentHistory } from './api/mypage.api';
 
 const MyPage = ({ initialView = 'main' }) => {
+    const navigate = useNavigate();
     const [view, setView] = useState(initialView);
     const [history, setHistory] = useState([]);
     
@@ -41,10 +43,7 @@ const MyPage = ({ initialView = 'main' }) => {
         <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-12">
             {/* Header */}
             <div className="flex justify-between items-center mb-0">
-                <h1 className="text-2xl font-bold text-white">마이페이지</h1>
-                <button className="p-2 hover:bg-slate-800 rounded-full transition-colors text-white">
-                    <Settings className="w-6 h-6" />
-                </button>
+                <div></div> {/* Spacer */}
             </div>
 
             {/* Profile Section */}
@@ -62,7 +61,7 @@ const MyPage = ({ initialView = 'main' }) => {
             <div className="mb-10">
                 <h3 className="text-[#9D9DA4] text-sm font-medium mb-4">나의 구독 정보</h3>
                 <button 
-                    onClick={() => setView('capsule')}
+                    onClick={() => navigate('/mypage/capsure')}
                     className="w-full flex items-center justify-between p-5 bg-[#141925] hover:bg-[#1E2535] rounded-[24px] transition-all group border border-slate-800/30"
                 >
                     <div className="flex items-center gap-4">
@@ -92,7 +91,7 @@ const MyPage = ({ initialView = 'main' }) => {
                         return (
                             <button 
                                 key={idx}
-                                onClick={() => item.id === 'history' ? setView('history') : null}
+                                onClick={() => item.id === 'history' ? navigate('/mypage/history') : null}
                                 className="w-full flex items-center justify-between p-5 bg-[#141925] hover:bg-[#1E2535] rounded-[24px] transition-all group border border-slate-800/30"
                             >
                                 <div className="flex items-center gap-4">
@@ -121,7 +120,7 @@ const MyPage = ({ initialView = 'main' }) => {
     const renderHistory = () => (
         <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-4 mb-8">
-                <button onClick={() => setView('main')} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-white">
+                <button onClick={() => navigate('/mypage')} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-white">
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <h1 className="text-2xl font-bold text-white">구독 내역</h1>
@@ -150,7 +149,7 @@ const MyPage = ({ initialView = 'main' }) => {
     const renderCapsule = () => (
         <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-4 mb-8">
-                <button onClick={() => setView('main')} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-white">
+                <button onClick={() => navigate('/mypage')} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-white">
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <h1 className="text-2xl font-bold text-white">나의 캡슐</h1>
