@@ -49,8 +49,8 @@ deploy-to-aws:
   script:
     - echo "Deploying to AWS Server..."
 
-    - ssh -o StrictHostKeyChecking=no ubuntu@$MAIN_AWS_HOST "mkdir -p /home/ubuntu/S14P21A308/Infra/main/"
-    - scp -o StrictHostKeyChecking=no ./Infra/main/* ubuntu@$MAIN_AWS_HOST:/home/ubuntu/S14P21A308/Infra/main/
+    - ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "mkdir -p /home/ubuntu/S14P21A308/Infra/main/"
+    - scp -o StrictHostKeyChecking=no -p 22 ./Infra/main/* ubuntu@$MAIN_AWS_HOST:/home/ubuntu/S14P21A308/Infra/main/
 
     # SSH로 AWS 서버에 접속하여 명령 실행
     # MAIN_AWS_HOST(서버 IP)와 프로젝트 경로를 변수로 관리한다.
@@ -93,8 +93,8 @@ deploy-test:
     - chmod 700 ~/.ssh
   script:
     - echo "Deploying Test to AWS..."
-    - ssh -o StrictHostKeyChecking=no ubuntu@$MAIN_AWS_HOST "mkdir -p /home/ubuntu/S14P21A308/Infra/main/test"
-    - scp -o StrictHostKeyChecking=no ./Infra/main/test/* ubuntu@$MAIN_AWS_HOST:/home/ubuntu/S14P21A308/Infra/main/test/
+    - ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "mkdir -p /home/ubuntu/S14P21A308/Infra/main/test"
+    - scp -o StrictHostKeyChecking=no -p 22 ./Infra/main/test/* ubuntu@$MAIN_AWS_HOST:/home/ubuntu/S14P21A308/Infra/main/test/
     - |
       ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "
         cd /home/ubuntu/S14P21A308/Infra/test && \
