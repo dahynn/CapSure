@@ -23,6 +23,16 @@ build-images:
     - docker buildx build --platform linux/amd64 -t $IMAGE_FRONT:latest ./Frontend --push
     - docker buildx build --platform linux/amd64 -t $IMAGE_BACK:latest ./Backend --push
 
+### 테스트 빌드
+build-images:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == " test"  # main 브랜치에 push(merge 포함)될 때만 실행
+  script:
+    - echo "Building for AWS (linux/amd64) and pushing to Docker Hub..."
+    - docker buildx build --platform linux/amd64 -t $IMAGE_FRONT:test ./Frontend --push
+    - docker buildx build --platform linux/amd64 -t $IMAGE_BACK:test ./Backend --push
+
 deploy-to-aws:
   stage: deploy
   tags:
@@ -62,5 +72,27 @@ deploy-to-aws:
         export DOCKER_USER=$DOCKER_USER && \ 
         cd /home/ubuntu/S14P21A308/Infra/main && \ 
         docker compose pull && \ 
+        docker compose up -d
+      "
+
+### Test 배포
+deploy-test:
+  stage: deploy
+  tags:
+    - DevOps_and_Monitor
+  rules:
+    - if: $CI_COMMIT_BRANCH == "test"
+  before_script:
+    - eval $(ssh-agent -s)
+    - echo "$TEST_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - echo "Deploying Test to AWS..."
+    - |
+      ssh -o StrictHostKeyChecking=no ubuntu@$TEST_AWS_HOST "
+        cd /home/ubuntu/S14P21A308/Infra/test && \
+        echo 'DOCKER_USER=$DOCKER_USER' > .env && \
+        docker compose pull && \
         docker compose up -d
       "
