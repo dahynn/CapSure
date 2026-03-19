@@ -12,7 +12,7 @@ const CapsureMakerPage = () => {
             alert('담은 상품이 없습니다.');
             return;
         }
-        navigate('/capsure-insurance/checkout');
+        navigate('/capsure-insurance/terms');
     };
 
     const handleViewDetail = (product) => {

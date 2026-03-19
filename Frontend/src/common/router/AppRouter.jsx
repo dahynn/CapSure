@@ -12,7 +12,7 @@ import CapsureFlowLayout from "@/features/capsure/CapsureFlowLayout";
 import CapsureBudgetPage from "@/features/capsure/CapsureBudgetPage";
 import CapsureMakerPage from "@/features/capsure/CapsureMakerPage";
 import CapsureProductDetailPage from "@/features/capsure/CapsureProductDetailPage";
-import CapsureCheckoutFlow from "@/features/capsure/CapsureCheckoutFlow";
+import CapsureTermsPage from "@/features/capsure/CapsureTermsPage";
 
 // MyPage Features
 import MyPage from "@/features/mypage/MyPage";
@@ -46,7 +46,7 @@ const AppRouter = () => {
                         <Route index element={<CapsureBudgetPage />} />
                         <Route path="maker" element={<CapsureMakerPage />} />
                         <Route path="detail/:id" element={<CapsureProductDetailPage />} />
-                        <Route path="checkout/*" element={<CapsureCheckoutFlow />} />
+                        <Route path="terms" element={<CapsureTermsPage />} />
                     </Route>
 
                     <Route
