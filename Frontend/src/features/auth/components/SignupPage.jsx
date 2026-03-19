@@ -2,6 +2,71 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth.api';
 
+const CustomSelect = ({ value, onChange, options, placeholder, dropUp }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const ref = React.useRef(null);
+
+    React.useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    React.useEffect(() => {
+        if (isOpen && value && ref.current) {
+            const selectedEl = ref.current.querySelector('[data-selected="true"]');
+            if (selectedEl) {
+                selectedEl.scrollIntoView({ block: 'center' });
+            }
+        }
+    }, [isOpen, value]);
+
+    return (
+        <div className="relative flex-1" ref={ref}>
+            <button
+                type="button"
+                className={`w-full flex items-center justify-between px-3 py-4 rounded-2xl text-sm transition-all focus:outline-none bg-white ${!value ? 'text-slate-400' : 'text-slate-900'}`}
+                onClick={() => setIsOpen(!isOpen)}
+                style={{ boxShadow: isOpen ? '0 0 0 2px var(--color-brand-blue)' : 'none' }}
+            >
+                <span>{value ? value + placeholder : placeholder}</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 flex-shrink-0 ml-1 ${isOpen ? 'rotate-180' : ''}`}>
+                    <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+            </button>
+            
+            {isOpen && (
+                <div 
+                    className={`absolute z-50 w-full left-0 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-y-auto custom-scrollbar ${dropUp ? 'bottom-full mb-2' : 'top-full mt-2'}`}
+                    style={{ maxHeight: '200px' }}
+                >
+                    <div className="py-2">
+                        {options.map((opt) => (
+                            <button
+                                type="button"
+                                key={opt}
+                                data-selected={value == opt}
+                                className={`w-full text-center px-2 py-3 text-sm transition-colors ${value == opt ? 'font-bold bg-blue-50/50' : 'text-slate-700 hover:bg-slate-50'}`}
+                                style={value == opt ? { color: 'var(--color-brand-blue)' } : {}}
+                                onClick={() => {
+                                    onChange(opt);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                {opt}{placeholder}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const SignupPage = () => {
     const navigate = useNavigate();
     const [view, setView] = useState('signup'); // signup, signup-success
@@ -12,9 +77,12 @@ const SignupPage = () => {
         passwordConfirm: '',
         phone: '',
         gender: '', // 'male' | 'female'
-        birthDate: '',
     });
     
+    const [birthYear, setBirthYear] = useState('');
+    const [birthMonth, setBirthMonth] = useState('');
+    const [birthDay, setBirthDay] = useState('');
+
     const [agreed, setAgreed] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -34,10 +102,18 @@ const SignupPage = () => {
             return;
         }
 
+        if (!birthYear || !birthMonth || !birthDay) {
+            setError('생년월일을 모두 선택해주세요.');
+            return;
+        }
+
         setLoading(true);
         try {
+            const birthDate = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`;
+            
             await authApi.signup({
                 ...signupForm,
+                birthDate,
                 name: '사용자', // 와이어프레임에 이름 필드가 없어서 기본값 처리 (필요시 백엔드 스펙 조율)
             });
             setView('signup-success');
@@ -50,6 +126,11 @@ const SignupPage = () => {
             setLoading(false);
         }
     };
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
     if (view === 'signup-success') {
         return (
@@ -174,13 +255,11 @@ const SignupPage = () => {
                     {/* 생년월일 */}
                     <div>
                         <label className="block text-sm font-medium text-white mb-2">생년월일</label>
-                        <input
-                            type="date" name="birthDate"
-                            value={signupForm.birthDate} onChange={handleChange} required
-                            className="w-full px-4 py-4 rounded-2xl text-slate-900 text-sm outline-none bg-white transition-all"
-                            onFocus={e => e.target.style.boxShadow = '0 0 0 2px var(--color-brand-blue)'}
-                            onBlur={e => e.target.style.boxShadow = 'none'}
-                        />
+                        <div className="flex gap-2">
+                            <CustomSelect value={birthYear} onChange={setBirthYear} options={years} placeholder="년" />
+                            <CustomSelect value={birthMonth} onChange={setBirthMonth} options={months} placeholder="월" />
+                            <CustomSelect value={birthDay} onChange={setBirthDay} options={days} placeholder="일" />
+                        </div>
                     </div>
 
                     {/* 약관 동의 */}

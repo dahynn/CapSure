@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
-    getCapsuleItems,
-    getMyCapsuleInsurance,
-} from "../capsule/api/capsuleInsurance.api";
-import { submitCapsuleReservation } from "./api/capsuleModify.api";
+    getCapsureItems,
+    getMyCapsureInsurance,
+} from "../capsure/api/capsureInsurance.api";
+import { submitCapsureReservation } from "./api/capsureModify.api";
 import { Plus, Info, ChevronRight, Loader2, CheckCircle } from "lucide-react";
 import CustomModal from "@/common/components/ui/modal/CustomModal";
 import TermsCheck from "./components/TermsCheck";
@@ -36,7 +36,7 @@ const categories = [
     },
 ];
 
-const CapsuleModify = () => {
+const CapsureModify = () => {
     const [targetAmount, setTargetAmount] = useState(0);
     const [selectedCells, setSelectedCells] = useState([]);
 
@@ -58,7 +58,7 @@ const CapsuleModify = () => {
     useEffect(() => {
         const fetchInit = async () => {
             try {
-                const data = await getMyCapsuleInsurance();
+                const data = await getMyCapsureInsurance();
                 setTargetAmount(data.targetAmount);
                 setSelectedCells(
                     data.selectedCells ||
@@ -100,7 +100,7 @@ const CapsuleModify = () => {
         setOpenCategory(categoryId);
         setIsLoadingItems(true);
         try {
-            const data = await getCapsuleItems(categoryId, 10000); // 1만원 단위 가정
+            const data = await getCapsureItems(categoryId, 10000); // 1만원 단위 가정
             setCategoryItems(data);
         } catch (error) {
             console.error("Failed to fetch items", error);
@@ -148,7 +148,7 @@ const CapsuleModify = () => {
     const handleExecuteReservation = async () => {
         setIsSubmitting(true);
         try {
-            await submitCapsuleReservation({
+            await submitCapsureReservation({
                 targetAmount,
                 selectedCells,
             });
@@ -415,4 +415,4 @@ const CapsuleModify = () => {
     );
 };
 
-export default CapsuleModify;
+export default CapsureModify;

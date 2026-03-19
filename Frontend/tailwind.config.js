@@ -8,12 +8,14 @@ module.exports = {
       colors: {
         // ✅ 메인 배경
         bg: '#020715',
+        'capsure-card': '#161B26',
         // ✅ 브랜드 대표 색상
         brand: {
           white:  '#FCFCFC', // 거의 흰색 (배경)
           gray:   '#9D9DA4', // 중간 회색 (보조 텍스트)
           blue:   '#82D8FC', // 하늘파랑 (포인트)
           purple: '#F2BEF7', // 연보라 (강조)
+          'light-purple': '#E2BFEA', // 연한 연보라
           yellow: '#F6CD3C', // 노랑 (CTA)
         },
         primary: {
@@ -35,7 +37,15 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Pretendard', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      fontSize: {
+        'micro': ['10px', '14px'],
+        'capsure-sm': ['12px', '16px'],
+        'capsure-base': ['13px', '18px'],
+        'capsure-lg': ['15px', '22px'],
+        'capsure-title': ['17px', '24px'],
+        'capsure-price': ['24px', '32px'],
       },
     },
   },

@@ -1,29 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyCapsuleInsurance } from '../capsule/api/capsuleInsurance.api';
+import { getMyCapsureInsurance } from '../capsure/api/capsureInsurance.api';
 import { Loader2, ShieldCheck, Box, ChevronDown, ChevronUp } from 'lucide-react';
-import CapsuleModify from '../capsuleModify/CapsuleModify';
+import CapsureModify from '../capsureModify/CapsureModify';
 
-const MyCapsuleInsurance = () => {
+const MyCapsureInsurance = () => {
     const navigate = useNavigate();
     const [viewTab, setViewTab] = useState('this-month'); // 'this-month' | 'next-month'
     const [subData, setSubData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchMyCapsules = async () => {
+        const fetchMyCapsures = async () => {
             setIsLoading(true);
             try {
-                const data = await getMyCapsuleInsurance();
+                const data = await getMyCapsureInsurance();
                 setSubData(data);
             } catch (error) {
-                console.error("Failed to fetch my capsule info", error);
+                console.error("Failed to fetch my capsure info", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchMyCapsules();
+        fetchMyCapsures();
     }, []);
 
     if (isLoading) {
@@ -101,7 +101,7 @@ const MyCapsuleInsurance = () => {
 
                         <div className="mt-auto pt-8 w-full text-center">
                             <button
-                                onClick={() => navigate('/capsule-cancel')}
+                                onClick={() => navigate('/capsure-cancel')}
                                 className="text-sm font-bold text-red-500 hover:text-red-600 underline underline-offset-4 decoration-red-200 hover:decoration-red-400 transition-colors"
                             >
                                 현재 보험 취소하기
@@ -150,7 +150,7 @@ const MyCapsuleInsurance = () => {
 
             {viewTab === 'next-month' && (
                 <div className="animate-in fade-in duration-300">
-                    <CapsuleModify />
+                    <CapsureModify />
                 </div>
             )}
 
@@ -158,4 +158,4 @@ const MyCapsuleInsurance = () => {
     );
 };
 
-export default MyCapsuleInsurance;
+export default MyCapsureInsurance;

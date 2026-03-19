@@ -5,13 +5,14 @@ import AuthPage from "@/features/auth/AuthPage";
 import LoginPage from "@/features/auth/components/LoginPage";
 import SignupPage from "@/features/auth/components/SignupPage";
 import HomePage from "@/features/home/HomePage";
-import CapsuleInsurancePage from "@/features/capsule/CapsuleInsurancePage";
+import SearchPage from "@/features/search/SearchPage";
+import CapsureInsurancePage from "@/features/capsure/CapsureInsurancePage";
 
 // MyPage Features
 import Profile from "@/features/mypage/Profile";
-import MyCapsuleInsurance from "@/features/mypage/MyCapsuleInsurance";
+import MyCapsureInsurance from "@/features/mypage/MyCapsureInsurance";
 import InsuranceHistory from "@/features/mypage/InsuranceHistory";
-import CapsuleCancelPage from "@/features/capsuleCancel/CapsuleCancelPage";
+import CapsureCancelPage from "@/features/capsureCancel/CapsureCancelPage";
 import SearchInsurancePage from "@/features/searchInsurance/SearchInsurancePage";
 import InsuranceDetailPage from "@/features/searchInsurance/InsuranceDetailPage";
 import OnboardingPage from "@/features/onboarding/components/OnboardingPage";
@@ -27,12 +28,13 @@ const AppRouter = () => {
 
                 {/* 내비/푸터 없는 독립 경로 */}
                 <Route path="/onboarding" element={<OnboardingPage />} />
+                <Route path="/search" element={<SearchPage />} />
 
                 <Route element={<MainLayout />}>
                     <Route path="/home" element={<HomePage />} />
                     <Route
-                        path="/capsule-insurance"
-                        element={<CapsuleInsurancePage />}
+                        path="/capsure-insurance"
+                        element={<CapsureInsurancePage />}
                     />
                     <Route
                         path="/search-insurance"
@@ -46,15 +48,15 @@ const AppRouter = () => {
                     {/* MyPage Routes */}
                     <Route path="/profile" element={<Profile />} />
                     <Route
-                        path="/my-capsule"
-                        element={<MyCapsuleInsurance />}
+                        path="/my-capsure"
+                        element={<MyCapsureInsurance />}
                     />
                     <Route path="/my-history" element={<InsuranceHistory />} />
 
                     {/* Extra Flows */}
                     <Route
-                        path="/capsule-cancel"
-                        element={<CapsuleCancelPage />}
+                        path="/capsure-cancel"
+                        element={<CapsureCancelPage />}
                     />
 
                     <Route

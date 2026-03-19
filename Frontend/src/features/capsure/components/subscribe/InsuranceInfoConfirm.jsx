@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getInsuranceCoverages } from '../../api/capsuleInsurance.api';
+import { getInsuranceCoverages } from '../../api/capsureInsurance.api';
 import { Loader2, ArrowRight } from 'lucide-react';
 
 const InsuranceInfoConfirm = ({ selectedCells, onNext, onPrev }) => {

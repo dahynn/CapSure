@@ -1,10 +1,10 @@
-1// src/features/capsule/api/capsuleInsurance.api.js
+1// src/features/capsure/api/capsureInsurance.api.js
 
 /**
  * 캡슐 조합(캡슐 보험)에서 사용하는 Mock API
  */
 
-const dummyCapsuleItems = [
+const dummyCapsureItems = [
     // 실손 보험 (shilson)
     { id: 's1', categoryId: 'shilson', name: '기본형 실손의료비', company: '삼성화재', price: 1 },
     { id: 's2', categoryId: 'shilson', name: '종합형 실손의료비', company: '현대해상', price: 3 },
@@ -41,10 +41,10 @@ const dummyCapsuleItems = [
  * @param {number|null} maxPrice - 상한 금액 (단위: 만원), null이면 전채 금액
  * @returns {Promise<Array>} 아이템 객체 배열
  */
-export const getCapsuleItems = async (categoryId, maxPrice = null) => {
+export const getCapsureItems = async (categoryId, maxPrice = null) => {
     return new Promise((resolve) => {
         setTimeout(() => {
-            let filtered = dummyCapsuleItems.filter(item => item.categoryId === categoryId);
+            let filtered = dummyCapsureItems.filter(item => item.categoryId === categoryId);
 
             if (maxPrice !== null) {
                 filtered = filtered.filter(item => item.price <= maxPrice);
@@ -82,7 +82,7 @@ export const getInsuranceCoverages = async (insuranceIds) => {
     return new Promise((resolve) => {
         setTimeout(() => {
             const coverages = insuranceIds.map(id => {
-                const item = dummyCapsuleItems.find(i => i.id === id);
+                const item = dummyCapsureItems.find(i => i.id === id);
                 if (!item) return null;
 
                 // Mock dynamic coverages based on category/price
@@ -117,7 +117,7 @@ export const getInsuranceTerms = async (insuranceIds) => {
     return new Promise((resolve) => {
         setTimeout(() => {
             const terms = insuranceIds.map(id => {
-                const item = dummyCapsuleItems.find(i => i.id === id);
+                const item = dummyCapsureItems.find(i => i.id === id);
                 if (!item) return null;
 
                 return {
@@ -139,7 +139,7 @@ export const getInsuranceTerms = async (insuranceIds) => {
 /**
  * 내(구독 중인) 캡슐 보험 정보 조회
  */
-export const getMyCapsuleInsurance = async () => {
+export const getMyCapsureInsurance = async () => {
     return new Promise((resolve) => {
         setTimeout(() => {
             // Mock response: User has subscribed to some initial dummy data

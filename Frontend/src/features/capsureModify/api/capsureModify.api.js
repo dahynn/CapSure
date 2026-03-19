@@ -2,7 +2,7 @@
  * 다음달 구독 변경 예약을 서버에 요청합니다.
  * @param {Object} payload 예약 정보 (선택된 셀 데이터와 목표 금액 등)
  */
-export const submitCapsuleReservation = async (payload) => {
+export const submitCapsureReservation = async (payload) => {
     return new Promise((resolve) => {
         setTimeout(() => {
             resolve({

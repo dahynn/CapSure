@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCancelTermsAndRefund, executeCancel } from './api/capsuleCancel.api';
-import { getMyCapsuleInsurance } from '../capsule/api/capsuleInsurance.api';
+import { getCancelTermsAndRefund, executeCancel } from './api/capsureCancel.api';
+import { getMyCapsureInsurance } from '../capsure/api/capsureInsurance.api';
 import { ShieldAlert, AlertTriangle, Loader2, CheckSquare, Square, ShieldCheck, ArrowRight, CheckCircle } from 'lucide-react';
 import TextModal from '@/common/components/ui/modal/TextModal';
 
-const CapsuleCancelPage = () => {
+const CapsureCancelPage = () => {
     const navigate = useNavigate();
 
     // View states: 'step-select' -> 'step-terms' -> 'step-complete'
     const [view, setView] = useState('step-select');
 
     // Current Subscribe Data
-    const [myCapsules, setMyCapsules] = useState([]);
-    const [isLoadingCapsules, setIsLoadingCapsules] = useState(true);
+    const [myCapsures, setMyCapsures] = useState([]);
+    const [isLoadingCapsures, setIsLoadingCapsures] = useState(true);
 
     // Cancel selection
     const [selectedCancelId, setSelectedCancelId] = useState(null);
@@ -30,14 +30,14 @@ const CapsuleCancelPage = () => {
     useEffect(() => {
         // Fetch current subscribed items to show on 'step-select'
         const fetchSubscribed = async () => {
-            setIsLoadingCapsules(true);
+            setIsLoadingCapsures(true);
             try {
-                const data = await getMyCapsuleInsurance();
-                setMyCapsules(data.selectedCells || []);
+                const data = await getMyCapsureInsurance();
+                setMyCapsures(data.selectedCells || []);
             } catch (e) {
                 console.error(e);
             } finally {
-                setIsLoadingCapsules(false);
+                setIsLoadingCapsures(false);
             }
         };
         fetchSubscribed();
@@ -110,14 +110,14 @@ const CapsuleCancelPage = () => {
                     </div>
 
                     <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                        {isLoadingCapsules ? (
+                        {isLoadingCapsures ? (
                             <div className="flex justify-center items-center py-20">
                                 <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
                             </div>
                         ) : (
                             <div className="flex flex-col items-center">
                                 <div className="bg-slate-100 rounded-2xl border-2 border-slate-200 p-8 grid grid-cols-5 gap-2 w-full max-w-2xl place-content-center">
-                                    {myCapsules.map((cell, i) => (
+                                    {myCapsures.map((cell, i) => (
                                         <div
                                             key={i}
                                             onClick={() => handleSelectCell(cell)}
@@ -253,7 +253,7 @@ const CapsuleCancelPage = () => {
                         환불 금액은 영업일 기준 2~3일 내에 입금될 예정입니다.
                     </p>
                     <button
-                        onClick={() => navigate('/my-capsule')}
+                        onClick={() => navigate('/my-capsure')}
                         className="px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-lg"
                     >
                         내 구독 보러가기
@@ -264,4 +264,4 @@ const CapsuleCancelPage = () => {
     );
 };
 
-export default CapsuleCancelPage;
+export default CapsureCancelPage;

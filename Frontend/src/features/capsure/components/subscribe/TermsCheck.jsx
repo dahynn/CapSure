@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getInsuranceTerms } from '@/features/capsule/api/capsuleInsurance.api';
+import { getInsuranceTerms } from '@/features/capsure/api/capsureInsurance.api';
 import { Loader2, ArrowRight, CheckCircle2, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
 
 const TermsCheck = ({ selectedCells, onNext, onPrev, buttonText = "다음" }) => {

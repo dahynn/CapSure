@@ -5,7 +5,7 @@ const Profile = () => {
     // Dummy state for user info
     const [userInfo, setUserInfo] = useState({
         name: '캡슐러',
-        email: 'capsule@cover.com',
+        email: 'capsure@cover.com',
         phone: '010-1234-5678'
     });
 
