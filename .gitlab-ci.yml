@@ -61,8 +61,7 @@ deploy-to-aws:
         
         # 2. GitLab 변수를 기반으로 .env 파일 생성 및 내용 기입
         echo 'DOCKER_USER=$DOCKER_USER' > .env && \
-        echo 'DATABASE_PASSWORD=$DB_PASSWORD' >> .env && \
-        echo 'API_KEY=$SECRET_API_KEY' >> .env && \
+        echo 'DATABASE_PASSWORD=$DB_PASSWORD' >> .env \
         
         # 3. 파일 권한을 600(소유자 읽기/쓰기만 허용)으로 설정
         chmod 600 .env && \
@@ -97,8 +96,21 @@ deploy-test:
     - scp -o StrictHostKeyChecking=no -P 22 ./Infra/main/test/* ubuntu@$MAIN_AWS_HOST:/home/ubuntu/S14P21A308/Infra/main/test/
     - |
       ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "
+
         cd /home/ubuntu/S14P21A308/Infra/main/test && \
+
         echo 'DOCKER_USER=$DOCKER_USER' > .env && \
+        echo 'DATABASE_PASSWORD=$DB_PASSWORD' >> .env \
+
+        chmod 600 .env && \
+
         docker compose pull && \
+        docker compose up -d
+      "
+    - |
+      ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "
+        export DOCKER_USER=$DOCKER_USER && \ 
+        cd /home/ubuntu/S14P21A308/Infra/main/test && \ 
+        docker compose pull && \ 
         docker compose up -d
       "
