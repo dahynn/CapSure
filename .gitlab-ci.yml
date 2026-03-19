@@ -24,7 +24,7 @@ build-images:
     - docker buildx build --platform linux/amd64 -t $IMAGE_BACK:latest ./Backend --push
 
 ### 테스트 빌드
-build-images:
+build-images-test:
   stage: build
   rules:
     - if: $CI_COMMIT_BRANCH == " test"  # main 브랜치에 push(merge 포함)될 때만 실행
@@ -90,7 +90,7 @@ deploy-test:
   script:
     - echo "Deploying Test to AWS..."
     - |
-      ssh -o StrictHostKeyChecking=no ubuntu@$TEST_AWS_HOST "
+      ssh -o StrictHostKeyChecking=no ubuntu@$MAIN_AWS_HOST "
         cd /home/ubuntu/S14P21A308/Infra/test && \
         echo 'DOCKER_USER=$DOCKER_USER' > .env && \
         docker compose pull && \
