@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getPaymentHistory } from './api/mypage.api';
+import { getPaymentHistory } from '../api/mypage.api';
 import { Loader2, Receipt, Calendar, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 
 const InsuranceHistory = () => {

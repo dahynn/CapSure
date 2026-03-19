@@ -6,16 +6,24 @@ import LoginPage from "@/features/auth/components/LoginPage";
 import SignupPage from "@/features/auth/components/SignupPage";
 import HomePage from "@/features/home/HomePage";
 import SearchPage from "@/features/search/SearchPage";
-import CapsureInsurancePage from "@/features/capsure/CapsureInsurancePage";
+
+// Refactored Capsure Feature Routes
+import CapsureFlowLayout from "@/features/capsure/CapsureFlowLayout";
+import CapsureBudgetPage from "@/features/capsure/CapsureBudgetPage";
+import CapsureMakerPage from "@/features/capsure/CapsureMakerPage";
+import CapsureProductDetailPage from "@/features/capsure/CapsureProductDetailPage";
+import CapsureCheckoutFlow from "@/features/capsure/CapsureCheckoutFlow";
 
 // MyPage Features
-import Profile from "@/features/mypage/Profile";
-import MyCapsureInsurance from "@/features/mypage/MyCapsureInsurance";
-import InsuranceHistory from "@/features/mypage/InsuranceHistory";
+import MyPage from "@/features/mypage/MyPage";
+
 import CapsureCancelPage from "@/features/capsureCancel/CapsureCancelPage";
 import SearchInsurancePage from "@/features/searchInsurance/SearchInsurancePage";
 import InsuranceDetailPage from "@/features/searchInsurance/InsuranceDetailPage";
 import OnboardingPage from "@/features/onboarding/components/OnboardingPage";
+
+// Dashboard Feature
+import DashboardPage from "@/features/dashboard/DashboardPage";
 
 const AppRouter = () => {
     return (
@@ -32,10 +40,15 @@ const AppRouter = () => {
 
                 <Route element={<MainLayout />}>
                     <Route path="/home" element={<HomePage />} />
-                    <Route
-                        path="/capsure-insurance"
-                        element={<CapsureInsurancePage />}
-                    />
+                    
+                    {/* Capsure Insurance Flow (Context Provider Wrapped) */}
+                    <Route path="/capsure-insurance" element={<CapsureFlowLayout />}>
+                        <Route index element={<CapsureBudgetPage />} />
+                        <Route path="maker" element={<CapsureMakerPage />} />
+                        <Route path="detail/:id" element={<CapsureProductDetailPage />} />
+                        <Route path="checkout/*" element={<CapsureCheckoutFlow />} />
+                    </Route>
+
                     <Route
                         path="/search-insurance"
                         element={<SearchInsurancePage />}
@@ -45,13 +58,19 @@ const AppRouter = () => {
                         element={<InsuranceDetailPage />}
                     />
 
-                    {/* MyPage Routes */}
-                    <Route path="/profile" element={<Profile />} />
+                    {/* Dashboard Route */}
+                    <Route path="/dashboard" element={<DashboardPage />} />
+
+                    {/* consolidated MyPage Routes */}
+                    <Route path="/profile" element={<MyPage />} />
                     <Route
                         path="/my-capsure"
-                        element={<MyCapsureInsurance />}
+                        element={<MyPage initialView="capsule" />}
                     />
-                    <Route path="/my-history" element={<InsuranceHistory />} />
+                    <Route 
+                        path="/my-history" 
+                        element={<MyPage initialView="history" />} 
+                    />
 
                     {/* Extra Flows */}
                     <Route

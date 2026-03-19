@@ -40,12 +40,24 @@ module.exports = {
         sans: ['Pretendard', 'Inter', 'system-ui', 'sans-serif'],
       },
       fontSize: {
+        /* Legacy Capsure Sizes for Compatibility */
         'micro': ['10px', '14px'],
         'capsure-sm': ['12px', '16px'],
         'capsure-base': ['13px', '18px'],
         'capsure-lg': ['15px', '22px'],
         'capsure-title': ['17px', '24px'],
         'capsure-price': ['24px', '32px'],
+        
+        /* New Standardized Typography */
+        'display': ['36px', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '900' }],
+        'h1': ['28px', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'h2': ['22px', { lineHeight: '1.3', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'h3': ['20px', { lineHeight: '1.3', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'h4': ['17px', { lineHeight: '1.4', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'body-lg': ['15px', { lineHeight: '1.5', letterSpacing: '-0.01em', fontWeight: '400' }],
+        'body': ['14px', { lineHeight: '1.5', letterSpacing: '-0.01em', fontWeight: '400' }],
+        'body-sm': ['13px', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '400' }],
+        'caption': ['11px', { lineHeight: '1.4', letterSpacing: '0.15em', fontWeight: '700' }],
       },
     },
   },

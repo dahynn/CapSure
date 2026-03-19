@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 
 import SessionTimer from '@/features/auth/components/SessionTimer';
 import logoImg from '@/assets/logo.png';
+import capsureLogoImg from '@/assets/capsure_logo.png';
 
 const MainLayout = () => {
     const navigate = useNavigate();
@@ -29,10 +30,8 @@ const MainLayout = () => {
                             className="flex items-center cursor-pointer"
                             onClick={() => navigate('/home')}
                         >
-                            <img src={logoImg} alt="Capsure Logo" className="w-[42px] h-[42px] object-contain drop-shadow-md" />
-                            <span className="text-[22px] font-black tracking-widest text-white ml-2.5 mt-1">
-                                CAPSURE
-                            </span>
+                            <img src={logoImg} alt="Capsure Logo Icon" className="w-[42px] h-[42px] object-contain drop-shadow-md" />
+                            <img src={capsureLogoImg} alt="CAPSURE" className="h-[18px] ml-2.5 mt-1 object-contain drop-shadow-md" />
                         </div>
 
                         {/* 오른쪽 검색 영역 */}
@@ -65,7 +64,7 @@ const MainLayout = () => {
                         {[
                             { name: '홈', path: '/home', icon: Home },
                             { name: '캡슐', path: '/capsure-insurance', icon: Pill },
-                            { name: '대시보드', path: '/search-insurance', icon: LayoutDashboard },
+                            { name: '대시보드', path: '/dashboard', icon: LayoutDashboard },
                             { name: '마이페이지', path: '/profile', icon: User },
                         ].map((item) => {
                             const Icon = item.icon;
