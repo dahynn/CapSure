@@ -1,0 +1,66 @@
+<!-- #Demo Setting -->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.capsule.insurance.auth.infra.UserAccountMapper">
+
+    <resultMap id="userAccountResultMap" type="com.capsule.insurance.auth.domain.UserAccount">
+        <id property="userId" column="user_id"/>
+        <result property="email" column="email"/>
+        <result property="passwordEncrypted" column="password_encrypted"/>
+        <result property="name" column="name"/>
+        <result property="phone" column="phone"/>
+        <result property="birthDate" column="birth_date"/>
+        <result property="gender" column="gender"/>
+        <result property="userStatus" column="user_status"/>
+        <result property="onboardingCompletedAt" column="onboarding_completed_at"/>
+        <result property="withdrawnAt" column="withdrawn_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- TODO: 이 파트에서 LOCKED/WITHDRAWN 사용자 인증 허용 여부라는 논의점이 있는데, 우선 상태 필터 없이 계정 원본 row를 조회하도록 구현했음. -->
+    <select id="findByUserId" resultMap="userAccountResultMap">
+        select
+            user_id,
+            email,
+            password_encrypted,
+            name,
+            phone,
+            birth_date,
+            gender,
+            user_status,
+            onboarding_completed_at,
+            withdrawn_at,
+            created_at,
+            updated_at
+        from usr_user
+        where user_id = #{userId}
+    </select>
+
+    <!-- TODO: 이 파트에서 LOCKED/WITHDRAWN 사용자 인증 허용 여부라는 논의점이 있는데, 우선 상태 필터 없이 계정 원본 row를 조회하도록 구현했음. -->
+    <select id="findByEmail" resultMap="userAccountResultMap">
+        select
+            user_id,
+            email,
+            password_encrypted,
+            name,
+            phone,
+            birth_date,
+            gender,
+            user_status,
+            onboarding_completed_at,
+            withdrawn_at,
+            created_at,
+            updated_at
+        from usr_user
+        where email = #{email}
+    </select>
+
+    <select id="existsByEmail" resultType="boolean">
+        select case when count(*) &gt; 0 then true else false end
+        from usr_user
+        where email = #{email}
+    </select>
+
+</mapper>

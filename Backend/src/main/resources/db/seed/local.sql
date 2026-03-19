@@ -1,0 +1,3 @@
+-- #Demo Setting
+-- Local seed data placeholder
+-- Add local-only reference data when domain SQL is introduced.

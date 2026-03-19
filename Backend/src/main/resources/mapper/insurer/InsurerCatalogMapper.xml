@@ -1,0 +1,106 @@
+<!-- #Demo Setting -->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.capsule.insurance.insurer.infra.InsurerCatalogMapper">
+
+    <resultMap id="referenceCoverageResultMap" type="com.capsule.insurance.insurer.domain.ReferenceCoverage">
+        <id property="coverageCode" column="coverage_code"/>
+        <result property="coverageCategory" column="coverage_category_code"/>
+        <result property="coverageName" column="coverage_name"/>
+        <result property="duplicateGroupCode" column="duplicate_group_code"/>
+        <result property="description" column="description"/>
+        <result property="searchKeywordsJson" column="search_keywords_json"/>
+        <result property="active" column="is_active"/>
+        <result property="compensationType" column="compensation_type"/>
+        <result property="duplicateRuleCode" column="duplicate_rule_code"/>
+        <result property="recommendationRuleCode" column="recommendation_rule_code"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="capsuleProductResultMap" type="com.capsule.insurance.insurer.domain.CapsuleProduct">
+        <id property="capsuleProductId" column="capsule_product_id"/>
+        <result property="capsuleCode" column="capsule_code"/>
+        <result property="capsuleName" column="capsule_name"/>
+        <result property="coverageCategory" column="coverage_category_code"/>
+        <result property="coverageCode" column="coverage_code"/>
+        <result property="coverageAmount" column="coverage_amount"/>
+        <result property="coverageUnit" column="coverage_unit"/>
+        <result property="monthlyPrice" column="monthly_price"/>
+        <result property="minRetentionDays" column="min_retention_days"/>
+        <result property="saleStatus" column="sale_status"/>
+        <result property="duplicateCheckTarget" column="is_duplicate_check_target"/>
+        <result property="termsUri" column="terms_uri"/>
+        <result property="termsVersion" column="terms_version"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findActiveCoverages" resultMap="referenceCoverageResultMap">
+        select
+            coverage_code,
+            coverage_category_code,
+            coverage_name,
+            duplicate_group_code,
+            description,
+            search_keywords_json,
+            is_active,
+            compensation_type,
+            duplicate_rule_code,
+            recommendation_rule_code,
+            created_at,
+            updated_at
+        from ref_coverage
+        where is_active = true
+        order by coverage_code
+    </select>
+
+    <!-- TODO: 이 파트에서 HIDDEN/DISCONTINUED 상품을 어떤 조회에서 노출할지라는 논의점이 있는데, 우선 AVAILABLE 상품만 목록 조회하도록 구현했음. -->
+    <select id="findAvailableCapsuleProducts" resultMap="capsuleProductResultMap">
+        select
+            capsule_product_id,
+            capsule_code,
+            capsule_name,
+            coverage_category_code,
+            coverage_code,
+            coverage_amount,
+            coverage_unit,
+            monthly_price,
+            min_retention_days,
+            sale_status,
+            is_duplicate_check_target,
+            terms_uri,
+            terms_version,
+            description,
+            created_at,
+            updated_at
+        from capsule_product
+        where sale_status = 'AVAILABLE'
+        order by capsule_product_id
+    </select>
+
+    <select id="findCapsuleProductById" resultMap="capsuleProductResultMap">
+        select
+            capsule_product_id,
+            capsule_code,
+            capsule_name,
+            coverage_category_code,
+            coverage_code,
+            coverage_amount,
+            coverage_unit,
+            monthly_price,
+            min_retention_days,
+            sale_status,
+            is_duplicate_check_target,
+            terms_uri,
+            terms_version,
+            description,
+            created_at,
+            updated_at
+        from capsule_product
+        where capsule_product_id = #{capsuleProductId}
+    </select>
+
+</mapper>

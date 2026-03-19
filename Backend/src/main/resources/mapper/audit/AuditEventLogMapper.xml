@@ -1,0 +1,63 @@
+<!-- #Demo Setting -->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.capsule.insurance.audit.infra.AuditEventLogMapper">
+
+    <resultMap id="auditEventLogResultMap" type="com.capsule.insurance.audit.domain.AuditEventLog">
+        <id property="auditEventId" column="audit_event_id"/>
+        <result property="eventType" column="event_type"/>
+        <result property="actorUserId" column="actor_user_id"/>
+        <result property="targetType" column="target_type"/>
+        <result property="targetId" column="target_id"/>
+        <result property="occurredAt" column="occurred_at"/>
+        <result property="requestId" column="request_id"/>
+        <result property="beforeJson" column="before_json"/>
+        <result property="afterJson" column="after_json"/>
+        <result property="integrityHash" column="integrity_hash"/>
+        <result property="prevHash" column="prev_hash"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- TODO: 이 파트에서 감사 로그 보관 및 삭제 정책이라는 논의점이 있는데, 우선 행위 사용자 기준 최신순 단순 조회로 구현했음. -->
+    <select id="findByActorUserId" resultMap="auditEventLogResultMap">
+        select
+            audit_event_id,
+            event_type,
+            actor_user_id,
+            target_type,
+            target_id,
+            occurred_at,
+            request_id,
+            before_json,
+            after_json,
+            integrity_hash,
+            prev_hash,
+            created_at
+        from audit_event_log
+        where actor_user_id = #{actorUserId}
+        order by audit_event_id desc
+    </select>
+
+    <!-- TODO: 이 파트에서 감사 로그 검색 조건 확장 여부라는 논의점이 있는데, 우선 target_type + target_id 단건 축으로만 조회하도록 구현했음. -->
+    <select id="findByTarget" resultMap="auditEventLogResultMap">
+        select
+            audit_event_id,
+            event_type,
+            actor_user_id,
+            target_type,
+            target_id,
+            occurred_at,
+            request_id,
+            before_json,
+            after_json,
+            integrity_hash,
+            prev_hash,
+            created_at
+        from audit_event_log
+        where target_type = #{targetType}
+          and target_id = #{targetId}
+        order by audit_event_id desc
+    </select>
+
+</mapper>

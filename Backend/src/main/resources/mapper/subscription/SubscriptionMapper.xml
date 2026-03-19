@@ -1,0 +1,104 @@
+<!-- #Demo Setting -->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.capsule.insurance.subscription.infra.SubscriptionMapper">
+
+    <resultMap id="subscriptionAggregateResultMap" type="com.capsule.insurance.subscription.domain.Subscription">
+        <id property="subscriptionId" column="subscription_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="subscriptionStatus" column="subscription_status"/>
+        <result property="billingAnchorDay" column="billing_anchor_day"/>
+        <result property="currentCycleStartAt" column="current_cycle_start_at"/>
+        <result property="currentCycleEndAt" column="current_cycle_end_at"/>
+        <result property="nextBillingAt" column="next_billing_at"/>
+        <result property="expectedNextAmount" column="expected_next_amount"/>
+        <result property="pausedAt" column="paused_at"/>
+        <result property="cancelledAt" column="cancelled_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+
+        <!-- TODO: 지금은 CURRENT/NEXT를 두 개의 nested select로 분리했다. -->
+        <!-- TODO: NEXT 우선 규칙이 확정되면 조회 응답 조립 책임을 application 계층에서 다시 정리한다. -->
+        <collection property="currentItems"
+                    column="subscription_id"
+                    select="findCurrentItemsBySubscriptionId"/>
+        <collection property="nextItems"
+                    column="subscription_id"
+                    select="findNextItemsBySubscriptionId"/>
+    </resultMap>
+
+    <resultMap id="subscriptionItemResultMap" type="com.capsule.insurance.subscription.domain.SubscriptionItem">
+        <id property="subscriptionItemId" column="subscription_item_id"/>
+        <result property="subscriptionId" column="subscription_id"/>
+        <result property="capsuleProductId" column="capsule_product_id"/>
+        <result property="planVersion" column="plan_version"/>
+        <result property="itemStatus" column="item_status"/>
+        <result property="coverageAmountSnapshot" column="coverage_amount_snapshot"/>
+        <result property="monthlyPriceSnapshot" column="monthly_price_snapshot"/>
+        <result property="effectiveStartAt" column="effective_start_at"/>
+        <result property="effectiveEndAt" column="effective_end_at"/>
+        <result property="editableAfterAt" column="editable_after_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findSubscriptionAggregateByUserId" resultMap="subscriptionAggregateResultMap">
+        select
+            subscription_id,
+            user_id,
+            subscription_status,
+            billing_anchor_day,
+            current_cycle_start_at,
+            current_cycle_end_at,
+            next_billing_at,
+            expected_next_amount,
+            paused_at,
+            cancelled_at,
+            created_at,
+            updated_at
+        from subscription
+        where user_id = #{userId}
+    </select>
+
+    <select id="findCurrentItemsBySubscriptionId" resultMap="subscriptionItemResultMap">
+        select
+            subscription_item_id,
+            subscription_id,
+            capsule_product_id,
+            plan_version,
+            item_status,
+            coverage_amount_snapshot,
+            monthly_price_snapshot,
+            effective_start_at,
+            effective_end_at,
+            editable_after_at,
+            created_at,
+            updated_at
+        from subscription_item
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'CURRENT'
+        order by subscription_item_id
+    </select>
+
+    <select id="findNextItemsBySubscriptionId" resultMap="subscriptionItemResultMap">
+        select
+            subscription_item_id,
+            subscription_id,
+            capsule_product_id,
+            plan_version,
+            item_status,
+            coverage_amount_snapshot,
+            monthly_price_snapshot,
+            effective_start_at,
+            effective_end_at,
+            editable_after_at,
+            created_at,
+            updated_at
+        from subscription_item
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'NEXT'
+        order by subscription_item_id
+    </select>
+
+</mapper>
