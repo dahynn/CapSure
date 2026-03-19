@@ -90,7 +90,7 @@ deploy-test:
   script:
     - echo "Deploying Test to AWS..."
     - |
-      ssh -o StrictHostKeyChecking=no ubuntu@$MAIN_AWS_HOST "
+      ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$MAIN_AWS_HOST "
         cd /home/ubuntu/S14P21A308/Infra/test && \
         echo 'DOCKER_USER=$DOCKER_USER' > .env && \
         docker compose pull && \
