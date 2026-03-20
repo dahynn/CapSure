@@ -59,8 +59,6 @@ services:
       - ./promtail-data:/tmp/promtail
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - agent-net
 
   node-exporter:
     image: prom/node-exporter:v1.10.2
@@ -77,8 +75,6 @@ services:
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
       - "--path.rootfs=/rootfs"
-    networks:
-      - agent-net
 
   cadvisor:
     image: ghcr.io/google/cadvisor:0.56.2
@@ -94,12 +90,6 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-    networks:
-      - agent-net
 
 volumes:
   postgres_data:
-
-networks:
-  agent-net:
-    driver: bridge
