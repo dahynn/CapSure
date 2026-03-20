@@ -1,0 +1,10 @@
+services:
+  # [Test] Frontend
+  frontend-test:
+    image: ${DOCKER_USER}/capsure-frontend:test
+    container_name: capsure-frontend-test
+    ports:
+      - "8080:80" # FE 테스트용 포트 : 8080
+    restart: always
+    environment:
+      - NODE_ENV=development
