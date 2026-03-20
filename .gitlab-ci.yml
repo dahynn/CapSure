@@ -47,6 +47,11 @@ deploy-fe-test:
         - Frontend/**/*
         - Infra/main/docker-compose.fe.test.yml
         - .gitlab-ci.yml
+  before_script:
+    - eval $(ssh-agent -s)
+    - echo "$MAIN_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
   script:
     - echo "Deploying Test to AWS..."
     # 1. 원격 서버 디렉토리 생성 및 설정 파일 복사
