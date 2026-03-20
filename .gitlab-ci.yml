@@ -120,7 +120,7 @@ build-mock-test:
     - ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$AWS_HOST "mkdir -p $DEPLOY_PATH"
     - scp -o StrictHostKeyChecking=no -P 22 ./Infra/$ENV_DIR/$COMPOSE_FILE ubuntu@$AWS_HOST:$DEPLOY_PATH/
     - |
-      ssh -o StrictHostKeyChecking=no ubuntu@$AWS_HOST "
+      ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$AWS_HOST "
         # 서버 내 폴더 생성
         cd $DEPLOY_PATH && \
 
@@ -150,7 +150,9 @@ deploy-fe-prod:
       changes:
         - Frontend/**/*
         - Infra/main/docker-compose.yml
-  needs: ["build-fe-prod"]
+  needs: 
+    - job: "build-fe-prod"
+      optional: true
 
 # 2. (Test) Frontend 배포 -> Main AWS
 deploy-fe-test:
@@ -166,7 +168,9 @@ deploy-fe-test:
       changes:
         - Frontend/**/*
         - Infra/main-test/docker-compose.test.yml
-  needs: ["build-fe-test"]
+  needs: 
+    - job: "build-fe-test"
+      optional: true
 
 # 3. (Prod) Backend 배포 -> Main AWS
 deploy-be-prod:
@@ -182,7 +186,9 @@ deploy-be-prod:
       changes:
         - Backend/**/*
         - Infra/main/docker-compose.yml
-  needs: ["build-be-prod"]
+  needs:
+    - job: "build-be-prod"
+      optional: true
 
 # 4. (Test) Backend 배포 -> Main AWS
 deploy-be-test:
@@ -198,7 +204,9 @@ deploy-be-test:
       changes:
         - Backend/**/*
         - Infra/main-test/docker-compose.test.yml
-  needs: ["build-be-test"]
+  needs:
+    - job: "build-be-test"
+      optional: true
 
 # 5. (Prod) Mock 배포 -> Sub AWS
 deploy-mock-prod:
@@ -214,7 +222,9 @@ deploy-mock-prod:
       changes:
         - Mock/**/*
         - Infra/mock/docker-compose.yml
-  needs: ["build-mock-prod"]
+  needs: 
+    - job: "build-mock-prod"
+      optional: true
 
 # 6. (Test) Mock 배포 -> Sub AWS
 deploy-mock-test:
@@ -230,4 +240,6 @@ deploy-mock-test:
       changes:
         - Mock/**/*
         - Infra/mock-test/docker-compose.test.yml
-  needs: ["build-mock-test"]
+  needs: 
+    - job: "build-mock-test"
+      optional: true
