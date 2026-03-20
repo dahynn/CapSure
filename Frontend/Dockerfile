@@ -1,9 +1,10 @@
 # 1단계: Build (Node.js 환경)
-FROM node:18-slim AS build-stage
+FROM node:20-slim AS build-stage
 # pnpm 설치를 위한 corepack 활성화
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
+
 # 의존성 설치(pnpm)
 RUN pnpm install --frozen-lockfile
 COPY . .
