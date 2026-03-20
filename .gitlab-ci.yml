@@ -66,6 +66,9 @@ deploy-fe-test:
         
         cd /home/ubuntu/S14P21A308/Infra/main && \
         
+        # 기존에 떠있을 수 있는 테스트 환경을 안전하게 종료
+        docker compose -f docker-compose.fe.test.yml down --remove-orphans || true && \
+
         # .env 파일 생성 (필요한 변수 모두 기입)
         echo 'DOCKER_USER=$DOCKER_USER' > .env && \
         chmod 600 .env && \
