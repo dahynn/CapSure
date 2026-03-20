@@ -2,13 +2,19 @@ services:
   loki:
     image: grafana/loki:3.6.7
     container_name: loki
+    labels:
+      promtail.collect: "true"
     restart: always
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    environment:
+      LOKI_RETENTION: ${LOKI_RETENTION:-120h}
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+      - -config.expand-env=true
     volumes:
       - ./loki-data:/loki
-      - ./conf/loki-config.yaml:/etc/loki/local-config.yaml
+      - ./conf/loki-config.yaml:/etc/loki/local-config.yaml:ro
     networks:
       - monitor-net
 
@@ -29,21 +35,59 @@ services:
   prometheus:
     image: prom/prometheus:v3.10.0
     container_name: prometheus
+    labels:
+      promtail.collect: "true"
     restart: always
     ports:
       - "9090:9090"
+    environment:
+      MAIN_DOMAIN: ${MAIN_DOMAIN:-}
+      MOCK_DOMAIN: ${MOCK_DOMAIN:-}
+      PROMETHEUS_RETENTION: ${PROMETHEUS_RETENTION:-7d}
+      MAIN_NODE_EXPORTER_PORT: ${MAIN_NODE_EXPORTER_PORT:-8100}
+      MAIN_CADVISOR_PORT: ${MAIN_CADVISOR_PORT:-8080}
+      MOCK_NODE_EXPORTER_PORT: ${MOCK_NODE_EXPORTER_PORT:-9100}
+      MOCK_CADVISOR_PORT: ${MOCK_CADVISOR_PORT:-8080}
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=7d"
-      - "--web.enable-lifecycle"
+      - |
+        set -eu
+
+        mkdir -p /tmp/targets
+
+        if [ -n "$${MAIN_DOMAIN}" ]; then
+          printf '[{"targets":["%s:%s"],"labels":{"server_type":"main","app":"system"}}]\n' \
+            "$${MAIN_DOMAIN}" "$${MAIN_NODE_EXPORTER_PORT}" > /tmp/targets/main-node-exporter.json
+          printf '[{"targets":["%s:%s"],"labels":{"server_type":"main","app":"docker"}}]\n' \
+            "$${MAIN_DOMAIN}" "$${MAIN_CADVISOR_PORT}" > /tmp/targets/main-cadvisor.json
+        else
+          echo '[]' > /tmp/targets/main-node-exporter.json
+          echo '[]' > /tmp/targets/main-cadvisor.json
+        fi
+
+        if [ -n "$${MOCK_DOMAIN}" ]; then
+          printf '[{"targets":["%s:%s"],"labels":{"server_type":"mock","app":"system"}}]\n' \
+            "$${MOCK_DOMAIN}" "$${MOCK_NODE_EXPORTER_PORT}" > /tmp/targets/mock-node-exporter.json
+          printf '[{"targets":["%s:%s"],"labels":{"server_type":"mock","app":"docker"}}]\n' \
+            "$${MOCK_DOMAIN}" "$${MOCK_CADVISOR_PORT}" > /tmp/targets/mock-cadvisor.json
+        else
+          echo '[]' > /tmp/targets/mock-node-exporter.json
+          echo '[]' > /tmp/targets/mock-cadvisor.json
+        fi
+
+        exec /bin/prometheus \
+          --config.file=/etc/prometheus/prometheus.yml \
+          --storage.tsdb.path=/prometheus \
+          --storage.tsdb.retention.time="$${PROMETHEUS_RETENTION}" \
+          --web.enable-lifecycle \
+          --enable-feature=expand-external-labels
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - ./prometheus-data:/prometheus
     networks:
       - monitor-net
-  
+
   node-exporter:
     image: prom/node-exporter:v1.10.2
     container_name: monitor-node-exporter
@@ -54,6 +98,8 @@ services:
       - /:/rootfs:ro
     command:
       - '--path.rootfs=/rootfs'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
     networks:
       - monitor-net
 
@@ -69,20 +115,27 @@ services:
       - /var/run:/var/run:ro
       - /sys:/host/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+    command:
+      - '--housekeeping_interval=10s'  # 기본 1s → 10s로 부하 감소
+      - '--docker_only=true'           # 도커 컨테이너만 수집
     networks:
       - monitor-net
 
   grafana:
     image: grafana/grafana:12.4.1
     container_name: grafana
+    labels:
+      promtail.collect: "true"
     restart: always
     ports:
       - "3000:3000"
+    environment:
+      GF_USERS_ALLOW_SIGN_UP: "false"
     depends_on:
       - loki
       - prometheus
     volumes:
-      - ./grafana-data:/var/lib/grafana
+      - grafana-storage:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     networks:
       - monitor-net
@@ -90,3 +143,6 @@ services:
 networks:
   monitor-net:
     driver: bridge
+
+volumes:
+  grafana-storage:

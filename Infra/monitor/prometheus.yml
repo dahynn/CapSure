@@ -1,0 +1,86 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: "monitoring-cluster"
+    monitor: "mac-mini"
+
+rule_files:
+  - "alert-rules.yml"
+
+# ─── 공통 필터링 앵커 정의 ───────────────────────────────────────────
+x-filter-node-exporter: &filter-node-exporter
+  metric_relabel_configs:
+    - source_labels: [__name__]
+      regex: "go_.*|promhttp_.*"
+      action: drop
+    - source_labels: [__name__]
+      regex: "node_.*"
+      action: keep
+
+x-filter-cadvisor: &filter-cadvisor
+  metric_relabel_configs:
+    - source_labels: [__name__]
+      regex: "container_(cpu|memory|network|fs)_.*"
+      action: keep
+
+# ─── scrape 설정 ─────────────────────────────────────────────────────
+scrape_configs:
+
+  # Prometheus 자체
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          server_type: "monitor"
+          app: "prometheus"
+
+  # Monitor 서버 (Mac Mini) - Node Exporter
+  - job_name: "monitor-node-exporter"
+    static_configs:
+      - targets: ["monitor-node-exporter:9100"]
+        labels:
+          server_type: "monitor"
+          app: "system"
+    <<: *filter-node-exporter  # 앵커 재사용
+
+  # Monitor 서버 (Mac Mini) - cAdvisor
+  - job_name: "monitor-cadvisor"
+    static_configs:
+      - targets: ["monitor-cadvisor:8080"]
+        labels:
+          server_type: "monitor"
+          app: "docker"
+    <<: *filter-cadvisor  # 앵커 재사용
+
+  # Main 서버 (EC2) - Node Exporter
+  - job_name: "main-node-exporter"
+    file_sd_configs:
+      - files:
+          - "/tmp/targets/main-node-exporter.json"
+        refresh_interval: 30s  # 타겟 파일 변경 감지 주기
+    <<: *filter-node-exporter
+
+  # Main 서버 (EC2) - cAdvisor
+  - job_name: "main-cadvisor"
+    file_sd_configs:
+      - files:
+          - "/tmp/targets/main-cadvisor.json"
+        refresh_interval: 30s
+    <<: *filter-cadvisor
+
+  # Mock 서버 (EC2) - Node Exporter
+  - job_name: "mock-node-exporter"
+    file_sd_configs:
+      - files:
+          - "/tmp/targets/mock-node-exporter.json"
+        refresh_interval: 30s
+    <<: *filter-node-exporter
+
+  # Mock 서버 (EC2) - cAdvisor
+  - job_name: "mock-cadvisor"
+    file_sd_configs:
+      - files:
+          - "/tmp/targets/mock-cadvisor.json"
+        refresh_interval: 30s
+    <<: *filter-cadvisor
