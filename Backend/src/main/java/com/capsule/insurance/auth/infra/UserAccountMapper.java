@@ -13,4 +13,6 @@ public interface UserAccountMapper {
     UserAccount findByEmail(@Param("email") String email);
 
     boolean existsByEmail(@Param("email") String email);
+
+    void insert(UserAccount userAccount);
 }
