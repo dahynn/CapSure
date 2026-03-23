@@ -10,6 +10,7 @@ import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.auth.domain.RefreshTokenRepository;
+import com.capsule.insurance.auth.domain.TokenBlacklistRepository;
 import com.capsule.insurance.common.security.jwt.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,13 +25,28 @@ public class AuthService {
     private final EmailService emailService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenBlacklistRepository tokenBlacklistRepository;
 
-    public AuthService(UserAccountMapper userAccountMapper, PasswordEncoder passwordEncoder, EmailService emailService, JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenRepository) {
+    public AuthService(UserAccountMapper userAccountMapper, PasswordEncoder passwordEncoder, EmailService emailService, JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenRepository, TokenBlacklistRepository tokenBlacklistRepository) {
         this.userAccountMapper = userAccountMapper;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.tokenBlacklistRepository = tokenBlacklistRepository;
+    }
+
+    public void logout(String userId, String accessToken) {
+        // 1. Refresh Token 무효화 (저장소에서 삭제)
+        refreshTokenRepository.deleteByUserId(userId);
+        
+        // 2. Access Token 블랙리스트 추가 (남은 만료 시간만큼만 저장)
+        if (accessToken != null && jwtTokenProvider.validateToken(accessToken)) {
+            long remaining = jwtTokenProvider.getExpirationRemaining(accessToken);
+            if (remaining > 0) {
+                tokenBlacklistRepository.save(accessToken, remaining);
+            }
+        }
     }
 
     public AuthResult login(LoginRequest request) {

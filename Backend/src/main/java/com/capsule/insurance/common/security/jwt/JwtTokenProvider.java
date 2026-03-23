@@ -74,4 +74,14 @@ public class JwtTokenProvider {
         User principal = new User(userId, "", List.of(new SimpleGrantedAuthority(role != null ? role : "ROLE_USER")));
         return new UsernamePasswordAuthenticationToken(principal, token, principal.getAuthorities());
     }
+
+    public long getExpirationRemaining(String token) {
+        try {
+            Date expiration = Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration();
+            long remaining = expiration.getTime() - System.currentTimeMillis();
+            return remaining > 0 ? remaining : 0;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
 }
