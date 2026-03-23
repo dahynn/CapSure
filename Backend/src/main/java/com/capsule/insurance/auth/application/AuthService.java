@@ -49,6 +49,19 @@ public class AuthService {
         }
     }
 
+    public void withdraw(String userId, String accessToken) {
+        UserAccount user = userAccountMapper.findByUserId(Long.valueOf(userId));
+        if (user == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "계정 정보를 찾을 수 없습니다.");
+        }
+        if (user.getUserStatus() == com.capsule.insurance.auth.domain.UserStatus.WITHDRAWN) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "이미 탈퇴 처리된 계정입니다.");
+        }
+
+        userAccountMapper.withdraw(Long.valueOf(userId));
+        this.logout(userId, accessToken);
+    }
+
     public AuthResult login(LoginRequest request) {
         UserAccount user = userAccountMapper.findByEmail(request.email());
         if (user == null) {

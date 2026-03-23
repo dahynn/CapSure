@@ -71,4 +71,12 @@
         )
     </insert>
 
+    <update id="withdraw">
+        UPDATE usr_user
+        SET user_status = 'WITHDRAWN',
+            withdrawn_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
 </mapper>

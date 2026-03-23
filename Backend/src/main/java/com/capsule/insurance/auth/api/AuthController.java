@@ -13,6 +13,7 @@ import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -64,5 +65,17 @@ public class AuthController {
         
         authService.logout(authentication.getName(), accessToken);
         return ApiResponse.success("로그아웃 되었습니다.");
+    }
+
+    @DeleteMapping("/withdraw")
+    public ApiResponse<String> withdraw(org.springframework.security.core.Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        String authorization = request.getHeader("Authorization");
+        String accessToken = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : null;
+        
+        authService.withdraw(authentication.getName(), accessToken);
+        return ApiResponse.success("회원 탈퇴가 완료되었습니다.");
     }
 }
