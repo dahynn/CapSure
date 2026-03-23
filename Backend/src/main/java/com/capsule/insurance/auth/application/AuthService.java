@@ -7,6 +7,8 @@ import com.capsule.insurance.auth.dto.AuthResult;
 import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.SignupRequest;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
+import com.capsule.insurance.common.exception.BusinessException;
+import com.capsule.insurance.common.exception.ErrorCode;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -34,17 +36,17 @@ public class AuthService {
         
         // 1. 비밀번호 일치 확인
         if (!request.password().equals(request.passwordConfirm())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
         
         // 2. 이메일 중복 체크
         if (userAccountMapper.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("이미 가입된 이메일입니다.");
+            throw new BusinessException(ErrorCode.DUPLICATED_EMAIL);
         }
         
         // 3. 이메일 인증 확인
         if (!emailService.isEmailVerified(request.email())) {
-            throw new IllegalArgumentException("이메일 인증이 정상적으로 완료되지 않았습니다.");
+            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
         
         // 4. 유저 생성 및 비밀번호 암호화

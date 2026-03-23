@@ -8,6 +8,8 @@ import com.capsule.insurance.auth.dto.EmailAuthSendRequest;
 import com.capsule.insurance.auth.dto.EmailAuthVerifyRequest;
 import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.SignupRequest;
+import com.capsule.insurance.common.exception.BusinessException;
+import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,7 +49,7 @@ public class AuthController {
     public ApiResponse<String> verifyEmailCode(@Valid @RequestBody EmailAuthVerifyRequest request) {
         boolean verified = emailService.verifyCode(request.email(), request.authCode());
         if (!verified) {
-            throw new IllegalArgumentException("인증 코드가 일치하지 않거나 만료되었습니다.");
+            throw new BusinessException(ErrorCode.INVALID_AUTH_CODE);
         }
         return ApiResponse.success("인증 번호가 일치합니다.");
     }
