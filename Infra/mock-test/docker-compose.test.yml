@@ -1,0 +1,10 @@
+services:
+  # [Test] Mock
+  mock-test:
+    image: ${DOCKER_USER}/mydata-mock:test
+    container_name: mydata-mock-test
+    ports:
+      - "18000:8000"
+    restart: always
+    environment:
+      - NODE_ENV=development
