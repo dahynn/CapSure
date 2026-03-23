@@ -8,22 +8,6 @@ global:
 rule_files:
   - "alert-rules.yml"
 
-# ─── 공통 필터링 앵커 정의 ───────────────────────────────────────────
-x-filter-node-exporter: &filter-node-exporter
-  metric_relabel_configs:
-    - source_labels: [__name__]
-      regex: "go_.*|promhttp_.*"
-      action: drop
-    - source_labels: [__name__]
-      regex: "node_.*"
-      action: keep
-
-x-filter-cadvisor: &filter-cadvisor
-  metric_relabel_configs:
-    - source_labels: [__name__]
-      regex: "container_(cpu|memory|network|fs)_.*"
-      action: keep
-
 # ─── scrape 설정 ─────────────────────────────────────────────────────
 scrape_configs:
 
@@ -42,7 +26,13 @@ scrape_configs:
         labels:
           server_type: "monitor"
           app: "system"
-    <<: *filter-node-exporter  # 앵커 재사용
+    metric_relabel_configs: &filter_node_exporter
+      - source_labels: [__name__]
+        regex: "go_.*|promhttp_.*"
+        action: drop
+      - source_labels: [__name__]
+        regex: "node_.*"
+        action: keep
 
   # Monitor 서버 (Mac Mini) - cAdvisor
   - job_name: "monitor-cadvisor"
@@ -51,7 +41,10 @@ scrape_configs:
         labels:
           server_type: "monitor"
           app: "docker"
-    <<: *filter-cadvisor  # 앵커 재사용
+    metric_relabel_configs: &filter_cadvisor
+      - source_labels: [__name__]
+        regex: "container_(cpu|memory|network|fs)_.*"
+        action: keep
 
   # Main 서버 (EC2) - Node Exporter
   - job_name: "main-node-exporter"
@@ -59,7 +52,7 @@ scrape_configs:
       - files:
           - "/tmp/targets/main-node-exporter.json"
         refresh_interval: 30s  # 타겟 파일 변경 감지 주기
-    <<: *filter-node-exporter
+    metric_relabel_configs: *filter_node_exporter
 
   # Main 서버 (EC2) - cAdvisor
   - job_name: "main-cadvisor"
@@ -67,7 +60,7 @@ scrape_configs:
       - files:
           - "/tmp/targets/main-cadvisor.json"
         refresh_interval: 30s
-    <<: *filter-cadvisor
+    metric_relabel_configs: *filter_cadvisor
 
   # Mock 서버 (EC2) - Node Exporter
   - job_name: "mock-node-exporter"
@@ -75,7 +68,7 @@ scrape_configs:
       - files:
           - "/tmp/targets/mock-node-exporter.json"
         refresh_interval: 30s
-    <<: *filter-node-exporter
+    metric_relabel_configs: *filter_node_exporter
 
   # Mock 서버 (EC2) - cAdvisor
   - job_name: "mock-cadvisor"
@@ -83,4 +76,4 @@ scrape_configs:
       - files:
           - "/tmp/targets/mock-cadvisor.json"
         refresh_interval: 30s
-    <<: *filter-cadvisor
+    metric_relabel_configs: *filter_cadvisor
