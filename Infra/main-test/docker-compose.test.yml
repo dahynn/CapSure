@@ -4,7 +4,8 @@ services:
     image: ${DOCKER_USER}/capsure-frontend:test
     container_name: capsure-frontend-test
     ports:
-      - "8080:80" # FE 테스트용 포트 : 8080
+      - "40080:40080" # FE 테스트용 포트
+      - "40443:40443"
     restart: always
     environment:
       - NODE_ENV=development
@@ -14,7 +15,7 @@ services:
     image: ${DOCKER_USER}/capsure-backend:test
     container_name: capsure-backend-test
     ports:
-      - "18000:8000"
+      - "48000:48000"
     restart: always
     environment:
       - NODE_ENV=development
