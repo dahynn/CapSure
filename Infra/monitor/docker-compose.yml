@@ -44,7 +44,7 @@ services:
       MAIN_DOMAIN: ${MAIN_DOMAIN:-}
       MOCK_DOMAIN: ${MOCK_DOMAIN:-}
       PROMETHEUS_RETENTION: ${PROMETHEUS_RETENTION:-7d}
-      MAIN_NODE_EXPORTER_PORT: ${MAIN_NODE_EXPORTER_PORT:-8100}
+      MAIN_NODE_EXPORTER_PORT: ${MAIN_NODE_EXPORTER_PORT:-9100}
       MAIN_CADVISOR_PORT: ${MAIN_CADVISOR_PORT:-8080}
       MOCK_NODE_EXPORTER_PORT: ${MOCK_NODE_EXPORTER_PORT:-9100}
       MOCK_CADVISOR_PORT: ${MOCK_CADVISOR_PORT:-8080}
@@ -79,8 +79,7 @@ services:
           --config.file=/etc/prometheus/prometheus.yml \
           --storage.tsdb.path=/prometheus \
           --storage.tsdb.retention.time="$${PROMETHEUS_RETENTION}" \
-          --web.enable-lifecycle \
-          --enable-feature=expand-external-labels
+          --web.enable-lifecycle
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
