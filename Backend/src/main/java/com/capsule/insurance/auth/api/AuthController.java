@@ -115,4 +115,16 @@ public class AuthController {
         }
         return ApiResponse.success("인증 번호가 일치합니다.");
     }
+
+    @PostMapping("/logout")
+    public ApiResponse<String> logout(org.springframework.security.core.Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        String authorization = request.getHeader("Authorization");
+        String accessToken = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : null;
+        
+        authService.logout(authentication.getName(), accessToken);
+        return ApiResponse.success("로그아웃 되었습니다.");
+    }
 }
