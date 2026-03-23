@@ -18,4 +18,5 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Nginx 기본 포트
 EXPOSE 80
+EXPOSE 443
 CMD ["nginx", "-g", "daemon off;"]
