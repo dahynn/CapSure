@@ -4,7 +4,7 @@ services:
     image: ${DOCKER_USER}/mydata-mock:latest
     container_name: mydata-mock-prod
     ports:
-      - "8000:8000"
+      - "58000:8000"
     restart: always
     environment:
       - NODE_ENV=production
