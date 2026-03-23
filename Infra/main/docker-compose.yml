@@ -66,7 +66,7 @@ services:
     restart: always
     pid: host
     ports:
-      - "${MAIN_NODE_EXPORTER_PORT}:9100"
+      - "8100:9100"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -82,7 +82,7 @@ services:
     restart: always
     privileged: true
     ports:
-      - "${MAIN_CADVISOR_PORT}:8080"
+      - "8080:8080"
     devices:
       - /dev/kmsg
     volumes:
