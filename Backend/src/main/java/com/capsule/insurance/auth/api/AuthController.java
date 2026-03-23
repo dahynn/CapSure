@@ -111,7 +111,7 @@ public class AuthController {
     public ApiResponse<String> verifyEmailCode(@Valid @RequestBody EmailAuthVerifyRequest request) {
         boolean verified = emailService.verifyCode(request.email(), request.authCode());
         if (!verified) {
-            throw new IllegalArgumentException("인증 코드가 일치하지 않거나 만료되었습니다.");
+            throw new BusinessException(ErrorCode.INVALID_AUTH_CODE);
         }
         return ApiResponse.success("인증 번호가 일치합니다.");
     }
