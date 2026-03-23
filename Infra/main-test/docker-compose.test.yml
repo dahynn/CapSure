@@ -6,6 +6,9 @@ services:
     ports:
       - "40080:40080" # FE 테스트용 포트
       - "40443:40443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     restart: always
     environment:
       - NODE_ENV=development
