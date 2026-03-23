@@ -6,12 +6,9 @@ services:
     ports:
       - "40080:40080" # FE 테스트용 포트
       - "40443:40443"
-<<<<<<< HEAD
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
-=======
->>>>>>> f2f456b ([Infra] 94 chore: 포트 번호 정리)
     restart: always
     environment:
       - NODE_ENV=development
