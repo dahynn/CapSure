@@ -1,0 +1,10 @@
+services:
+  # [Production] Frontend
+  frontend:
+    image: ${DOCKER_USER}/capsure-frontend:latest
+    container_name: capsure-frontend-pord
+    ports:
+      - "80:80"
+    restart: always
+    environment:
+      - NODE_ENV=production

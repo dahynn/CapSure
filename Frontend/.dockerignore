@@ -1,0 +1,29 @@
+# 의존성 폴더 (Docker 내부에서 pnpm install로 새로 설치함)
+node_modules/
+.pnpm-debug.log*
+
+# 빌드 결과물 (Docker 내부에서 pnpm build로 새로 생성함)
+dist/
+build/
+
+# 환경 변수 파일 (보안을 위해 복사 제외, docker-compose나 CI/CD를 통해 주입)
+.env
+.env.local
+.env.*.local
+
+# Git 설정 파일
+.git
+.gitignore
+
+# 로그 및 에디터 설정
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vscode/
+.idea/
+.DS_Store
+
+# Docker 관련 파일 자체
+Dockerfile
+docker-compose.yml
+.dockerignore

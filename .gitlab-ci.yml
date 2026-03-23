@@ -1,0 +1,245 @@
+# ==================================================
+# 공통 설정
+# ==================================================
+
+workflow:
+  rules:
+    # merge commit이 develop에 들어올 때만
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "test"'
+      when: always
+    - when: never
+
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  IMAGE_FRONT: $DOCKER_USER/capsure-frontend
+  IMAGE_BACK: $DOCKER_USER/capsure-backend
+  IMAGE_MOCK: $DOCKER_USER/capsure-mydata-mock
+
+
+# ==================================================
+# 공통 Build 템플릿
+# ==================================================
+
+.build_template: &build_logic
+  stage: build
+  before_script:
+    - docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
+  script:
+    - echo "Building $IMAGE_NAME for $CI_COMMIT_BRANCH environment..."
+    - docker buildx build --platform linux/amd64 -t $IMAGE_NAME:$IMAGE_TAG $CONTEXT_DIR --push
+
+# 1. (Prod) Frontend 빌드 
+build-fe-prod:
+  <<: *build_logic
+  variables:
+    IMAGE_NAME: $IMAGE_FRONT
+    IMAGE_TAG: "latest"
+    CONTEXT_DIR: "./Frontend"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Frontend/**/*
+
+# 2. (Test) Frontend 빌드
+build-fe-test:
+  <<: *build_logic
+  variables:
+    IMAGE_NAME: $IMAGE_FRONT
+    IMAGE_TAG: "test"
+    CONTEXT_DIR: "./Frontend"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "test"
+      changes:
+        - Frontend/**/*
+
+# 3. (Prod) Backend 빌드
+build-be-prod:
+  <<: *build_logic
+  variables:
+    IMAGE_NAME: $IMAGE_BACK
+    IMAGE_TAG: "latest"
+    CONTEXT_DIR: "./Backend"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Backend/**/*
+
+# 4. (Test) Backend 빌드
+build-be-test:
+  <<: *build_logic
+  variables:
+    IMAGE_NAME: $IMAGE_BACK
+    IMAGE_TAG: "test"
+    CONTEXT_DIR: "./Backend"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "test"
+      changes:
+        - Backend/**/*
+
+# 5. (Prod) Mock 서버 빌드
+build-mock-prod:
+  <<: *build_logic
+  variables:
+    IMAGE_NAME: $IMAGE_MOCK
+    IMAGE_TAG: "latest"
+    CONTEXT_DIR: "./Mock"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Mock/**/*
+
+# 6. (Test) Mock 서버 빌드
+build-mock-test:
+  <<: *build_logic
+  variables:
+    IMAGE_NAME: $IMAGE_MOCK
+    IMAGE_TAG: "test"
+    CONTEXT_DIR: "./Mock"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "test"
+      changes:
+        - Mock/**/*
+
+# ==================================================
+# 공통 Deploy 템플릿
+# ==================================================
+
+.deploy_template: &deploy_definition
+  stage: deploy
+  before_script:
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - echo "Deploying to $AWS_HOST..."
+    - ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$AWS_HOST "mkdir -p $DEPLOY_PATH"
+    - scp -o StrictHostKeyChecking=no -P 22 ./Infra/$ENV_DIR/$COMPOSE_FILE ubuntu@$AWS_HOST:$DEPLOY_PATH/
+    - |
+      ssh -o StrictHostKeyChecking=no -p 22 ubuntu@$AWS_HOST "
+        # 서버 내 폴더 생성
+        cd $DEPLOY_PATH && \
+
+        # 기존에 떠있을 수 있는 테스트 환경을 안전하게 종료
+        docker compose -f $COMPOSE_FILE down --remove-orphans || true && \
+        
+        # Docker 로그인 및 .env 생성
+        echo '$DOCKER_PASSWORD' | docker login -u '$DOCKER_USER' --password-stdin && \
+        echo 'DOCKER_USER=$DOCKER_USER' > .env && \
+        
+        # 배포 실행
+        docker compose -f $COMPOSE_FILE pull && \
+        docker compose -f $COMPOSE_FILE up -d
+      "
+
+# 1. (Prod) Frontend 배포 -> Main AWS
+deploy-fe-prod:
+  <<: *deploy_definition
+  variables:
+    SSH_PRIVATE_KEY: $MAIN_SSH_KEY
+    AWS_HOST: $MAIN_AWS_HOST
+    DEPLOY_PATH: "/home/ubuntu/S14P21A308/Infra/main"
+    COMPOSE_FILE: "docker-compose.yml"
+    ENV_DIR: "main"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Frontend/**/*
+        - Infra/main/docker-compose.yml
+  needs: 
+    - job: "build-fe-prod"
+      optional: true
+
+# 2. (Test) Frontend 배포 -> Main AWS
+deploy-fe-test:
+  <<: *deploy_definition
+  variables:
+    SSH_PRIVATE_KEY: $MAIN_SSH_KEY
+    AWS_HOST: $MAIN_AWS_HOST
+    DEPLOY_PATH: "/home/ubuntu/S14P21A308/Infra/main-test"
+    COMPOSE_FILE: "docker-compose.test.yml"
+    ENV_DIR: "main-test"
+  rules:        
+    - if: $CI_COMMIT_BRANCH == "test"
+      changes:
+        - Frontend/**/*
+        - Infra/main-test/docker-compose.test.yml
+  needs: 
+    - job: "build-fe-test"
+      optional: true
+
+# 3. (Prod) Backend 배포 -> Main AWS
+deploy-be-prod:
+  <<: *deploy_definition
+  variables:
+    SSH_PRIVATE_KEY: $MAIN_SSH_KEY
+    AWS_HOST: $MAIN_AWS_HOST
+    DEPLOY_PATH: "/home/ubuntu/S14P21A308/Infra/main"
+    COMPOSE_FILE: "docker-compose.yml"
+    ENV_DIR: "main"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Backend/**/*
+        - Infra/main/docker-compose.yml
+  needs:
+    - job: "build-be-prod"
+      optional: true
+
+# 4. (Test) Backend 배포 -> Main AWS
+deploy-be-test:
+  <<: *deploy_definition
+  variables:
+    SSH_PRIVATE_KEY: $MAIN_SSH_KEY
+    AWS_HOST: $MAIN_AWS_HOST
+    DEPLOY_PATH: "/home/ubuntu/S14P21A308/Infra/main-test"
+    COMPOSE_FILE: "docker-compose.test.yml"
+    ENV_DIR: "main-test"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "test"
+      changes:
+        - Backend/**/*
+        - Infra/main-test/docker-compose.test.yml
+  needs:
+    - job: "build-be-test"
+      optional: true
+
+# 5. (Prod) Mock 배포 -> Sub AWS
+deploy-mock-prod:
+  <<: *deploy_definition
+  variables:
+    SSH_PRIVATE_KEY: $SUB_SSH_KEY # 서브 서버용 키 사용
+    AWS_HOST: $SUB_AWS_HOST      # 서브 서버 IP 사용
+    DEPLOY_PATH: "/home/ubuntu/S14P21A308/Infra/mock"
+    COMPOSE_FILE: "docker-compose.yml"
+    ENV_DIR: "mock"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Mock/**/*
+        - Infra/mock/docker-compose.yml
+  needs: 
+    - job: "build-mock-prod"
+      optional: true
+
+# 6. (Test) Mock 배포 -> Sub AWS
+deploy-mock-test:
+  <<: *deploy_definition
+  variables:
+    SSH_PRIVATE_KEY: $SUB_SSH_KEY
+    AWS_HOST: $SUB_AWS_HOST
+    DEPLOY_PATH: "/home/ubuntu/S14P21A308/Infra/mock-test"
+    COMPOSE_FILE: "docker-compose.test.yml"
+    ENV_DIR: "mock-test"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "test"
+      changes:
+        - Mock/**/*
+        - Infra/mock-test/docker-compose.test.yml
+  needs: 
+    - job: "build-mock-test"
+      optional: true
