@@ -2,9 +2,19 @@ services:
   # [Production] Frontend
   frontend:
     image: ${DOCKER_USER}/capsure-frontend:latest
-    container_name: capsure-frontend-pord
+    container_name: capsure-frontend-prod
     ports:
       - "80:80"
+    restart: always
+    environment:
+      - NODE_ENV=production
+
+  # [Production] Backend
+  backend:
+    image: ${DOCKER_USER}/capsure-backend:latest
+    container_name: capsure-backend-prod
+    ports:
+      - "8000:8000"
     restart: always
     environment:
       - NODE_ENV=production

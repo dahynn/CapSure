@@ -8,3 +8,13 @@ services:
     restart: always
     environment:
       - NODE_ENV=development
+
+  # [Test] Backend
+  backend-test:
+    image: ${DOCKER_USER}/capsure-backend:test
+    container_name: capsure-backend-test
+    ports:
+      - "18000:8000"
+    restart: always
+    environment:
+      - NODE_ENV=development
