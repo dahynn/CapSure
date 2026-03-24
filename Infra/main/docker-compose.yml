@@ -9,6 +9,24 @@ services:
     environment:
       - NODE_ENV=production
 
+  # [Production] PostgreSQL
+  postgres:
+    image: postgres:17
+    container_name: capsure-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-capsure}
+      POSTGRES_USER: ${POSTGRES_USER:-capsure}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in Infra/main/.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   # [Production] Backend
   backend:
     image: ${DOCKER_USER}/capsure-backend:latest
@@ -18,3 +36,14 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-capsure}
+      - POSTGRES_USER=${POSTGRES_USER:-capsure}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
