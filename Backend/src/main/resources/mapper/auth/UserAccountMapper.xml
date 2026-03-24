@@ -63,4 +63,20 @@
         where email = #{email}
     </select>
 
+    <insert id="insert" useGeneratedKeys="true" keyProperty="userId" keyColumn="user_id">
+        INSERT INTO usr_user (
+            email, password_encrypted, name, phone, birth_date, gender, user_status, created_at, updated_at
+        ) VALUES (
+            #{email}, #{passwordEncrypted}, #{name}, #{phone}, #{birthDate}, #{gender}, #{userStatus}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="withdraw">
+        UPDATE usr_user
+        SET user_status = 'WITHDRAWN',
+            withdrawn_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
 </mapper>
