@@ -30,7 +30,7 @@ services:
     restart: always
     pid: host
     ports:
-      - "9100:9100"
+      - "${MOCK_NODE_EXPORTER_PORT:-59100}:9100"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -46,7 +46,7 @@ services:
     restart: always
     privileged: true
     ports:
-      - "8080:8080"
+      - "${MOCK_CADVISOR_PORT:-58080}:8080"
     devices:
       - /dev/kmsg
     volumes:
