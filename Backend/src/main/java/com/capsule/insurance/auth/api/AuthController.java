@@ -36,8 +36,9 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ApiResponse<AuthResult> signup(@Valid @RequestBody SignupRequest request) {
-        return ApiResponse.success(authService.signup(request));
+    public ApiResponse<String> signup(@Valid @RequestBody SignupRequest request) {
+        authService.signup(request);
+        return ApiResponse.success("회원가입이 완료되었습니다.");
     }
 
     @PostMapping("/email/send-code")

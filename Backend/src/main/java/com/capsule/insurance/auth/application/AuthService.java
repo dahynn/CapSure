@@ -84,7 +84,7 @@ public class AuthService {
         return new AuthResult(accessToken, refreshToken, "Bearer", String.valueOf(user.getUserId()));
     }
 
-    public AuthResult signup(SignupRequest request) {
+    public void signup(SignupRequest request) {
         
         // 1. 비밀번호 일치 확인
         if (!request.password().equals(request.passwordConfirm())) {
@@ -117,6 +117,5 @@ public class AuthService {
         // 5. 사용된 이메일 인증 상태 제거
         emailService.completeSignup(request.email());
         
-        return new AuthResult("stub-user-1", "stub-refresh-user-1", "Bearer", request.email());
     }
 }
