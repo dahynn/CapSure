@@ -61,30 +61,6 @@ public class AuthController {
         return ApiResponse.success("인증 번호가 일치합니다.");
     }
 
-    @PostMapping("/logout")
-    public ApiResponse<String> logout(org.springframework.security.core.Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-        String authorization = request.getHeader("Authorization");
-        String accessToken = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : null;
-        
-        authService.logout(authentication.getName(), accessToken);
-        return ApiResponse.success("로그아웃 되었습니다.");
-    }
-
-    @DeleteMapping("/withdraw")
-    public ApiResponse<String> withdraw(org.springframework.security.core.Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-        String authorization = request.getHeader("Authorization");
-        String accessToken = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : null;
-        
-        authService.withdraw(authentication.getName(), accessToken);
-        return ApiResponse.success("회원 탈퇴가 완료되었습니다.");
-    }
-
     @GetMapping("/profile")
     public ApiResponse<UserProfileResponse> getProfile(org.springframework.security.core.Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
@@ -99,21 +75,6 @@ public class AuthController {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         return ApiResponse.success("PUT - 프로필 수정을 성공했습니다.", authService.updateProfile(authentication.getName(), request));
-    }
-
-    @PostMapping("/email/send-code")
-    public ApiResponse<String> sendEmailVerificationCode(@Valid @RequestBody EmailAuthSendRequest request) {
-        emailService.sendVerificationCode(request.email());
-        return ApiResponse.success("이메일로 인증 번호가 전송되었습니다.");
-    }
-
-    @PostMapping("/email/verify-code")
-    public ApiResponse<String> verifyEmailCode(@Valid @RequestBody EmailAuthVerifyRequest request) {
-        boolean verified = emailService.verifyCode(request.email(), request.authCode());
-        if (!verified) {
-            throw new BusinessException(ErrorCode.INVALID_AUTH_CODE);
-        }
-        return ApiResponse.success("인증 번호가 일치합니다.");
     }
 
     @PostMapping("/logout")
