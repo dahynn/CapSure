@@ -24,6 +24,8 @@ scrape_configs:
           expression: '(?i)\b(/healthz?|/ready|/readiness|/live|/liveness|heartbeat|\bpong\b|\bping\b)\b'
       - drop:
           expression: '(?i)\b(level=debug|level=trace|"level"\s*:\s*"(debug|trace)")\b'
+      - drop:
+          expression: '(?i)\bsession_monitor_receiver_client\s+connect_failed\b'
       # 민감 정보 마스킹
       - replace:
           expression: '(?i)(authorization:\s*bearer\s+)[^\s"]+'
@@ -62,6 +64,8 @@ scrape_configs:
           expression: '(?i)\b(/healthz?|/ready|/readiness|/live|/liveness|heartbeat|\bpong\b|\bping\b)\b'
       - drop:
           expression: '(?i)\b(level=debug|level=trace|"level"\s*:\s*"(debug|trace)")\b'
+      - drop:
+          expression: '(?i)\bsession_monitor_receiver_client\s+connect_failed\b'
       - replace:
           expression: '(?i)(authorization:\s*bearer\s+)[^\s"]+'
           replace: '${1}***'
