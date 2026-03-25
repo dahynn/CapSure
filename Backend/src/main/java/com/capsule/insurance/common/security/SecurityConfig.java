@@ -1,4 +1,4 @@
-// #Demo Setting
+
 package com.capsule.insurance.common.security;
 
 import com.capsule.insurance.common.security.jwt.JwtAuthenticationFilter;
@@ -32,6 +32,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/**",
+                                "/mydata/**",
+                                "/mock/**",
                                 "/actuator/health",
                                 "/actuator/info",
                                 "/v3/api-docs/**",
