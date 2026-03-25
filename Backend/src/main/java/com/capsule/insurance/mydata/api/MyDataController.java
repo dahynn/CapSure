@@ -1,9 +1,8 @@
-
 package com.capsule.insurance.mydata.api;
 
 import com.capsule.insurance.common.response.ApiResponse;
 import com.capsule.insurance.mydata.application.MyDataProxyService;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.capsule.insurance.mydata.dto.MyDataUserInsurancesResponse;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Profile("main")
 @RestController
-@RequestMapping("/api/v1/mydata")
+@RequestMapping("/mydata")
 public class MyDataController {
 
     private static final long DEFAULT_USER_ID = 1L;
@@ -24,17 +23,17 @@ public class MyDataController {
     }
 
     @GetMapping("/insurances")
-    public ApiResponse<JsonNode> getInsurances() {
+    public ApiResponse<MyDataUserInsurancesResponse> getInsurances() {
         return ApiResponse.success(myDataProxyService.getUserInsurances(DEFAULT_USER_ID));
     }
 
     @GetMapping("/users/{userId}/insurances")
-    public JsonNode getUserInsurances(@PathVariable Long userId) {
-        return myDataProxyService.getUserInsurances(userId);
+    public ApiResponse<MyDataUserInsurancesResponse> getUserInsurances(@PathVariable Long userId) {
+        return ApiResponse.success(myDataProxyService.getUserInsurances(userId));
     }
 
     @GetMapping("/my-insurances")
-    public JsonNode getMyInsurances() {
-        return myDataProxyService.getUserInsurances(DEFAULT_USER_ID);
+    public ApiResponse<MyDataUserInsurancesResponse> getMyInsurances() {
+        return ApiResponse.success(myDataProxyService.getUserInsurances(DEFAULT_USER_ID));
     }
 }
