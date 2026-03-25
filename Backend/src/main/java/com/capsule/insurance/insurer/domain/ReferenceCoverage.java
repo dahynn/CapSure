@@ -1,7 +1,7 @@
 // #Demo Setting
 package com.capsule.insurance.insurer.domain;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +24,6 @@ public class ReferenceCoverage {
     private CompensationType compensationType;
     private DuplicateRuleCode duplicateRuleCode;
     private RecommendationRuleCode recommendationRuleCode;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 }

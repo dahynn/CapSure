@@ -1,8 +1,8 @@
 // #Demo Setting
 package com.capsule.insurance.insurer.domain;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -75,6 +75,6 @@ public class ProductSource {
     private final ProductMappingStatus mappingStatus;
     private final String manualNote;
 
-    private final LocalDateTime loadedAt;
-    private final LocalDateTime updatedAt;
+    private final Instant loadedAt;
+    private final Instant updatedAt;
 }
