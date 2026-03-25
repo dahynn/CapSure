@@ -1,3 +1,0 @@
--- #Demo Setting
--- Current schema baseline for capsule-insurance-api
--- Update this file together with mapper XML and related tests.
