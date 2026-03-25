@@ -59,5 +59,27 @@
           and target_id = #{targetId}
         order by audit_event_id desc
     </select>
+    
+    <!-- OutboxWorker에서 중복 적재를 방지하기 위해 사용하는 Idempotency Key(request_id 등) 검증 메서드 -->
+    <select id="countByOutboxTrackingKey" resultType="int">
+        select count(*) 
+        from audit_event_log 
+        where request_id = #{requestId} 
+          and event_type = #{eventType} 
+          and target_id = #{targetId}
+    </select>
+
+    <!-- OutboxWorker에서 사용하는 최종 적재용 (PostgreSQL jsonb 구문 유지) -->
+    <insert id="saveAuditLog">
+        insert into audit_event_log (
+            event_type, actor_user_id, target_type, target_id, 
+            occurred_at, request_id, before_json, after_json, 
+            integrity_hash, prev_hash
+        ) values (
+            #{eventType}, #{actorUserId}, #{targetType}, #{targetId},
+            #{occurredAt}, #{requestId}, #{beforeJson}::jsonb, #{afterJson}::jsonb,
+            #{integrityHash}, #{prevHash}
+        )
+    </insert>
 
 </mapper>

@@ -32,26 +32,45 @@ public class RequestIdFilter extends OncePerRequestFilter {
         long startTime = System.currentTimeMillis();
         String requestId = resolveRequestId(request);
         String sourceIp = resolveSourceIp(request);
+        
+        // 마스킹 로직 정교화 (경로 유지, 파라미터 값만 마스킹)
+        String uri = request.getRequestURI();
+        String queryString = request.getQueryString();
+        String displayUri = uri;
+        if (StringUtils.hasText(queryString)) {
+            String maskedQuery = maskSensitiveParams(queryString);
+            displayUri = uri + "?" + maskedQuery;
+        }
 
         MDC.put("requestId", requestId);
-        MDC.put("userId", "anonymous");
+        // MDC userId 바인딩 시점 조정 (doFilter 이전 수행)
+        MDC.put("userId", resolveUserId());
         MDC.put("sourceIp", sourceIp);
         response.setHeader(REQUEST_ID_HEADER, requestId);
+
+        log.info("API START: method={}, uri={}", request.getMethod(), displayUri);
 
         try {
             filterChain.doFilter(request, response);
         } finally {
-            MDC.put("userId", resolveUserId());
             long elapsedMs = System.currentTimeMillis() - startTime;
             log.info(
-                    "method={}, uri={}, status={}, elapsedMs={}",
+                    "API END: method={}, uri={}, status={}, elapsedMs={}",
                     request.getMethod(),
-                    request.getRequestURI(),
+                    displayUri,
                     response.getStatus(),
                     elapsedMs
             );
             MDC.clear();
         }
+    }
+
+    private String maskSensitiveParams(String queryString) {
+        if (!StringUtils.hasText(queryString)) {
+            return queryString;
+        }
+        // password, token, secret 등의 파라미터 값을 ***로 치환
+        return queryString.replaceAll("(?i)(password|token|secret|credentials)=([^&]+)", "$1=***");
     }
 
     private String resolveRequestId(HttpServletRequest request) {

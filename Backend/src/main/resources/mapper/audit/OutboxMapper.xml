@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.capsule.insurance.audit.infra.OutboxMapper">
+
+    <insert id="saveOutbox">
+        INSERT INTO audit_outbox (event_id, payload, status)
+        VALUES (#{eventId}, #{payload}::jsonb, 'PENDING')
+    </insert>
+
+    <delete id="deleteOutbox">
+        DELETE FROM audit_outbox WHERE id = #{id}
+    </delete>
+
+    <update id="updateStatus">
+        UPDATE audit_outbox SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <insert id="saveDlq">
+        INSERT INTO audit_outbox_dlq (event_id, payload, error_reason)
+        VALUES (#{eventId}, #{payload}::jsonb, #{errorReason})
+    </insert>
+
+    <select id="findPendingOutboxRecords" resultType="java.util.Map">
+        SELECT id, event_id as "eventId", (payload::text) as "payload"
+        FROM audit_outbox
+        WHERE status = 'PENDING'
+        LIMIT 100
+    </select>
+
+</mapper>
