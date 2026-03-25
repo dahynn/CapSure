@@ -33,7 +33,7 @@ import sys
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
 
 import pandas as pd
 
@@ -86,6 +86,8 @@ PRODUCT_COLUMNS = [
     "minimum_join_premium",
     "premium_male",
     "premium_female",
+    "monthly_premium_male",
+    "monthly_premium_female",
     "fixed_rate",
     "current_announced_rate",
     "minimum_guaranteed_rate",
@@ -140,6 +142,16 @@ LIFE_FFILL_FIELDS = [
     "sale_date",
     "special_note",
     "contact_phone",
+    "premium_male",
+    "premium_female",
+    "price_index_male",
+    "price_index_female",
+    "extra_premium_index_male",
+    "extra_premium_index_female",
+    "extra_premium_index",
+    "contract_cost_index_male",
+    "contract_cost_index_female",
+    "contract_cost_index",
 ]
 
 NONLIFE_FFILL_FIELDS = [
@@ -152,6 +164,16 @@ NONLIFE_FFILL_FIELDS = [
     "renewal",
     "special_note",
     "contact_phone",
+    "premium_male",
+    "premium_female",
+    "price_index_male",
+    "price_index_female",
+    "extra_premium_index_male",
+    "extra_premium_index_female",
+    "extra_premium_index",
+    "contract_cost_index_male",
+    "contract_cost_index_female",
+    "contract_cost_index",
 ]
 
 COLUMN_MAPPING: Dict[str, str] = {
@@ -518,22 +540,38 @@ def map_coverage(coverage_name: Optional[str], file_name: str, product_name: Opt
     elif "종합" in fn or "상해" in fn or "화재" in fn or "상해" in pn:
         return "ACCIDENT", "ACCIDENT_GENERAL", "AUTO_MAPPED"
         
-    return None, None, "UNMAPPED"
+    return "ETC", "ETC_GENERAL", "UNMAPPED"
 
 
 # --------------------------------------------------------------------------------------
 # Payment / Coverage term extraction
 # --------------------------------------------------------------------------------------
 
-def extract_payment_info(special_note: Optional[str], raw_row: Optional[Dict]) -> Dict[str, Optional[str]]:
+def parse_numeric_premium(text: Optional[str]) -> Optional[float]:
+    if not text:
+        return None
+    # 숫자, 소수점 제외 모든 문자 제거
+    clean = re.sub(r"[^0-9.]", "", str(text))
+    try:
+        return float(clean) if clean else None
+    except ValueError:
+        return None
+
+
+def calculate_monthly(premium_val: Optional[float], cycle: Optional[str]) -> Optional[float]:
+    if premium_val is None:
+        return None
+    if cycle == "연납":
+        return round(premium_val / 12.0, 2)
+    
+    # 월납, 일시납, 또는 정보가 없는(Null) 경우 모두 보험료 원금 그대로 반영
+    return premium_val
+
+
+def extract_payment_info(special_note: Optional[str], raw_row: Optional[Dict]) -> Dict[str, Optional[object]]:
     """
     special_note 와 raw_row_jsonb 의 모든 텍스트를 합쳐
     payment_cycle / payment_term / coverage_term 을 정규식으로 추출합니다.
-
-    출력 예)
-      payment_cycle : '월납'  |  '연납'  |  '일시납'  |  None
-      payment_term  : '20년납' | '전기납' | '종신납'   |  None
-      coverage_term : '20년만기' | '100세만기' | '종신' |  None
     """
     # 분석할 텍스트 수집
     parts: List[str] = []
@@ -545,7 +583,7 @@ def extract_payment_info(special_note: Optional[str], raw_row: Optional[Dict]) -
                 parts.append(v)
     text = " ".join(parts)
 
-    result: Dict[str, Optional[str]] = {
+    result: Dict[str, Optional[object]] = {
         "payment_cycle": None,
         "payment_term": None,
         "coverage_term": None,
@@ -556,7 +594,7 @@ def extract_payment_info(special_note: Optional[str], raw_row: Optional[Dict]) -
     for keyword, label in cycle_map:
         if keyword in text:
             result["payment_cycle"] = label
-            break  # 일시납 우선 체크 후 월납 순
+            break
 
     # 2. payment_term: N년납 / 전기납 / 종신납
     term_match = re.search(r"(\d+)년납", text)
@@ -700,6 +738,13 @@ def normalize_dataframe(df: pd.DataFrame, file_name: str, sector: str) -> List[D
         )
         out.update(payment_info)
 
+        # 월납 환산 계산 (추가)
+        cycle = out.get("payment_cycle")
+        pm = parse_numeric_premium(cast(Optional[str], out.get("premium_male")))
+        pf = parse_numeric_premium(cast(Optional[str], out.get("premium_female")))
+        out["monthly_premium_male"] = calculate_monthly(pm, cast(Optional[str], cycle))
+        out["monthly_premium_female"] = calculate_monthly(pf, cast(Optional[str], cycle))
+
         validate_required_identifiers(
             file_name=file_name,
             source_row_no=idx,
@@ -724,10 +769,9 @@ def get_conn(database_url: str):
     return psycopg2.connect(database_url)
 
 
-def run_schema_sql_if_needed(conn, schema_sql_path: Optional[Path]) -> None:
-    if not schema_sql_path:
-        return
-    sql = schema_sql_path.read(encoding="utf-8")
+def run_schema_sql_if_needed(conn, schema_sql_path: Path) -> None:
+    print(f"스키마 SQL 실행: {schema_sql_path}")
+    sql = schema_sql_path.read_text(encoding="utf-8")
     with conn.cursor() as cur:
         cur.execute(sql)
     conn.commit()

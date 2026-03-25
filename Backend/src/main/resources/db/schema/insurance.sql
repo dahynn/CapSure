@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS insurance.product_source (
         )
 );
 
-COMMENT ON TABLE insurance.product_source IS '생명보함 및 손해보험 Excel 정규화 통합 staging';
+COMMENT ON TABLE insurance.product_source IS '생명보험 및 손해보험 Excel 정규화 통합 staging';
 COMMENT ON COLUMN insurance.product_source.source_file_name IS '원천 파일명';
 COMMENT ON COLUMN insurance.product_source.source_row_no IS '헤더를 제외한 데이터 row 순번';
 COMMENT ON COLUMN insurance.product_source.insurer_sector IS '구분 (LIFE, NONLIFE)';
