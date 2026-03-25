@@ -8,3 +8,49 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
+  promtail:
+    image: grafana/promtail:3.6.7
+    container_name: mock-promtail
+    restart: always
+    environment:
+      MONITOR_DOMAIN: ${MONITOR_DOMAIN:-}
+      LOKI_PORT: ${LOKI_PORT:-3100}
+    command:
+      - -config.file=/etc/promtail/config.yml
+      - -config.expand-env=true
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yml:ro
+      - ./promtail-data:/tmp/promtail
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  node-exporter:
+    image: prom/node-exporter:v1.10.2
+    container_name: mock-node-exporter
+    restart: always
+    pid: host
+    ports:
+      - "${MOCK_NODE_EXPORTER_PORT:-59100}:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:0.56.2
+    container_name: mock-cadvisor
+    restart: always
+    privileged: true
+    ports:
+      - "${MOCK_CADVISOR_PORT:-58080}:8080"
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
