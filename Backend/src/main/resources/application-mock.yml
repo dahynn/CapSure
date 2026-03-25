@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/capsule_insurance}
+    username: ${DB_USERNAME:capsule}
+    password: ${DB_PASSWORD:capsule}
+    driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: never
+
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+server:
+  port: 8081
+
+mydata:
+  mock:
+    base-url: http://localhost:8081
+    client-id: capsule-main-client
+    provider-code: CAPSULE-MOCK
+    timeout: 5s
+    transmission-key-seed: capsule-main-transmission-seed
+    token-secret: capsule-mydata-hs256-secret-key-32
+    token-issuer: https://capsule-mydata-mock
+    token-audience: capsule-main-client
+    access-token-ttl: 10m
+    refresh-token-ttl: 7d

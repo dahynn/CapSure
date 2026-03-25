@@ -1,9 +1,9 @@
-// #Demo Setting
+
 package com.capsule.insurance.mydata.domain;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,6 +27,6 @@ public class MyDataContractCoverage {
     private LocalDate endDate;
     private String coverageCode;
     private String extraPayloadJson;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 }

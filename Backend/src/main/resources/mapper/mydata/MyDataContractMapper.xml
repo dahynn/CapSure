@@ -1,4 +1,4 @@
-<!-- #Demo Setting -->
+
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
@@ -7,6 +7,7 @@
     <resultMap id="myDataContractResultMap" type="com.capsule.insurance.mydata.domain.MyDataContract">
         <id property="myDataContractId" column="my_data_contract_id"/>
         <result property="userId" column="user_id"/>
+        <result property="providerCode" column="provider_code"/>
         <result property="insuNum" column="insu_num"/>
         <result property="consent" column="is_consent"/>
         <result property="businessType" column="business_type"/>
@@ -20,7 +21,7 @@
         <result property="currencyCode" column="currency_code"/>
         <result property="insuredListJson" column="insured_list_json"/>
         <result property="prizeListJson" column="prize_list_json"/>
-        <result property="riderListJson" column="rider_list_json"/>
+        <result property="contractListJson" column="contract_list_json"/>
         <result property="policyUri" column="policy_uri"/>
         <result property="extraPayloadJson" column="extra_payload_json"/>
         <result property="createdAt" column="created_at"/>
@@ -53,6 +54,7 @@
         select
             myd_contract_id as my_data_contract_id,
             user_id,
+            provider_code,
             insu_num,
             is_consent,
             business_type,
@@ -66,7 +68,7 @@
             currency_code,
             insured_list_json,
             prize_list_json,
-            rider_list_json,
+            contract_list_json,
             policy_uri,
             extra_payload_json,
             created_at,
@@ -95,5 +97,93 @@
         where myd_contract_id = #{myDataContractId}
         order by myd_contract_coverage_id
     </select>
+
+    <delete id="deleteCoveragesByUserId">
+        delete from myd_contract_coverage
+        where myd_contract_id in (
+            select myd_contract_id
+            from myd_contract
+            where user_id = #{userId}
+        )
+    </delete>
+
+    <delete id="deleteContractsByUserId">
+        delete from myd_contract
+        where user_id = #{userId}
+    </delete>
+
+    <insert id="insertContract" useGeneratedKeys="true" keyProperty="myDataContractId" keyColumn="myd_contract_id">
+        insert into myd_contract (
+            user_id,
+            insu_num,
+            is_consent,
+            business_type,
+            product_name,
+            insu_type_code,
+            contract_status_code,
+            contract_date,
+            start_date,
+            end_date,
+            premium_amount,
+            currency_code,
+            insured_list_json,
+            prize_list_json,
+            contract_list_json,
+            policy_uri,
+            extra_payload_json,
+            created_at,
+            updated_at
+        ) values (
+            #{userId},
+            #{insuNum},
+            #{consent},
+            #{businessType},
+            #{productName},
+            #{insuTypeCode},
+            #{contractStatusCode},
+            #{contractDate},
+            #{startDate},
+            #{endDate},
+            #{premiumAmount},
+            #{currencyCode},
+            #{insuredListJson},
+            #{prizeListJson},
+            #{contractListJson},
+            #{policyUri},
+            #{extraPayloadJson},
+            now(),
+            now()
+        )
+    </insert>
+
+    <insert id="insertCoverage" useGeneratedKeys="true" keyProperty="myDataContractCoverageId" keyColumn="myd_contract_coverage_id">
+        insert into myd_contract_coverage (
+            myd_contract_id,
+            coverage_num,
+            coverage_name,
+            coverage_amount,
+            currency_code,
+            coverage_status,
+            start_date,
+            end_date,
+            coverage_code,
+            extra_payload_json,
+            created_at,
+            updated_at
+        ) values (
+            #{myDataContractId},
+            #{coverageNum},
+            #{coverageName},
+            #{coverageAmount},
+            #{currencyCode},
+            #{coverageStatus},
+            #{startDate},
+            #{endDate},
+            #{coverageCode},
+            #{extraPayloadJson},
+            now(),
+            now()
+        )
+    </insert>
 
 </mapper>
