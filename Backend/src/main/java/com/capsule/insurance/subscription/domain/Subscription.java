@@ -2,7 +2,7 @@
 package com.capsule.insurance.subscription.domain;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
@@ -21,14 +21,14 @@ public class Subscription {
     private Long userId;
     private SubscriptionStatus subscriptionStatus;
     private Integer billingAnchorDay;
-    private LocalDateTime currentCycleStartAt;
-    private LocalDateTime currentCycleEndAt;
-    private LocalDateTime nextBillingAt;
+    private Instant currentCycleStartAt;
+    private Instant currentCycleEndAt;
+    private Instant nextBillingAt;
     private BigDecimal expectedNextAmount;
-    private LocalDateTime pausedAt;
-    private LocalDateTime cancelledAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant pausedAt;
+    private Instant cancelledAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 
     @Builder.Default
     private List<SubscriptionItem> currentItems = new ArrayList<>();

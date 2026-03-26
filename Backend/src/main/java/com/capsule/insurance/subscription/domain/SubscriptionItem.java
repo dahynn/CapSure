@@ -2,7 +2,7 @@
 package com.capsule.insurance.subscription.domain;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,11 +22,11 @@ public class SubscriptionItem {
     private SubscriptionItemStatus itemStatus;
     private BigDecimal coverageAmountSnapshot;
     private BigDecimal monthlyPriceSnapshot;
-    private LocalDateTime effectiveStartAt;
-    private LocalDateTime effectiveEndAt;
-    private LocalDateTime editableAfterAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant effectiveStartAt;
+    private Instant effectiveEndAt;
+    private Instant editableAfterAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 
     public boolean isCurrentPlan() {
         return planVersion == PlanVersion.CURRENT;
