@@ -1,5 +1,5 @@
-// Native fetch-based HTTP client (axios 의존성 없음)
-const BASE_URL = 'http://localhost:8080';
+// Vite proxy 사용 - /auth, /subscriptions 등은 vite.config.js에서 localhost:8080으로 프록시됨
+const BASE_URL = '';  // 직접 호출 대신 Vite proxy 경유
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');

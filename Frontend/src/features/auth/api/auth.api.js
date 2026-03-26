@@ -1,90 +1,69 @@
-// import { httpClient } from '@/common/api/httpClient';
+import { httpClient } from '@/common/api/httpClient';
 
 /**
  * Auth(인증) 관련 API 엔드포인트 모음
  */
 export const authApi = {
     /**
-     * 로그인
-     * @param {Object} credentials - 로그인 정보 (예: { email, password })
+     * 로그인 - 실제 백엔드 API 연동 + JWT 토큰 저장
      */
     login: async (credentials) => {
-        // 실제 API 연동 시 주석 해제
-        // const response = await httpClient.post('/auth/login', credentials);
-        // return response.data;
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({ success: true, message: '로그인 성공', data: { email: credentials.email, name: '테스트 유저' } });
-            }, 500);
-        });
+        const response = await httpClient.post('/auth/login', credentials);
+        const data = response.data?.data;
+        if (data?.accessToken) {
+            localStorage.setItem('accessToken', data.accessToken);
+        }
+        if (data?.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+        }
+        return data;
     },
 
     /**
      * 회원가입
-     * @param {Object} userData - 가입 폼 데이터 (예: { email, password, name })
      */
     signup: async (userData) => {
-        // 실제 API 연동 시 주석 해제
-        // const response = await httpClient.post('/auth/signup', userData);
-        // return response.data;
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({ success: true, message: '회원가입 성공' });
-            }, 1000);
-        });
+        const response = await httpClient.post('/auth/signup', userData);
+        return response.data?.data;
     },
 
     /**
-     * 이메일 중복 확인 (무조건 승인)
-     * @param {string} email
+     * 이메일 중복 확인
      */
     checkEmail: async (email) => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({ success: true, message: '사용 가능한 이메일입니다.' });
-            }, 300);
-        });
+        const response = await httpClient.get(`/auth/check-email?email=${encodeURIComponent(email)}`);
+        return response.data?.data;
     },
 
     /**
-     * 최초 로그인 여부 확인 모의 API
-     * @returns {Promise<{ isFirstLogin: boolean }>}
+     * 최초 로그인 여부 확인
      */
     checkFirstLogin: async () => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    isFirstLogin: true // 테스트를 위해 항상 true 반환
-                });
-            }, 500);
-        });
+        // 회원가입 후 온보딩 여부는 서버에서 받거나, 로그인 응답에 포함된 정보로 판단
+        // 임시: 로컬스토리지에 온보딩 완료 여부 저장
+        const onboardingDone = localStorage.getItem('onboardingDone');
+        return { isFirstLogin: !onboardingDone };
     },
 
     /**
      * 로그아웃
      */
     logout: async () => {
-        // 실제 API 연동 시 주석 해제
-        // const response = await httpClient.post('/auth/logout');
-        // return response.data;
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({ success: true });
-            }, 300);
-        });
+        try {
+            await httpClient.post('/auth/logout', {});
+        } catch (e) {
+            // 서버 로그아웃 실패해도 로컬 토큰 제거
+        }
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        return { success: true };
     },
 
     /**
      * 로그인 세션 연장
      */
     extendSession: async () => {
-        // 실제 API 연동 시 주석 해제
-        // const response = await httpClient.post('/auth/extend-session');
-        // return response.data;
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({ success: true, message: '세션이 연장되었습니다.' });
-            }, 500);
-        });
+        const response = await httpClient.post('/auth/extend-session', {});
+        return response.data?.data;
     },
 };
