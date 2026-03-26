@@ -163,16 +163,19 @@
             updated_at
         )
         select
-            #{subscriptionId},
-            #{capsuleProductId},
+            s.subscription_id,
+            cp.capsule_product_id,
             'NEXT',
             'RESERVED_ADD',
             cp.coverage_amount,
-            cp.monthly_price,
+            case when u.gender = 'F' then cp.monthly_price_female else cp.monthly_price_male end,
             now(),
             now()
-        from capsule_product cp
-        where cp.capsule_product_id = #{capsuleProductId}
+        from subscription s
+        join usr_user u on u.user_id = s.user_id
+        cross join capsule_product cp
+        where s.subscription_id = #{subscriptionId}
+          and cp.capsule_product_id = #{capsuleProductId}
     </insert>
 
     <!-- ── 신규: NEXT 아이템 삭제 ── -->

@@ -129,9 +129,9 @@ public class SubscriptionService {
         return new ReservedItemResponse(
                 inserted != null ? inserted.getSubscriptionItemId() : null,
                 product.getCapsuleProductId(),
-                product.getCapsuleName(),
+                product.getProductName(),
                 "캡슐손해보험",
-                product.getMonthlyPrice() != null ? product.getMonthlyPrice().intValue() : 0,
+                product.getMonthlyPriceMale() != null ? product.getMonthlyPriceMale().intValue() : 0,
                 SubscriptionItemStatus.RESERVED_ADD.name()
         );
     }
@@ -186,7 +186,7 @@ public class SubscriptionService {
                     return new SubscriptionItemDto(
                             item.getSubscriptionItemId(),
                             item.getCapsuleProductId(),
-                            p != null ? p.getCapsuleName() : "알 수 없음",
+                            p != null ? p.getProductName() : "알 수 없음",
                             "캡슐손해보험",
                             item.getMonthlyPriceSnapshot() != null ? item.getMonthlyPriceSnapshot().intValue() : 0,
                             item.getItemStatus() != null ? item.getItemStatus().name() : ""

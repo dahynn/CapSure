@@ -20,6 +20,8 @@ public record ProductDetailResponse(
                 String paymentCycle, // 납입 주기 (월납, 연납 등)
                 String paymentTerm, // 납입 기간 (10년납, 20년납 등)
                 String coverageTerm, // 보장 기간 (80세 만기, 100세 만기 등)
+                String coverageCategoryCode, // 보장 카테고리 코드 (CANCER, DEATH 등)
+                String coverageCode, // 상세 보장 코드
                 BigDecimal monthlyPrice, // 월 납입 보험료 (조회 시 성별에 맞춰 계산된 값)
                 String productSummary, // 상품 요약 설명
                 String productFeature, // 상품의 주요 특징 (특장점)

@@ -94,12 +94,13 @@ SET
 -- ---------------------------------------------------------------------------
 INSERT INTO public.capsule_product (
     capsule_code,
-    capsule_name,
+    product_name,
     coverage_category_code,
     coverage_code,
     coverage_amount,
     coverage_unit,
-    monthly_price,
+    monthly_price_male,
+    monthly_price_female,
     min_retention_days,
     sale_status,
     is_duplicate_check_target,
@@ -116,6 +117,7 @@ VALUES
         10000000,
         'KRW',
         9900,
+        8900,
         30,
         'AVAILABLE',
         TRUE,
@@ -131,6 +133,7 @@ VALUES
         3000000,
         'KRW',
         4900,
+        4500,
         30,
         'AVAILABLE',
         TRUE,
@@ -140,12 +143,13 @@ VALUES
     )
 ON CONFLICT (capsule_code) DO UPDATE
 SET
-    capsule_name = EXCLUDED.capsule_name,
+    product_name = EXCLUDED.product_name,
     coverage_category_code = EXCLUDED.coverage_category_code,
     coverage_code = EXCLUDED.coverage_code,
     coverage_amount = EXCLUDED.coverage_amount,
     coverage_unit = EXCLUDED.coverage_unit,
-    monthly_price = EXCLUDED.monthly_price,
+    monthly_price_male = EXCLUDED.monthly_price_male,
+    monthly_price_female = EXCLUDED.monthly_price_female,
     min_retention_days = EXCLUDED.min_retention_days,
     sale_status = EXCLUDED.sale_status,
     is_duplicate_check_target = EXCLUDED.is_duplicate_check_target,
@@ -202,7 +206,7 @@ SELECT
     'CURRENT',
     'ACTIVE',
     cp.coverage_amount,
-    cp.monthly_price,
+    CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
     TIMESTAMPTZ '2026-03-01 00:00:00+09',
     TIMESTAMPTZ '2026-04-01 00:00:00+09'
 FROM public.subscription s

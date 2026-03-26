@@ -54,7 +54,11 @@ public class InsurerController {
         if (authentication == null || "anonymousUser".equals(authentication.getName())) {
             return 1L; // 테스트를 위한 기본 유저 ID
         }
-        return Long.parseLong(authentication.getName());
+        try {
+            return Long.parseLong(authentication.getName());
+        } catch (NumberFormatException e) {
+            return 1L; // 파싱 실패 시 기본 유저 ID
+        }
     }
 
     @GetMapping("/product-sources/{productSourceId}/terms-summary")

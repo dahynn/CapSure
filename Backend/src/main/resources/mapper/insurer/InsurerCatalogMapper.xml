@@ -31,6 +31,33 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <resultMap id="productDetailResultMap" type="com.capsule.insurance.insurer.dto.ProductDetailResponse">
+        <id property="productSourceId" column="product_source_id"/>
+        <result property="companyName" column="company_name"/>
+        <result property="productName" column="product_name"/>
+        <result property="insurerSector" column="insurer_sector"/>
+        <result property="saleChannel" column="sale_channel"/>
+        <result property="coverageName" column="coverage_name"/>
+        <result property="claimReason" column="claim_reason"/>
+        <result property="payoutAmount" column="payout_amount"/>
+        <result property="joinAmount" column="join_amount"/>
+        <result property="minimumJoinPremium" column="minimum_join_premium"/>
+        <result property="paymentCycle" column="payment_cycle"/>
+        <result property="paymentTerm" column="payment_term"/>
+        <result property="coverageTerm" column="coverage_term"/>
+        <result property="coverageCategoryCode" column="coverage_category_code"/>
+        <result property="coverageCode" column="coverage_code"/>
+        <result property="monthlyPrice" column="monthly_price"/>
+        <result property="productSummary" column="product_summary"/>
+        <result property="productFeature" column="product_feature"/>
+        <result property="specialNote" column="special_note"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="saleDate" column="sale_date"/>
+        <result property="currentAnnouncedRate" column="current_announced_rate"/>
+        <result property="fixedRate" column="fixed_rate"/>
+        <result property="minimumGuaranteedRate" column="minimum_guaranteed_rate"/>
+    </resultMap>
+
     <resultMap id="capsuleProductResultMap" type="com.capsule.insurance.insurer.domain.CapsuleProduct">
         <id property="capsuleProductId" column="capsule_product_id"/>
         <result property="productName" column="product_name"/>
@@ -120,7 +147,7 @@
         where capsule_product_id = #{capsuleProductId}
     </select>
 
-    <select id="findProductSourcesByFilter" resultType="com.capsule.insurance.insurer.dto.ProductSummaryResponse">
+    <select id="findProductSourcesByFilter" resultMap="productSourceResultMap">
         SELECT
             product_source_id,
             company_name,
@@ -136,7 +163,7 @@
             loaded_at,
             updated_at
         FROM insurance.product_source
-        WHERE mapping_status = 'AUTO_MAPPED'::insurance.mapping_status
+        WHERE 1=1
         <if test="category != null and category != ''">
             AND coverage_category_code = #{category}::insurance.coverage_category_code
         </if>
@@ -156,12 +183,12 @@
         </choose>
         ORDER BY product_source_id ASC
     </select>
-    <select id="findProductSourceDetail" resultType="com.capsule.insurance.insurer.dto.ProductDetailResponse">
+    <select id="findProductSourceDetail" resultMap="productDetailResultMap">
         SELECT
             product_source_id,
             company_name,
             product_name,
-            insurer_sector,
+            insurer_sector::text as insurer_sector,
             sale_channel,
             coverage_name,
             claim_reason,
@@ -171,11 +198,13 @@
             payment_cycle,
             payment_term,
             coverage_term,
-            <choose>
-                <when test="gender == 'M'.toString()">monthly_premium_male</when>
-                <when test="gender == 'F'.toString()">monthly_premium_female</when>
-                <otherwise>NULL</otherwise>
-            </choose> AS monthly_price,
+            coverage_category_code::text as coverage_category_code,
+            coverage_code,
+            CASE 
+                WHEN #{gender} = 'M' THEN monthly_premium_male
+                WHEN #{gender} = 'F' THEN monthly_premium_female
+                ELSE 0.00
+            END as monthly_price,
             product_summary,
             product_feature,
             special_note,

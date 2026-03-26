@@ -21,19 +21,22 @@ export const CapsureProvider = ({ children }) => {
     const [selectedProducts, setSelectedProducts] = useState([]);
 
     const handleAddItem = (product) => {
-        const currentAmount = selectedProducts.reduce((sum, p) => sum + p.price, 0);
-        if (currentAmount + product.price > totalBudget) {
+        const price = Number(product.monthlyPrice || product.price || 0);
+        const productId = product.productSourceId || product.id;
+        
+        const currentAmount = selectedProducts.reduce((sum, p) => sum + Number(p.monthlyPrice || p.price || 0), 0);
+        if (currentAmount + price > totalBudget) {
             alert('예산을 초과할 수 없습니다.');
             return false;
         }
-        if (selectedProducts.find((p) => p.id === product.id)) return false;
+        if (selectedProducts.find((p) => (p.productSourceId || p.id) === productId)) return false;
         
         setSelectedProducts([...selectedProducts, product]);
         return true;
     };
 
     const handleRemoveItem = (id) => {
-        setSelectedProducts(selectedProducts.filter((p) => p.id !== id));
+        setSelectedProducts(selectedProducts.filter((p) => (p.productSourceId || p.id) !== id));
     };
 
     const value = {

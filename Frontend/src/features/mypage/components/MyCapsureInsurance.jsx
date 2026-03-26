@@ -95,7 +95,7 @@ const MyCapsureInsurance = () => {
                 >
                   {cell ? (
                     <span className="px-1 text-center text-[10px] font-bold leading-tight sm:text-xs">
-                      {cell.name}
+                      {cell.productName}
                     </span>
                   ) : (
                     <span className="text-xs font-bold opacity-50">빈 칸</span>
@@ -132,7 +132,7 @@ const MyCapsureInsurance = () => {
                           className={`h-3 w-3 rounded-full ${cell.category.color.split(' ')[0]}`}
                         />
                         <span className="font-bold text-slate-700">
-                          {cell.name}{' '}
+                          {cell.productName}{' '}
                           <span className="text-xs font-normal text-slate-400">
                             ({cell.category.name})
                           </span>

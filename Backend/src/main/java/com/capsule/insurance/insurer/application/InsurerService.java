@@ -63,18 +63,30 @@ public class InsurerService {
     }
 
     public List<ProductSummaryResponse> getProducts(String category, Integer budget, Long userId) {
-        UserAccount user = userAccountMapper.findByUserId(userId);
-        String gender = (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN)
-                ? user.getGender().name() : Gender.M.name();
+        String gender = "M"; // Default Male
+        try {
+            UserAccount user = userAccountMapper.findByUserId(userId);
+            if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
+                gender = user.getGender().name();
+            }
+        } catch (Exception e) {
+            // Ignore and use default gender
+        }
 
         BigDecimal maxPrice = (budget != null) ? BigDecimal.valueOf(budget) : null;
         return insurerCatalogMapper.findProductSourcesByFilter(category, maxPrice, gender);
     }
 
     public ProductDetailResponse getProductDetail(Long productSourceId, Long userId) {
-        UserAccount user = userAccountMapper.findByUserId(userId);
-        String gender = (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN)
-                ? user.getGender().name() : Gender.M.name();
+        String gender = "M"; // Default Male
+        try {
+            UserAccount user = userAccountMapper.findByUserId(userId);
+            if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
+                gender = user.getGender().name();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
 
         return insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
     }

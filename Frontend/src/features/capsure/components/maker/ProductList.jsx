@@ -1,5 +1,18 @@
 import React from 'react';
-import { X, Plus, Check } from 'lucide-react';
+import { X, Plus, Check, Building2 } from 'lucide-react';
+
+// Mapping for badge labels
+const CATEGORY_LABEL_MAP = {
+    'DEATH': '사망',
+    'CANCER': '암',
+    'BRAIN_HEART': '뇌/심장',
+    'ACTUAL_LOSS': '실손',
+    'SURGERY': '수술',
+    'DENTAL': '치아',
+    'ETC': '기타',
+    'ACCIDENT': '상해',
+    'LIABILITY': '배상'
+};
 
 const ProductList = ({ 
     categories, 
@@ -44,20 +57,27 @@ const ProductList = ({
                             아래 리스트에서 원하시는 상품을 담아보세요
                         </div>
                     ) : (
-                        selectedProducts.map(p => (
-                            <div key={p.id} className="flex-shrink-0 flex flex-col bg-capsure-card border border-slate-700/50 rounded-xl px-3.5 py-3 w-[160px] h-[92px]">
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className={`text-micro font-bold px-2 py-0.5 rounded ${p.category === '실손' ? 'bg-brand-purple/20 text-brand-purple' : p.category === '암' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-slate-700/50 text-brand-blue'}`}>
-                                        {p.category}
-                                    </span>
-                                    <button onClick={() => onRemoveItem(p.id)} className="w-[20px] h-[20px] flex items-center justify-center rounded-full bg-[#2A3142] text-slate-400 hover:text-white transition-colors">
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
+                        selectedProducts.map(p => {
+                            const pId = p.productSourceId || p.id;
+                            const pName = p.productName || p.name;
+                            const pPrice = Number(p.monthlyPrice || p.price || 0);
+                            const pCategory = CATEGORY_LABEL_MAP[p.coverageCategoryCode] || p.category;
+
+                            return (
+                                <div key={pId} className="flex-shrink-0 flex flex-col bg-capsure-card border border-slate-700/50 rounded-xl px-3.5 py-3 w-[160px] h-[92px]">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className={`text-micro font-bold px-2 py-0.5 rounded ${pCategory === '실손' ? 'bg-brand-purple/20 text-brand-purple' : pCategory === '암' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-slate-700/50 text-brand-blue'}`}>
+                                            {pCategory}
+                                        </span>
+                                        <button onClick={() => onRemoveItem(pId)} className="w-[20px] h-[20px] flex items-center justify-center rounded-full bg-[#2A3142] text-slate-400 hover:text-white transition-colors">
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                    <p className="text-white text-capsure-base font-bold leading-tight truncate">{pName}</p>
+                                    <p className="text-brand-blue text-capsure-base font-bold mt-1">{pPrice?.toLocaleString()}원</p>
                                 </div>
-                                <p className="text-white text-capsure-base font-bold leading-tight truncate">{p.name}</p>
-                                <p className="text-brand-blue text-capsure-base font-bold mt-1">{p.price.toLocaleString()}원</p>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>
@@ -81,50 +101,70 @@ const ProductList = ({
 
             {/* Product List */}
             <div className="px-6 flex flex-col gap-4 pb-8">
-                {filteredProducts.map(product => {
-                    const isSelected = selectedProducts.find(p => p.id === product.id);
-                    return (
-                        <div key={product.id} className="bg-capsure-card border border-slate-800/80 rounded-[20px] p-5 flex flex-col shadow-sm relative">
-                            {/* Top Row: Badge & Title */}
-                            <div className="flex items-center gap-2.5 mb-5">
-                                <span className={`text-capsure-sm font-bold px-2 py-1 rounded break-keep whitespace-nowrap ${product.category === '실손' ? 'bg-[#3D2C42] text-brand-light-purple' : product.category === '암' ? 'bg-[#3A331C] text-brand-yellow' : 'bg-[#182F48] text-brand-blue'}`}>
-                                    {product.category}
-                                </span>
-                                <h3 className="text-white font-bold text-capsure-title leading-[1.3] truncate w-full">{product.name}</h3>
-                            </div>
+                {filteredProducts?.length === 0 ? (
+                    <div className="py-20 text-center text-slate-500 font-bold">검색 결과가 없습니다.</div>
+                ) : (
+                    filteredProducts?.map(product => {
+                        const productId = product.productSourceId || product.id;
+                        const productName = product.productName || product.name;
+                        const productPrice = Number(product.monthlyPrice || product.price || 0);
+                        const productCategoryLabel = CATEGORY_LABEL_MAP[product.coverageCategoryCode] || product.category;
+                        const isSelected = selectedProducts.some(p => (p.productSourceId || p.id) === productId);
+                        const sectorLabel = product.insurerSector === 'LIFE' ? '생명보험' : '손해보험';
 
-                            {/* Bottom Row: Price & Buttons */}
-                            <div className="flex items-end justify-between">
-                                {/* Price & Link */}
-                                <div className="flex flex-col">
-                                    <div className="flex items-baseline gap-1 mb-2">
-                                        <span className="text-brand-blue font-black text-capsure-price tracking-tight">{product.price.toLocaleString()}</span>
-                                        <span className="text-slate-400 font-bold text-sm">원/월</span>
+                        return (
+                            <div key={productId} className="bg-capsure-card border border-slate-800/80 rounded-[20px] p-5 flex flex-col shadow-sm relative overflow-hidden">
+                                {/* Top Row: Badge & Sector */}
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex gap-2">
+                                        <span className={`text-micro font-extrabold px-2 py-1 rounded ${productCategoryLabel === '실손' ? 'bg-[#3D2C42] text-brand-light-purple' : productCategoryLabel === '암' ? 'bg-[#3A331C] text-brand-yellow' : 'bg-[#182F48] text-brand-blue'}`}>
+                                            {productCategoryLabel}
+                                        </span>
+                                        <span className="text-micro font-bold px-2 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700/50">
+                                            {sectorLabel}
+                                        </span>
                                     </div>
+                                    <div className="flex items-center gap-1.5 text-slate-500 text-micro font-bold">
+                                        <Building2 className="w-3 h-3" />
+                                        {product.companyName || product.company}
+                                    </div>
+                                </div>
+
+                                <h3 className="text-white font-bold text-capsure-lg leading-[1.3] mb-4 truncate w-full">{productName}</h3>
+
+                                {/* Bottom Row: Price & Buttons */}
+                                <div className="flex items-end justify-between">
+                                    {/* Price & Link */}
+                                    <div className="flex flex-col">
+                                        <div className="flex items-baseline gap-1 mb-2">
+                                            <span className="text-brand-blue font-black text-capsure-title tracking-tight">{productPrice?.toLocaleString()}</span>
+                                            <span className="text-slate-400 font-bold text-sm">원/월 가입가격</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => onViewDetail && onViewDetail(product)} 
+                                            className="text-slate-500 text-capsure-sm underline self-start hover:text-slate-300 transition-colors"
+                                        >
+                                            자세히 보기
+                                        </button>
+                                    </div>
+                                    {/* Add Button */}
                                     <button 
-                                        onClick={() => onViewDetail && onViewDetail(product)} 
-                                        className="text-slate-400 text-capsure-base underline self-start hover:text-slate-300 transition-colors"
+                                        onClick={() => {
+                                            if (isSelected) {
+                                                onRemoveItem(productId);
+                                            } else {
+                                                onAddItem(product);
+                                            }
+                                        }}
+                                        className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-slate-700 text-white border border-slate-600' : 'bg-brand-blue text-[#020715] hover:opacity-80'}`}
                                     >
-                                        상세보기
+                                        {isSelected ? <Check className="w-6 h-6" strokeWidth={3}/> : <Plus className="w-7 h-7" strokeWidth={3} />}
                                     </button>
                                 </div>
-                                {/* Add Button */}
-                                <button 
-                                    onClick={() => {
-                                        if (isSelected) {
-                                            onRemoveItem(product.id);
-                                        } else {
-                                            onAddItem(product);
-                                        }
-                                    }}
-                                    className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-[#2A3142] text-white border border-slate-600' : 'bg-brand-blue text-[#020715] hover:bg-[#6BC1E6]'}`}
-                                >
-                                    {isSelected ? <Check className="w-6 h-6" strokeWidth={3}/> : <Plus className="w-7 h-7" strokeWidth={3} />}
-                                </button>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })
+                )}
             </div>
         </>
     );
