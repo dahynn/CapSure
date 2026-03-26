@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Pill, ShieldCheck, FileText, ChevronRight, CheckCircle2, Shield, Activity, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronLeft, Pill, ShieldCheck, FileText, ChevronRight, CheckCircle2, Shield, Activity, CalendarClock, Loader2 } from 'lucide-react';
 import { getCapsuleDetail } from '@/features/mypage/api/mypage.api';
 
 const CapsuleDetailPage = () => {
@@ -62,8 +62,12 @@ const CapsuleDetailPage = () => {
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
-                    <button className="w-8 h-8 rounded-full bg-[#1C212E] flex items-center justify-center border border-slate-700/50 hover:bg-[#82D8FC]/10 hover:text-[#82D8FC] hover:border-[#82D8FC]/50 transition-all text-[#9D9DA4]">
-                        <Sparkles className="w-4 h-4" />
+                    <button
+                        onClick={() => navigate(`/mypage/capsule/${id}/edit`)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-[#82D8FC]/10 border border-[#82D8FC]/30 rounded-full text-[#82D8FC] text-[12px] font-bold hover:bg-[#82D8FC]/20 transition-all active:scale-95"
+                    >
+                        <CalendarClock className="w-3.5 h-3.5" />
+                        익월 변경
                     </button>
                 </div>
 
@@ -133,30 +137,37 @@ const CapsuleDetailPage = () => {
                     <h3 className="text-white text-[15px] font-bold mb-4 flex items-center gap-2 px-1 opacity-90">
                         <ShieldCheck className="w-4 h-4 text-[#82D8FC]" /> 핵심 통합 보장 내역
                     </h3>
-                    <div className="bg-[#141925] rounded-[28px] border border-slate-800/60 p-5 shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#82D8FC]/30 to-transparent"></div>
-                        <div className="space-y-0 relative z-10">
-                            {capsule.coverages.map((coverage, idx) => (
-                                <div 
-                                    key={idx} 
-                                    className="flex justify-between items-center py-4 border-b border-slate-800/50 last:border-0 hover:bg-[#1C212E]/60 px-3 -mx-3 rounded-xl transition-colors animate-in slide-in-from-bottom-4 fade-in fill-mode-both group"
-                                    style={{ animationDelay: `${300 + idx * 100}ms` }}
-                                >
-                                    <div className="flex items-start gap-3 w-[60%]">
-                                        <div className="w-6 h-6 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center shrink-0 group-hover:bg-[#82D8FC]/20 group-hover:border-[#82D8FC]/30 transition-colors mt-0.5">
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-[#82D8FC]" />
+                    {capsule.coverages && capsule.coverages.length > 0 ? (
+                        <div className="bg-[#141925] rounded-[28px] border border-slate-800/60 p-5 shadow-lg relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#82D8FC]/30 to-transparent"></div>
+                            <div className="space-y-0 relative z-10">
+                                {capsule.coverages.map((coverage, idx) => (
+                                    <div 
+                                        key={idx} 
+                                        className="flex justify-between items-center py-4 border-b border-slate-800/50 last:border-0 hover:bg-[#1C212E]/60 px-3 -mx-3 rounded-xl transition-colors animate-in slide-in-from-bottom-4 fade-in fill-mode-both group"
+                                        style={{ animationDelay: `${300 + idx * 100}ms` }}
+                                    >
+                                        <div className="flex items-start gap-3 w-[60%]">
+                                            <div className="w-6 h-6 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center shrink-0 group-hover:bg-[#82D8FC]/20 group-hover:border-[#82D8FC]/30 transition-colors mt-0.5">
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-[#82D8FC]" />
+                                            </div>
+                                            <span className="text-slate-300 text-[13px] font-medium leading-relaxed break-keep group-hover:text-white transition-colors">
+                                                {coverage.label}
+                                            </span>
                                         </div>
-                                        <span className="text-slate-300 text-[13px] font-medium leading-relaxed break-keep group-hover:text-white transition-colors">
-                                            {coverage.label}
+                                        <span className="text-white text-[13px] font-bold text-right shrink-0 max-w-[40%] pl-3 group-hover:text-[#82D8FC] transition-colors">
+                                            {coverage.amount}
                                         </span>
                                     </div>
-                                    <span className="text-white text-[13px] font-bold text-right shrink-0 max-w-[40%] pl-3 group-hover:text-[#82D8FC] transition-colors">
-                                        {coverage.amount}
-                                    </span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-10 text-center gap-2 bg-[#141925]/50 rounded-[28px] border border-slate-800/40">
+                            <ShieldCheck className="w-8 h-8 text-slate-700 mb-1" />
+                            <p className="text-slate-500 text-[13px] font-medium">현재 등록된 보장 내역이 없습니다.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

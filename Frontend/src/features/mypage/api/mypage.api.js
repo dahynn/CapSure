@@ -82,3 +82,35 @@ export const getCapsuleDetail = async (subscriptionId) => {
     const response = await httpClient.get(`/subscriptions/${subscriptionId}/detail`);
     return response.data.data;
 };
+
+/**
+ * 익월 예약 보험 조회
+ */
+export const getNextItems = async (subscriptionId) => {
+    const response = await httpClient.get(`/subscriptions/${subscriptionId}/next-items`);
+    return response.data.data;
+};
+
+/**
+ * 익월 보험 예약 (추가)
+ */
+export const reserveNextItem = async (subscriptionId, capsuleProductId) => {
+    const response = await httpClient.post(`/subscriptions/${subscriptionId}/next-items`, { capsuleProductId });
+    return response.data.data;
+};
+
+/**
+ * 익월 보험 예약 취소
+ */
+export const cancelNextItem = async (subscriptionId, subscriptionItemId) => {
+    const response = await httpClient.delete(`/subscriptions/${subscriptionId}/next-items/${subscriptionItemId}`);
+    return response.data;
+};
+
+/**
+ * 익월 캡슐 변경 확정
+ */
+export const confirmNext = async (subscriptionId) => {
+    const response = await httpClient.put(`/subscriptions/${subscriptionId}/confirm-next`, {});
+    return response.data.data;
+};
