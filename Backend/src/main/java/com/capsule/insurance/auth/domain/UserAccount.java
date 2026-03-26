@@ -1,8 +1,7 @@
-// #Demo Setting
 package com.capsule.insurance.auth.domain;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,10 +22,10 @@ public class UserAccount {
     private LocalDate birthDate;
     private Gender gender;
     private UserStatus userStatus;
-    private LocalDateTime onboardingCompletedAt;
-    private LocalDateTime withdrawnAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant onboardingCompletedAt;
+    private Instant withdrawnAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 
     public void updateProfile(String name, String phone, java.time.LocalDate birthDate, Gender gender) {
         this.name = name;

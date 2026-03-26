@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.auth.infra;
 
 import com.capsule.insurance.auth.domain.UserAccount;

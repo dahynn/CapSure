@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.auth.dto;
 
 import jakarta.validation.constraints.Email;
