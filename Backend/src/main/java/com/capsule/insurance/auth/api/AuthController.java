@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.auth.api;
 
 import com.capsule.insurance.auth.application.AuthService;
@@ -8,11 +7,13 @@ import com.capsule.insurance.auth.dto.EmailAuthSendRequest;
 import com.capsule.insurance.auth.dto.EmailAuthVerifyRequest;
 import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.SignupRequest;
+import com.capsule.insurance.auth.dto.UserProfileResponse;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -78,5 +79,13 @@ public class AuthController {
         
         authService.withdraw(authentication.getName(), accessToken);
         return ApiResponse.success("회원 탈퇴가 완료되었습니다.");
+    }
+
+    @GetMapping("/profile")
+    public ApiResponse<UserProfileResponse> getProfile(org.springframework.security.core.Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        return ApiResponse.success("GET - 상세 정보 불러오기를 성공했습니다.", authService.getProfile(authentication.getName()));
     }
 }
