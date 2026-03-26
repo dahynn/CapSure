@@ -17,7 +17,6 @@ import com.capsule.insurance.common.security.jwt.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Service

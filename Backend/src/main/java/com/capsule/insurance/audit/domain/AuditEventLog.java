@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.MDC;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,13 +28,13 @@ public class AuditEventLog {
     private Long actorUserId;
     private AuditTargetType targetType;
     private Long targetId;
-    private LocalDateTime occurredAt;
+    private Instant occurredAt;
     private String requestId;
     private String beforeJson;
     private String afterJson;
     private String integrityHash;
     private String prevHash;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     // TODO: 이 파트에서 감사 로그 보관 및 삭제 정책이라는 논의점이 있는데, 우선 최신순 단순 조회 모델로 구현했음.
     public boolean isIntegrityChained() {
@@ -55,7 +55,7 @@ public class AuditEventLog {
 
         // 발생 시간 및 RequestID 자동 주입을 위한 오버라이딩 (선택적 편의 기능)
         public AuditEventLogBuilder autoFillContext() {
-            this.occurredAt = LocalDateTime.now();
+            this.occurredAt = Instant.now();
             if (MDC.get("requestId") != null && !MDC.get("requestId").isBlank()) {
                 this.requestId = MDC.get("requestId");
             } else {
