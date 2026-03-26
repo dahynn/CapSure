@@ -1,5 +1,10 @@
 package com.capsule.insurance.insurer.application;
 
+import com.capsule.insurance.auth.domain.UserAccount;
+import com.capsule.insurance.auth.infra.UserAccountMapper;
+import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
+import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
+import java.math.BigDecimal;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.insurer.domain.ProductSource;
@@ -30,6 +35,8 @@ public class InsurerService {
     private static final Pattern NUMBER_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
 
     private final ProductSourceMapper productSourceMapper;
+    private final InsurerCatalogMapper insurerCatalogMapper;
+    private final UserAccountMapper userAccountMapper;
     private final ChatClient chatClient;
     private final String openAiApiKey;
 
@@ -44,8 +51,21 @@ public class InsurerService {
         this.openAiApiKey = openAiApiKey;
     }
 
+    public InsurerService(InsurerCatalogMapper insurerCatalogMapper, UserAccountMapper userAccountMapper) {
+        this.insurerCatalogMapper = insurerCatalogMapper;
+        this.userAccountMapper = userAccountMapper;
+    }
+
     public List<InsurerProductSummary> getProducts() {
         return List.of(new InsurerProductSummary("INSURER-A", "PROD-001", "Starter Plan"));
+    }
+
+    public List<ProductSummaryResponse> getProducts(String category, Integer budget, Long userId) {
+        UserAccount user = userAccountMapper.findByUserId(userId);
+        String gender = (user != null && user.getGender() != null) ? user.getGender().name() : "M";
+
+        BigDecimal maxPrice = (budget != null) ? BigDecimal.valueOf(budget) : null;
+        return insurerCatalogMapper.findProductSourcesByFilter(category, maxPrice, gender);
     }
 
     public ProductSourceTermsSummaryResponse getProductSourceTermsSummary(Long productSourceId) {
