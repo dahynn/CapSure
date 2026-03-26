@@ -56,15 +56,14 @@ public class SubscriptionService {
                 if (capsuleProduct != null) {
                     productDtos.add(new SubscriptionDetailResponse.ProductDto(
                             capsuleProduct.getCapsuleProductId(),
-                            capsuleProduct.getCapsuleName(),
+                            capsuleProduct.getProductName(),
                             "캡슐손해보험", 
                             capsuleProduct.getCoverageCategory() != null ? capsuleProduct.getCoverageCategory().name() : "기타"
                     ));
                     
                     coverageDtos.add(new SubscriptionDetailResponse.CoverageDto(
-                            capsuleProduct.getCapsuleName() != null ? capsuleProduct.getCapsuleName() : "통합 보장내역",
-                            "최대 " + (capsuleProduct.getCoverageAmount() != null ? capsuleProduct.getCoverageAmount() : "0") + 
-                                    (capsuleProduct.getCoverageUnit() != null ? capsuleProduct.getCoverageUnit() : "")
+                            capsuleProduct.getProductName() != null ? capsuleProduct.getProductName() : "통합 보장내역",
+                            "최대 " + (capsuleProduct.getCoverageAmount() != null ? capsuleProduct.getCoverageAmount() : "0")
                     ));
                 }
             }

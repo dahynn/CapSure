@@ -1,8 +1,10 @@
 package com.capsule.insurance.insurer.application;
 
+import com.capsule.insurance.auth.domain.Gender;
 import com.capsule.insurance.auth.domain.UserAccount;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
+import com.capsule.insurance.insurer.dto.ProductDetailResponse;
 import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
 import java.math.BigDecimal;
 import com.capsule.insurance.common.exception.BusinessException;
@@ -62,10 +64,19 @@ public class InsurerService {
 
     public List<ProductSummaryResponse> getProducts(String category, Integer budget, Long userId) {
         UserAccount user = userAccountMapper.findByUserId(userId);
-        String gender = (user != null && user.getGender() != null) ? user.getGender().name() : "M";
+        String gender = (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN)
+                ? user.getGender().name() : Gender.M.name();
 
         BigDecimal maxPrice = (budget != null) ? BigDecimal.valueOf(budget) : null;
         return insurerCatalogMapper.findProductSourcesByFilter(category, maxPrice, gender);
+    }
+
+    public ProductDetailResponse getProductDetail(Long productSourceId, Long userId) {
+        UserAccount user = userAccountMapper.findByUserId(userId);
+        String gender = (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN)
+                ? user.getGender().name() : Gender.M.name();
+
+        return insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
     }
 
     public ProductSourceTermsSummaryResponse getProductSourceTermsSummary(Long productSourceId) {
