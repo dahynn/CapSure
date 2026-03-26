@@ -26,14 +26,16 @@ public class AuthService {
     private final UserAccountMapper userAccountMapper;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final SmsService smsService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenBlacklistRepository tokenBlacklistRepository;
 
-    public AuthService(UserAccountMapper userAccountMapper, PasswordEncoder passwordEncoder, EmailService emailService, JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenRepository, TokenBlacklistRepository tokenBlacklistRepository) {
+    public AuthService(UserAccountMapper userAccountMapper, PasswordEncoder passwordEncoder, EmailService emailService, SmsService smsService, JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenRepository, TokenBlacklistRepository tokenBlacklistRepository) {
         this.userAccountMapper = userAccountMapper;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.smsService = smsService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
         this.tokenBlacklistRepository = tokenBlacklistRepository;
@@ -150,6 +152,9 @@ public class AuthService {
         // if (!emailService.isEmailVerified(request.email())) {
         //     throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         // }
+        // if (!smsService.isPhoneVerified(request.phone())) {
+        //    throw new BusinessException(ErrorCode.UNAUTHORIZED, "휴대폰 인증이 완료되지 않았습니다.");
+        // }
         
         // 4. 유저 생성 및 비밀번호 암호화
         UserAccount userAccount = UserAccount.builder()
@@ -164,8 +169,9 @@ public class AuthService {
                 
         userAccountMapper.insert(userAccount);
         
-        // 5. 사용된 이메일 인증 상태 제거
+        // 5. 사용된 이메일 및 휴대폰 인증 상태 제거
         emailService.completeSignup(request.email());
+        smsService.completeSignup(request.phone());
         
     }
 }

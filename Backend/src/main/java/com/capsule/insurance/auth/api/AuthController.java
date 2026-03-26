@@ -10,6 +10,9 @@ import com.capsule.insurance.auth.dto.SignupRequest;
 import com.capsule.insurance.auth.dto.UserProfileResponse;
 import com.capsule.insurance.auth.dto.UserProfileUpdateRequest;
 import com.capsule.insurance.auth.dto.TokenRefreshRequest;
+import com.capsule.insurance.auth.dto.SmsAuthRequest;
+import com.capsule.insurance.auth.dto.SmsAuthVerifyRequest;
+import com.capsule.insurance.auth.application.SmsService;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.common.response.ApiResponse;
@@ -30,10 +33,12 @@ public class AuthController {
 
     private final AuthService authService;
     private final EmailService emailService;
+    private final SmsService smsService;
 
-    public AuthController(AuthService authService, EmailService emailService) {
+    public AuthController(AuthService authService, EmailService emailService, SmsService smsService) {
         this.authService = authService;
         this.emailService = emailService;
+        this.smsService = smsService;
     }
 
     @PostMapping("/login")
@@ -76,6 +81,21 @@ public class AuthController {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         return ApiResponse.success("PUT - 프로필 수정을 성공했습니다.", authService.updateProfile(authentication.getName(), request));
+    }
+    
+    @PostMapping("/phone/send-code")
+    public ApiResponse<String> sendPhoneVerificationCode(@Valid @RequestBody SmsAuthRequest request) {
+        smsService.sendVerificationCode(request.phone());
+        return ApiResponse.success("휴대폰으로 인증 번호가 전송되었습니다.");
+    }
+
+    @PostMapping("/phone/verify-code")
+    public ApiResponse<String> verifyPhoneCode(@Valid @RequestBody SmsAuthVerifyRequest request) {
+        boolean verified = smsService.verifyCode(request.phone(), request.authCode());
+        if (!verified) {
+            throw new BusinessException(ErrorCode.INVALID_AUTH_CODE, "인증 번호가 일치하지 않습니다.");
+        }
+        return ApiResponse.success("휴대폰 인증이 완료되었습니다.");
     }
 
     @PostMapping("/logout")
