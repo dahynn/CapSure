@@ -1,0 +1,139 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.capsule.insurance.insurer.infra.ProductSourceMapper">
+
+    <resultMap id="productSourceResultMap" type="com.capsule.insurance.insurer.domain.ProductSource">
+        <id property="productSourceId" column="product_source_id"/>
+        <result property="sourceFileName" column="source_file_name"/>
+        <result property="sourceRowNo" column="source_row_no"/>
+        <result property="insurerSector" column="insurer_sector"/>
+
+        <result property="companyName" column="company_name"/>
+        <result property="productName" column="product_name"/>
+        <result property="saleChannel" column="sale_channel"/>
+        <result property="contractTypeText" column="contract_type"/>
+        <result property="coverageName" column="coverage_name"/>
+        <result property="claimReasonText" column="claim_reason"/>
+        <result property="payoutAmountText" column="payout_amount"/>
+        <result property="joinAmountText" column="join_amount"/>
+        <result property="minimumJoinPremiumText" column="minimum_join_premium"/>
+
+        <result property="premiumMaleText" column="premium_male"/>
+        <result property="premiumFemaleText" column="premium_female"/>
+        <result property="paymentCycle" column="payment_cycle"/>
+        <result property="paymentTerm" column="payment_term"/>
+        <result property="coverageTerm" column="coverage_term"/>
+        <result property="monthlyPremiumMale" column="monthly_premium_male"/>
+        <result property="monthlyPremiumFemale" column="monthly_premium_female"/>
+        <result property="fixedRateText" column="fixed_rate"/>
+        <result property="currentAnnouncedRateText" column="current_announced_rate"/>
+        <result property="minimumGuaranteedRateText" column="minimum_guaranteed_rate"/>
+        <result property="coveragePartInterestRateText" column="coverage_part_interest_rate"/>
+        <result property="reservePartInterestRateText" column="reserve_part_interest_rate"/>
+
+        <result property="priceIndexMaleText" column="price_index_male"/>
+        <result property="priceIndexFemaleText" column="price_index_female"/>
+        <result property="extraPremiumIndexMaleText" column="extra_premium_index_male"/>
+        <result property="extraPremiumIndexFemaleText" column="extra_premium_index_female"/>
+        <result property="extraPremiumIndexText" column="extra_premium_index"/>
+        <result property="contractCostIndexMaleText" column="contract_cost_index_male"/>
+        <result property="contractCostIndexFemaleText" column="contract_cost_index_female"/>
+        <result property="contractCostIndexText" column="contract_cost_index"/>
+        <result property="coverageScopeIndexNameText" column="coverage_scope_index_name"/>
+        <result property="coverageScopeIndexValueText" column="coverage_scope_index_value"/>
+        <result property="coverageScopeIndexCancerDiagnosisText" column="coverage_scope_index_cancer_diagnosis"/>
+        <result property="coverageScopeIndexCancerHospitalizationText" column="coverage_scope_index_cancer_hospitalization"/>
+
+        <result property="expectedRenewalPremiumText" column="expected_renewal_premium"/>
+        <result property="productSummaryText" column="product_summary"/>
+        <result property="productFeatureText" column="product_feature"/>
+        <result property="surrenderValueText" column="surrender_value"/>
+        <result property="minimumDeathBenefitText" column="minimum_death_benefit"/>
+        <result property="minimumDeathBenefitMethodText" column="minimum_death_benefit_method"/>
+        <result property="minimumSurrenderValueText" column="minimum_surrender_value"/>
+        <result property="minimumSurrenderValueMethodText" column="minimum_surrender_value_method"/>
+        <result property="mildDementiaCoveredText" column="mild_dementia_covered"/>
+        <result property="mildDementiaBenefitAmountText" column="mild_dementia_benefit_amount"/>
+
+        <result property="productSubtypeText" column="product_subtype"/>
+        <result property="renewalText" column="renewal"/>
+        <result property="universalText" column="universal"/>
+        <result property="specialNote" column="special_note"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="saleDate" column="sale_date"/>
+
+        <result property="coverageCategory" column="coverage_category_code"/>
+        <result property="coverageCode" column="coverage_code"/>
+        <result property="mappingStatus" column="mapping_status"/>
+        <result property="manualNote" column="manual_note"/>
+        <result property="loadedAt" column="loaded_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findById" resultMap="productSourceResultMap">
+        select
+            product_source_id,
+            source_file_name,
+            source_row_no,
+            insurer_sector,
+            company_name,
+            product_name,
+            sale_channel,
+            contract_type,
+            coverage_name,
+            claim_reason,
+            payout_amount,
+            join_amount,
+            minimum_join_premium,
+            premium_male,
+            premium_female,
+            payment_cycle,
+            payment_term,
+            coverage_term,
+            monthly_premium_male,
+            monthly_premium_female,
+            fixed_rate,
+            current_announced_rate,
+            minimum_guaranteed_rate,
+            coverage_part_interest_rate,
+            reserve_part_interest_rate,
+            price_index_male,
+            price_index_female,
+            extra_premium_index_male,
+            extra_premium_index_female,
+            extra_premium_index,
+            contract_cost_index_male,
+            contract_cost_index_female,
+            contract_cost_index,
+            coverage_scope_index_name,
+            coverage_scope_index_value,
+            coverage_scope_index_cancer_diagnosis,
+            coverage_scope_index_cancer_hospitalization,
+            expected_renewal_premium,
+            product_summary,
+            product_feature,
+            surrender_value,
+            minimum_death_benefit,
+            minimum_death_benefit_method,
+            minimum_surrender_value,
+            minimum_surrender_value_method,
+            mild_dementia_covered,
+            mild_dementia_benefit_amount,
+            product_subtype,
+            renewal,
+            universal,
+            special_note,
+            contact_phone,
+            sale_date,
+            coverage_category_code,
+            coverage_code,
+            mapping_status,
+            manual_note,
+            loaded_at,
+            updated_at
+        from insurance.product_source
+        where product_source_id = #{productSourceId}
+    </select>
+
+</mapper>

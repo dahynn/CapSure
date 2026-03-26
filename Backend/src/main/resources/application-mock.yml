@@ -1,4 +1,15 @@
 spring:
+  ai:
+    model:
+      chat: openai
+    openai:
+      api-key: "here"
+      base-url: ${OPENAI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com}
+      chat:
+        completions-path: /v1/chat/completions
+        options:
+          model: ${OPENAI_MODEL:gpt-5.2}
+          temperature: 0.2
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/capsule_insurance}
     username: ${DB_USERNAME:capsule}
@@ -15,6 +26,11 @@ mybatis:
 
 server:
   port: 8081
+
+insurer:
+  terms-pdf:
+    path: ${INSURER_TERMS_PDF_PATH:classpath:terms/fixed-terms.pdf}
+    max-chars: ${INSURER_TERMS_PDF_MAX_CHARS:30000}
 
 mydata:
   mock:

@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.insurer.domain;
 
 public enum CoverageCategory {
@@ -8,5 +7,6 @@ public enum CoverageCategory {
     ACTUAL_LOSS,
     SURGERY,
     ACCIDENT,
-    LIABILITY
+    LIABILITY,
+    ETC
 }
