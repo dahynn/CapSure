@@ -56,3 +56,44 @@ export const getPaymentHistory = async () => {
         }, 500); // 0.5s network delay
     });
 };
+
+/**
+ * 프로필 정보 조회
+ */
+export const getUserProfile = async () => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    const response = await fetch('/api/v1/auth/profile', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('프로필 조회에 실패했습니다.');
+    }
+    const result = await response.json();
+    return result.data;
+};
+
+/**
+ * 프로필 정보 수정
+ */
+export const updateUserProfile = async (updateData) => {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    const response = await fetch('/api/v1/auth/profile', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify(updateData)
+    });
+
+    if (!response.ok) {
+        throw new Error('프로필 수정에 실패했습니다.');
+    }
+    const result = await response.json();
+    return result.data;
+};
