@@ -46,16 +46,13 @@ const SubscribedCapsures = ({ subscribedCapsures }) => {
                                 
                                 <div className="flex justify-between items-start relative z-10">
                                     <div>
-                                        <h3 className="text-xl md:text-[22px] font-bold text-white mb-2 tracking-tight">{capsure.title}</h3>
-                                        <p 
-                                            className="text-[12px] font-bold tracking-widest uppercase font-mono" 
-                                            style={{ color: capsure.themeColor }}
-                                        >
-                                            EST. {capsure.date}
+                                        <h3 className="text-xl md:text-[22px] font-bold text-white mb-1 tracking-tight">{capsure.title}</h3>
+                                        <p className="text-[#9D9DA4] text-[12px] font-medium flex items-center gap-1">
+                                            가입일: <span style={{ color: capsure.themeColor }} className="font-bold">{capsure.date}</span>
                                         </p>
                                     </div>
                                     <button 
-                                        onClick={() => navigate('/my-capsure')}
+                                        onClick={() => navigate(`/mypage/capsule/${capsure.id}`)}
                                         className="px-4 py-2 rounded-[14px] bg-slate-700/50 hover:bg-slate-700 text-white text-[13px] font-medium transition-colors border border-slate-600/50 active:scale-95"
                                     >
                                         상세보기
