@@ -8,6 +8,7 @@ import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.SignupRequest;
 import com.capsule.insurance.auth.dto.UserProfileResponse;
 import com.capsule.insurance.auth.dto.UserProfileUpdateRequest;
+import com.capsule.insurance.auth.dto.TokenRefreshRequest;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
@@ -104,6 +105,33 @@ public class AuthService {
         refreshTokenRepository.save(String.valueOf(user.getUserId()), refreshToken);
 
         return new AuthResult(accessToken, refreshToken, "Bearer", String.valueOf(user.getUserId()));
+    }
+
+    public AuthResult refresh(TokenRefreshRequest request) {
+        String providedToken = request.refreshToken();
+
+        if (!jwtTokenProvider.validateToken(providedToken)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "유효하지 않거나 만료된 Refresh Token입니다.");
+        }
+
+        String userId = jwtTokenProvider.getUserIdFromToken(providedToken);
+        String storedToken = refreshTokenRepository.findByUserId(userId);
+        
+        if (storedToken == null || !providedToken.equals(storedToken)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "토큰 정보가 일치하지 않습니다. 다시 로그인해주세요.");
+        }
+
+        UserAccount user = userAccountMapper.findByUserId(Long.valueOf(userId));
+        if (user == null || user.getUserStatus() == com.capsule.insurance.auth.domain.UserStatus.WITHDRAWN || user.getUserStatus() == com.capsule.insurance.auth.domain.UserStatus.LOCKED) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "접근이 제한된 계정입니다.");
+        }
+
+        String newAccessToken = jwtTokenProvider.createAccessToken(userId, user.getEmail(), "ROLE_USER");
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+
+        refreshTokenRepository.save(userId, newRefreshToken);
+
+        return new AuthResult(newAccessToken, newRefreshToken, "Bearer", userId);
     }
 
     public void signup(SignupRequest request) {

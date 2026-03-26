@@ -9,6 +9,7 @@ import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.SignupRequest;
 import com.capsule.insurance.auth.dto.UserProfileResponse;
 import com.capsule.insurance.auth.dto.UserProfileUpdateRequest;
+import com.capsule.insurance.auth.dto.TokenRefreshRequest;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.common.response.ApiResponse;
@@ -99,5 +100,11 @@ public class AuthController {
         
         authService.withdraw(authentication.getName(), accessToken);
         return ApiResponse.success("회원 탈퇴가 완료되었습니다.");
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResult> refresh(@Valid @RequestBody TokenRefreshRequest request) {
+        AuthResult result = authService.refresh(request);
+        return ApiResponse.success(result);
     }
 }

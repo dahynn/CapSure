@@ -74,6 +74,10 @@ public class JwtTokenProvider {
         return new UsernamePasswordAuthenticationToken(principal, token, principal.getAuthorities());
     }
 
+    public String getUserIdFromToken(String token) {
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getSubject();
+    }
+
     public long getExpirationRemaining(String token) {
         try {
             Date expiration = Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration();
