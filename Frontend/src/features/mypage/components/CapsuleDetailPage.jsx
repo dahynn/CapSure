@@ -1,0 +1,185 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ChevronLeft, Pill, ShieldCheck, FileText, ChevronRight, CheckCircle2, Shield, Activity, Sparkles } from 'lucide-react';
+
+const MOCK_CAPSULES = {
+    '1': {
+        id: '1',
+        name: '일상생활 지킴이 캡슐',
+        status: '활성화',
+        date: '2023. 10. 15 ~ 계속',
+        totalPremium: 12000,
+        products: [
+            { id: 'p1', name: '자전거/킥보드 배상 책임 (5천)', company: 'DB손해보험', type: '생활 배상 책임' },
+            { id: 'p2', name: '스마트폰 액정/도난 파손 (7천)', company: '삼성화재', type: '가전/기기 보장' }
+        ],
+        coverages: [
+            { label: '대인/대물 배상', amount: '최대 1,000만원' },
+            { label: '자전거/킥보드 사고 수리비', amount: '최대 50만원' },
+            { label: '스마트폰 파손 수리비 지원', amount: '연 2회 / 최대 50만원' },
+            { label: '스마트폰 도난 보상', amount: '최대 30만원 (자기부담금 30%)' }
+        ]
+    },
+    '2': {
+        id: '2',
+        name: '해외 여행 안심 캡슐',
+        status: '활성화',
+        date: '2023. 11. 01 ~ 2023. 11. 15',
+        totalPremium: 8000,
+        products: [
+            { id: 'p3', name: '해외 의료비 집중 (4천)', company: '현대해상', type: '해외 의료' },
+            { id: 'p4', name: '항공기 지연 및 수하물 (4천)', company: 'KB손해보험', type: '여행 불편' }
+        ],
+        coverages: [
+            { label: '해외 상해/질병 의료비', amount: '최대 3,000만원' },
+            { label: '의료 통역 및 긴급 이송 서비스', amount: '지원' },
+            { label: '항공기 및 수하물 지연 보상', amount: '최대 20만원' },
+            { label: '여권 분실/도난 지원', amount: '재발급 비용 전액' }
+        ]
+    },
+    '3': {
+        id: '3',
+        name: '반려견 건강 무지개 캡슐',
+        status: '활성화',
+        date: '2023. 05. 01 ~ 계속',
+        totalPremium: 35000,
+        products: [
+            { id: 'p5', name: '댕댕이 의료비 70% (2.5만)', company: '메리츠화재', type: '펫 보험' },
+            { id: 'p6', name: '타인 상해 배상 책임 (1만)', company: '한화손해보험', type: '생활 배상 책임' }
+        ],
+        coverages: [
+            { label: '통원/입원/수술 의료비', amount: '치료비의 70% (연 1,500만원)' },
+            { label: '슬개골/고관절 질환 특별 보장', amount: '포함' },
+            { label: '개물림 등 타인 신체 상해 배상', amount: '최대 500만원' }
+        ]
+    }
+};
+
+const CapsuleDetailPage = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [capsule, setCapsule] = useState(null);
+
+    useEffect(() => {
+        // 실제 API 연동 시 fetch 데이터를 가져옵니다.
+        // 임시 목업 데이터를 보여줍니다.
+        const data = MOCK_CAPSULES[id] || MOCK_CAPSULES['1'];
+        setCapsule(data);
+    }, [id]);
+
+    if (!capsule) return null;
+
+    return (
+        <div className="w-full flex flex-col flex-1">
+            <div className="px-8 py-8 md:px-12 md:py-10 space-y-10 max-w-[560px] mx-auto w-full transition-all animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
+                
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                    <button 
+                        onClick={() => navigate(-1)} 
+                        className="p-2 hover:bg-[#1E2535] rounded-full transition-colors text-white -ml-2"
+                    >
+                        <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <button className="w-8 h-8 rounded-full bg-[#1C212E] flex items-center justify-center border border-slate-700/50 hover:bg-[#82D8FC]/10 hover:text-[#82D8FC] hover:border-[#82D8FC]/50 transition-all text-[#9D9DA4]">
+                        <Sparkles className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Capsule Hero Card */}
+                <div className="relative p-8 rounded-[32px] overflow-hidden group shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-800/80 hover:border-[#82D8FC]/30 transition-colors">
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#1C212E] via-[#141925] to-[#0A0E17] -z-10"></div>
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-[#82D8FC]/10 rounded-full blur-[50px] -mr-16 -mt-16 pointer-events-none transition-transform duration-1000 group-hover:scale-125 group-hover:bg-[#82D8FC]/20"></div>
+                    
+                    <div className="flex flex-col mb-8 relative z-10">
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="w-14 h-14 bg-[#0B0E14] rounded-full flex items-center justify-center border border-slate-700/80 shadow-[0_0_15px_rgba(130,216,252,0.1)] relative">
+                                <Pill className="w-6 h-6 text-[#82D8FC]" />
+                                <div className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-400 border-[3px] border-[#0B0E14]"></div>
+                            </div>
+                            <span className="text-[#82D8FC] text-[11px] font-extrabold px-3 py-1.5 bg-[#82D8FC]/10 border border-[#82D8FC]/20 rounded-full backdrop-blur-sm shadow-[0_0_10px_rgba(130,216,252,0.1)]">
+                                {capsule.status}
+                            </span>
+                        </div>
+                        <h2 className="text-white text-2xl font-bold tracking-tight mt-1 drop-shadow-md">{capsule.name}</h2>
+                        <p className="text-[#9D9DA4] text-[13px] font-medium mt-1.5 flex items-center gap-1.5 opacity-90">
+                            가입 기간: <span className="text-[#82D8FC] font-semibold">{capsule.date}</span>
+                        </p>
+                    </div>
+                    
+                    <div className="px-5 py-4 rounded-[20px] bg-[#0B0E14]/60 backdrop-blur-md border border-slate-800/80 relative z-10 flex justify-between items-center group-hover:bg-[#0B0E14]/80 transition-colors">
+                        <span className="text-[#9D9DA4] font-medium text-sm">총 월 납입액</span>
+                        <div className="text-right">
+                            <span className="text-white font-black text-2xl tracking-tighter drop-shadow-md">{capsule.totalPremium.toLocaleString()}</span>
+                            <span className="text-[#82D8FC] text-sm ml-1.5 font-bold">원</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Product List */}
+                <div className="pt-2">
+                    <h3 className="text-white text-[15px] font-bold mb-4 flex items-center gap-2 px-1 opacity-90">
+                        <Shield className="w-4 h-4 text-[#82D8FC]" /> 속해있는 보험 상품
+                    </h3>
+                    <div className="space-y-3 relative before:absolute before:inset-y-0 before:left-6 before:w-[2px] before:bg-gradient-to-b before:from-[#82D8FC]/20 before:via-[#82D8FC]/10 before:to-transparent before:-z-10">
+                        {capsule.products.map((product, idx) => (
+                            <div 
+                                key={product.id} 
+                                className="p-4 bg-[#141925] rounded-[24px] border border-slate-800/60 hover:bg-[#1C212E] hover:border-[#82D8FC]/30 transition-all cursor-pointer shadow-lg animate-in slide-in-from-bottom-4 fade-in fill-mode-both flex gap-4 items-center group relative overflow-hidden"
+                                style={{ animationDelay: `${100 + idx * 100}ms` }}
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#82D8FC]/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                                <div className="w-10 h-10 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center text-[#9D9DA4] group-hover:text-[#82D8FC] group-hover:bg-[#82D8FC]/5 transition-colors shrink-0 shadow-inner z-10">
+                                    <FileText className="w-4 h-4" />
+                                </div>
+                                <div className="flex-1 space-y-1.5 z-10">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-extrabold text-[#141925] bg-[#82D8FC] px-2 py-[2px] rounded-full">{product.type}</span>
+                                    </div>
+                                    <h4 className="text-white text-sm font-bold tracking-tight">{product.name}</h4>
+                                    <p className="text-[#9D9DA4] text-[11px] font-medium">{product.company}</p>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-[#0B0E14] border border-slate-800/50 flex items-center justify-center text-[#4E5669] group-hover:border-[#82D8FC]/30 group-hover:text-[#82D8FC] transition-all shrink-0 z-10 group-hover:translate-x-1">
+                                    <ChevronRight className="w-4 h-4" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Coverage Details */}
+                <div className="pt-2 pb-6">
+                    <h3 className="text-white text-[15px] font-bold mb-4 flex items-center gap-2 px-1 opacity-90">
+                        <ShieldCheck className="w-4 h-4 text-[#82D8FC]" /> 핵심 통합 보장 내역
+                    </h3>
+                    <div className="bg-[#141925] rounded-[28px] border border-slate-800/60 p-5 shadow-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#82D8FC]/30 to-transparent"></div>
+                        <div className="space-y-0 relative z-10">
+                            {capsule.coverages.map((coverage, idx) => (
+                                <div 
+                                    key={idx} 
+                                    className="flex justify-between items-center py-4 border-b border-slate-800/50 last:border-0 hover:bg-[#1C212E]/60 px-3 -mx-3 rounded-xl transition-colors animate-in slide-in-from-bottom-4 fade-in fill-mode-both group"
+                                    style={{ animationDelay: `${300 + idx * 100}ms` }}
+                                >
+                                    <div className="flex items-start gap-3 w-[60%]">
+                                        <div className="w-6 h-6 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center shrink-0 group-hover:bg-[#82D8FC]/20 group-hover:border-[#82D8FC]/30 transition-colors mt-0.5">
+                                            <CheckCircle2 className="w-3.5 h-3.5 text-[#82D8FC]" />
+                                        </div>
+                                        <span className="text-slate-300 text-[13px] font-medium leading-relaxed break-keep group-hover:text-white transition-colors">
+                                            {coverage.label}
+                                        </span>
+                                    </div>
+                                    <span className="text-white text-[13px] font-bold text-right shrink-0 max-w-[40%] pl-3 group-hover:text-[#82D8FC] transition-colors">
+                                        {coverage.amount}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default CapsuleDetailPage;
