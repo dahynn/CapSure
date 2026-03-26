@@ -8,15 +8,18 @@ import {
     Headphones, 
     LogOut, 
     ChevronRight,
-    ChevronLeft
+    ChevronLeft,
+    CheckCircle2
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getPaymentHistory } from './api/mypage.api';
 
 const MyPage = ({ initialView = 'main' }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [view, setView] = useState(initialView);
     const [history, setHistory] = useState([]);
+    const [showToast, setShowToast] = useState(false);
     
     // Mock user data (백엔드 연동 시 이 state를 API 응답으로 대체)
     const [user] = useState({
@@ -28,6 +31,15 @@ const MyPage = ({ initialView = 'main' }) => {
     useEffect(() => {
         setView(initialView);
     }, [initialView]);
+
+    useEffect(() => {
+        if (location.state?.profileUpdated) {
+            setShowToast(true);
+            window.history.replaceState({}, document.title);
+            const timer = setTimeout(() => setShowToast(false), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [location]);
 
     useEffect(() => {
         if (view === 'history') {
@@ -52,7 +64,10 @@ const MyPage = ({ initialView = 'main' }) => {
                     <h2 className="text-[28px] md:text-3xl font-bold text-white leading-tight tracking-tight mb-1">{user.name} 님</h2>
                     <p className="text-[#9D9DA4] text-sm">{user.email}</p>
                 </div>
-                <button className="px-4 py-2 bg-[#1C212E] hover:bg-[#2A3142] rounded-xl text-sm font-medium text-white transition-colors">
+                <button 
+                    onClick={() => navigate('/mypage/edit')}
+                    className="px-4 py-2 bg-[#1C212E] hover:bg-[#2A3142] rounded-xl text-sm font-medium text-white transition-colors"
+                >
                     프로필 수정
                 </button>
             </div>
@@ -179,7 +194,17 @@ const MyPage = ({ initialView = 'main' }) => {
     );
 
     return (
-        <div className="px-8 py-8 md:px-12 md:py-10 space-y-12 max-w-[560px] mx-auto w-full transition-all min-h-screen">
+        <div className="px-8 py-8 md:px-12 md:py-10 space-y-12 max-w-[560px] mx-auto w-full transition-all min-h-screen relative">
+            {/* Toast Notification */}
+            {showToast && (
+                <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+                    <div className="bg-[#1C212E]/90 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-2xl border border-slate-700 flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-[#82D8FC]" />
+                        <span className="text-sm font-bold whitespace-nowrap">프로필이 성공적으로 수정되었습니다</span>
+                    </div>
+                </div>
+            )}
+            
             {view === 'main' && renderMain()}
             {view === 'history' && renderHistory()}
             {view === 'capsule' && renderCapsule()}
