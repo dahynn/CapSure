@@ -5,10 +5,19 @@ import SubscribedCapsures from "./components/SubscribedCapsures";
 import ActiveInsurances from "./components/ActiveInsurances";
 
 const HomePage = () => {
-    // Mock user data
-    const [user] = React.useState({
-        name: '정정교',
+    // User data state
+    const [user, setUser] = React.useState({
+        name: '고객',
     });
+
+    React.useEffect(() => {
+        import('@/features/mypage/api/mypage.api')
+            .then(({ getUserProfile }) => getUserProfile())
+            .then(data => {
+                if (data && data.name) setUser({ name: data.name });
+            })
+            .catch(() => console.error("프로필 조회를 실패했습니다."));
+    }, []);
 
     // Mock AI Recommendations
     const [aiRecommendations] = React.useState([
