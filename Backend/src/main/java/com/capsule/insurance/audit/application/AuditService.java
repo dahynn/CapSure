@@ -25,8 +25,8 @@ public class AuditService {
      */
     public void saveOutbox(AuditEventLog eventLog) {
         try {
-            // Outbox 고유 식별자용 UUID 생성 (Idempotency 보장)
-            String eventId = UUID.randomUUID().toString();
+            // Outbox 고유 식별자: Timestamp(밀리초) + UUID 조합 (B-Tree 인덱스 정렬 최적화 및 충돌 방지)
+            String eventId = System.currentTimeMillis() + "-" + UUID.randomUUID().toString();
             String payload = objectMapper.writeValueAsString(eventLog);
             outboxMapper.saveOutbox(eventId, payload);
         } catch (JsonProcessingException e) {
