@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams, Navigate } from 'react-router-dom';
 import CapsureProductDetail from './components/CapsureProductDetail';
 import { useCapsure } from './context/CapsureContext';
+import { httpClient } from '@/common/api/httpClient';
 
 const CapsureProductDetailPage = () => {
     const { id } = useParams();
@@ -17,8 +18,8 @@ const CapsureProductDetailPage = () => {
         const fetchDetail = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/insurers/products/${id}`);
-                const data = await response.json();
+                const response = await httpClient.get(`/insurers/products/${id}`);
+                const data = response.data;
                 if (data.success) {
                     setProduct(data.data);
                 }

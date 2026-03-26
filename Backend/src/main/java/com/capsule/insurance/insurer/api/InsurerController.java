@@ -6,7 +6,6 @@ import com.capsule.insurance.insurer.application.FixedTermsPdfSummaryService;
 import com.capsule.insurance.insurer.application.InsurerService;
 import com.capsule.insurance.insurer.dto.ProductDetailResponse;
 import com.capsule.insurance.insurer.dto.FixedTermsPdfSummaryResponse;
-import com.capsule.insurance.insurer.dto.InsurerProductSummary;
 import com.capsule.insurance.insurer.dto.ProductSourceLightSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceTermsSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSummaryResponse;

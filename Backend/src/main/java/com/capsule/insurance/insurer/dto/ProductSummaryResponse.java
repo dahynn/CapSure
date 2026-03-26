@@ -27,3 +27,4 @@ public record ProductSummaryResponse(
         return coverageCategoryCode != null ? CoverageCategory.valueOf(coverageCategoryCode) : null;
     }
 }
+

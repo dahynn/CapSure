@@ -64,8 +64,8 @@ const SubscribedCapsures = ({ subscribedCapsures }) => {
                             <div className="rounded-b-[32px] rounded-t-[8px] bg-[#0A0E17] p-6 flex flex-wrap gap-2.5 border border-slate-800/80 border-t-0 z-10">
                                 {capsure.coverages.map(cov => {
                                     const style = cov.isActive ? {
-                                        borderColor: '#82D8FC66',
-                                        color: '#82D8FC',
+                                        borderColor: `${capsure.themeColor}66`,
+                                        color: capsure.themeColor,
                                         backgroundColor: 'transparent'
                                     } : {};
 

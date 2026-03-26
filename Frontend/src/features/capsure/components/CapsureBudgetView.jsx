@@ -4,7 +4,7 @@ import { ChevronLeft, Wallet, Shield, ArrowRight } from 'lucide-react';
 
 const CapsureBudgetView = ({ onProceed }) => {
     const navigate = useNavigate();
-    const [budgetInput, setBudgetInput] = useState("100000");
+    const [budgetInput, setBudgetInput] = useState("10000");
 
     return (
         <div className="flex flex-col min-h-screen">
@@ -30,7 +30,7 @@ const CapsureBudgetView = ({ onProceed }) => {
 
                 {/* Quick Amounts */}
                 <div className="flex gap-2.5 mt-4 overflow-x-auto hide-scrollbar">
-                    {[30000, 50000, 100000, 150000].map(amt => (
+                    {[10000, 30000, 50000, 70000].map(amt => (
                         <button
                             key={amt}
                             onClick={() => setBudgetInput(amt.toString())}
@@ -85,7 +85,7 @@ const CapsureBudgetView = ({ onProceed }) => {
             <div className="fixed bottom-[72px] left-0 right-0 max-w-[560px] mx-auto pt-16 px-6 pb-8 z-40">
                 <button 
                     onClick={() => {
-                        onProceed(Number(budgetInput) || 100000);
+                        onProceed(Number(budgetInput) || 10000);
                     }}
                     className="w-full py-4 rounded-xl font-bold text-[#020715] text-base bg-brand-blue shadow-[0_0_20px_rgba(130,216,252,0.2)] hover:bg-[#6BC1E6] active:scale-[0.98] transition-all flex justify-center items-center gap-2"
                 >

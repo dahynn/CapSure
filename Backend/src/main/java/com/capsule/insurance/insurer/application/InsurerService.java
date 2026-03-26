@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.insurer.domain.ProductSource;
-import com.capsule.insurance.insurer.dto.InsurerProductSummary;
 import com.capsule.insurance.insurer.dto.ProductSourceLightSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceTermsSummaryResponse;
 import com.capsule.insurance.insurer.infra.ProductSourceMapper;
@@ -44,26 +43,21 @@ public class InsurerService {
 
     public InsurerService(
             ProductSourceMapper productSourceMapper,
+            InsurerCatalogMapper insurerCatalogMapper,
+            UserAccountMapper userAccountMapper,
             ObjectProvider<ChatClient.Builder> chatClientBuilderProvider,
             @Value("${spring.ai.openai.api-key:}") String openAiApiKey
     ) {
         this.productSourceMapper = productSourceMapper;
+        this.insurerCatalogMapper = insurerCatalogMapper;
+        this.userAccountMapper = userAccountMapper;
         ChatClient.Builder chatClientBuilder = chatClientBuilderProvider.getIfAvailable();
         this.chatClient = chatClientBuilder == null ? null : chatClientBuilder.build();
         this.openAiApiKey = openAiApiKey;
     }
 
-    public InsurerService(InsurerCatalogMapper insurerCatalogMapper, UserAccountMapper userAccountMapper) {
-        this.insurerCatalogMapper = insurerCatalogMapper;
-        this.userAccountMapper = userAccountMapper;
-    }
-
-    public List<InsurerProductSummary> getProducts() {
-        return List.of(new InsurerProductSummary("INSURER-A", "PROD-001", "Starter Plan"));
-    }
-
     public List<ProductSummaryResponse> getProducts(String category, Integer budget, Long userId) {
-        String gender = "M"; // Default Male
+        String gender = "M";
         try {
             UserAccount user = userAccountMapper.findByUserId(userId);
             if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
@@ -72,13 +66,12 @@ public class InsurerService {
         } catch (Exception e) {
             // Ignore and use default gender
         }
-
         BigDecimal maxPrice = (budget != null) ? BigDecimal.valueOf(budget) : null;
         return insurerCatalogMapper.findProductSourcesByFilter(category, maxPrice, gender);
     }
 
     public ProductDetailResponse getProductDetail(Long productSourceId, Long userId) {
-        String gender = "M"; // Default Male
+        String gender = "M";
         try {
             UserAccount user = userAccountMapper.findByUserId(userId);
             if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
@@ -87,7 +80,6 @@ public class InsurerService {
         } catch (Exception e) {
             // Ignore
         }
-
         return insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
     }
 

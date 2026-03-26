@@ -60,7 +60,7 @@ const ProductList = ({
                         selectedProducts.map(p => {
                             const pId = p.productSourceId || p.id;
                             const pName = p.productName || p.name;
-                            const pPrice = Number(p.monthlyPrice || p.price || 0);
+                            const pPrice = Math.floor(Number(p.monthlyPrice || p.price || 0));
                             const pCategory = CATEGORY_LABEL_MAP[p.coverageCategoryCode] || p.category;
 
                             return (
@@ -107,7 +107,7 @@ const ProductList = ({
                     filteredProducts?.map(product => {
                         const productId = product.productSourceId || product.id;
                         const productName = product.productName || product.name;
-                        const productPrice = Number(product.monthlyPrice || product.price || 0);
+                        const productPrice = Math.floor(Number(product.monthlyPrice || product.price || 0));
                         const productCategoryLabel = CATEGORY_LABEL_MAP[product.coverageCategoryCode] || product.category;
                         const isSelected = selectedProducts.some(p => (p.productSourceId || p.id) === productId);
                         const sectorLabel = product.insurerSector === 'LIFE' ? '생명보험' : '손해보험';

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import CapsureProgress from './maker/CapsureProgress';
 import ProductList from './maker/ProductList';
+import { httpClient } from '@/common/api/httpClient';
 
 const categories = ['전체', '사망', '암', '뇌/심장', '실손', '수술', '기타'];
 
@@ -21,7 +22,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     
     // Filter & Sort State
     const [activeCategories, setActiveCategories] = useState(['전체']);
-    const [sortBy, setSortBy] = useState('price');
+    const [sortBy, setSortBy] = useState('popular');
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -41,8 +42,8 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
                 params.append('category', CATEGORY_MAP[filteredCat] || filteredCat);
             }
 
-            const response = await fetch(`/insurers/products?${params.toString()}`);
-            const data = await response.json();
+            const response = await httpClient.get(`/insurers/products?${params.toString()}`);
+            const data = response.data;
             
             if (data.success) {
                 setProducts(data.data || []);
@@ -82,7 +83,18 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     const remainingBudget = totalBudget - currentAmount;
     const progressPercent = Math.min((currentAmount / totalBudget) * 100, 100);
 
-    const filteredProducts = products; // Backend already filtered them!
+    const filteredProducts = [...products].sort((a, b) => {
+        if (sortBy === 'price') {
+            const priceA = Number(a.monthlyPrice || a.price || 0);
+            const priceB = Number(b.monthlyPrice || b.price || 0);
+            return priceA - priceB;
+        }
+        if (sortBy === 'popular') {
+            // stable fallback for popular
+            return (b.productSourceId || b.id) - (a.productSourceId || a.id);
+        }
+        return 0;
+    });
 
     return (
         <div className="flex flex-col min-h-screen pb-28">

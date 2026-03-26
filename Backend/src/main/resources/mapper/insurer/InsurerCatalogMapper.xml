@@ -20,42 +20,46 @@
     </resultMap>
 
     <resultMap id="productSourceResultMap" type="com.capsule.insurance.insurer.dto.ProductSummaryResponse">
-        <id property="productSourceId" column="product_source_id"/>
-        <result property="companyName" column="company_name"/>
-        <result property="productName" column="product_name"/>
-        <result property="insurerSector" column="insurer_sector"/>
-        <result property="coverageCategoryCode" column="coverage_category_code"/>
-        <result property="coverageCode" column="coverage_code"/>
-        <result property="monthlyPrice" column="monthly_price"/>
-        <result property="loadedAt" column="loaded_at"/>
-        <result property="updatedAt" column="updated_at"/>
+        <constructor>
+            <idArg column="product_source_id" javaType="java.lang.Long"/>
+            <arg column="company_name" javaType="java.lang.String"/>
+            <arg column="product_name" javaType="java.lang.String"/>
+            <arg column="insurer_sector" javaType="com.capsule.insurance.insurer.domain.InsurerSector"/>
+            <arg column="coverage_category_code" javaType="java.lang.String"/>
+            <arg column="coverage_code" javaType="java.lang.String"/>
+            <arg column="monthly_price" javaType="java.math.BigDecimal"/>
+            <arg column="loaded_at" javaType="java.time.Instant"/>
+            <arg column="updated_at" javaType="java.time.Instant"/>
+        </constructor>
     </resultMap>
 
     <resultMap id="productDetailResultMap" type="com.capsule.insurance.insurer.dto.ProductDetailResponse">
-        <id property="productSourceId" column="product_source_id"/>
-        <result property="companyName" column="company_name"/>
-        <result property="productName" column="product_name"/>
-        <result property="insurerSector" column="insurer_sector"/>
-        <result property="saleChannel" column="sale_channel"/>
-        <result property="coverageName" column="coverage_name"/>
-        <result property="claimReason" column="claim_reason"/>
-        <result property="payoutAmount" column="payout_amount"/>
-        <result property="joinAmount" column="join_amount"/>
-        <result property="minimumJoinPremium" column="minimum_join_premium"/>
-        <result property="paymentCycle" column="payment_cycle"/>
-        <result property="paymentTerm" column="payment_term"/>
-        <result property="coverageTerm" column="coverage_term"/>
-        <result property="coverageCategoryCode" column="coverage_category_code"/>
-        <result property="coverageCode" column="coverage_code"/>
-        <result property="monthlyPrice" column="monthly_price"/>
-        <result property="productSummary" column="product_summary"/>
-        <result property="productFeature" column="product_feature"/>
-        <result property="specialNote" column="special_note"/>
-        <result property="contactPhone" column="contact_phone"/>
-        <result property="saleDate" column="sale_date"/>
-        <result property="currentAnnouncedRate" column="current_announced_rate"/>
-        <result property="fixedRate" column="fixed_rate"/>
-        <result property="minimumGuaranteedRate" column="minimum_guaranteed_rate"/>
+        <constructor>
+            <idArg column="product_source_id" javaType="java.lang.Long"/>
+            <arg column="company_name" javaType="java.lang.String"/>
+            <arg column="product_name" javaType="java.lang.String"/>
+            <arg column="insurer_sector" javaType="com.capsule.insurance.insurer.domain.InsurerSector"/>
+            <arg column="sale_channel" javaType="java.lang.String"/>
+            <arg column="coverage_name" javaType="java.lang.String"/>
+            <arg column="claim_reason" javaType="java.lang.String"/>
+            <arg column="payout_amount" javaType="java.lang.String"/>
+            <arg column="join_amount" javaType="java.lang.String"/>
+            <arg column="minimum_join_premium" javaType="java.lang.String"/>
+            <arg column="payment_cycle" javaType="java.lang.String"/>
+            <arg column="payment_term" javaType="java.lang.String"/>
+            <arg column="coverage_term" javaType="java.lang.String"/>
+            <arg column="coverage_category_code" javaType="java.lang.String"/>
+            <arg column="coverage_code" javaType="java.lang.String"/>
+            <arg column="monthly_price" javaType="java.math.BigDecimal"/>
+            <arg column="product_summary" javaType="java.lang.String"/>
+            <arg column="product_feature" javaType="java.lang.String"/>
+            <arg column="special_note" javaType="java.lang.String"/>
+            <arg column="contact_phone" javaType="java.lang.String"/>
+            <arg column="sale_date" javaType="java.time.LocalDate"/>
+            <arg column="current_announced_rate" javaType="java.lang.String"/>
+            <arg column="fixed_rate" javaType="java.lang.String"/>
+            <arg column="minimum_guaranteed_rate" javaType="java.lang.String"/>
+        </constructor>
     </resultMap>
 
     <resultMap id="capsuleProductResultMap" type="com.capsule.insurance.insurer.domain.CapsuleProduct">
@@ -152,8 +156,8 @@
             product_source_id,
             company_name,
             product_name,
-            insurer_sector,
-            coverage_category_code,
+            insurer_sector::text as insurer_sector,
+            coverage_category_code::text as coverage_category_code,
             coverage_code,
             <choose>
                 <when test="gender == 'M'.toString()">monthly_premium_male</when>

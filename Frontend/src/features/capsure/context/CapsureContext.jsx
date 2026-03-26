@@ -39,6 +39,11 @@ export const CapsureProvider = ({ children }) => {
         setSelectedProducts(selectedProducts.filter((p) => (p.productSourceId || p.id) !== id));
     };
 
+    const completeSubscription = () => {
+        setHasSubscription(true);
+        setSelectedProducts([]);
+    };
+
     const value = {
         hasSubscription,
         setHasSubscription,
@@ -47,7 +52,8 @@ export const CapsureProvider = ({ children }) => {
         selectedProducts,
         setSelectedProducts,
         handleAddItem,
-        handleRemoveItem
+        handleRemoveItem,
+        completeSubscription
     };
 
     return (
