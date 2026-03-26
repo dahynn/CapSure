@@ -1,73 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Pill, ShieldCheck, FileText, ChevronRight, CheckCircle2, Shield, Activity, Sparkles } from 'lucide-react';
-
-const MOCK_CAPSULES = {
-    '1': {
-        id: '1',
-        name: '일상생활 지킴이 캡슐',
-        status: '활성화',
-        date: '2023. 10. 15 ~ 계속',
-        totalPremium: 12000,
-        products: [
-            { id: 'p1', name: '자전거/킥보드 배상 책임 (5천)', company: 'DB손해보험', type: '생활 배상 책임' },
-            { id: 'p2', name: '스마트폰 액정/도난 파손 (7천)', company: '삼성화재', type: '가전/기기 보장' }
-        ],
-        coverages: [
-            { label: '대인/대물 배상', amount: '최대 1,000만원' },
-            { label: '자전거/킥보드 사고 수리비', amount: '최대 50만원' },
-            { label: '스마트폰 파손 수리비 지원', amount: '연 2회 / 최대 50만원' },
-            { label: '스마트폰 도난 보상', amount: '최대 30만원 (자기부담금 30%)' }
-        ]
-    },
-    '2': {
-        id: '2',
-        name: '해외 여행 안심 캡슐',
-        status: '활성화',
-        date: '2023. 11. 01 ~ 2023. 11. 15',
-        totalPremium: 8000,
-        products: [
-            { id: 'p3', name: '해외 의료비 집중 (4천)', company: '현대해상', type: '해외 의료' },
-            { id: 'p4', name: '항공기 지연 및 수하물 (4천)', company: 'KB손해보험', type: '여행 불편' }
-        ],
-        coverages: [
-            { label: '해외 상해/질병 의료비', amount: '최대 3,000만원' },
-            { label: '의료 통역 및 긴급 이송 서비스', amount: '지원' },
-            { label: '항공기 및 수하물 지연 보상', amount: '최대 20만원' },
-            { label: '여권 분실/도난 지원', amount: '재발급 비용 전액' }
-        ]
-    },
-    '3': {
-        id: '3',
-        name: '반려견 건강 무지개 캡슐',
-        status: '활성화',
-        date: '2023. 05. 01 ~ 계속',
-        totalPremium: 35000,
-        products: [
-            { id: 'p5', name: '댕댕이 의료비 70% (2.5만)', company: '메리츠화재', type: '펫 보험' },
-            { id: 'p6', name: '타인 상해 배상 책임 (1만)', company: '한화손해보험', type: '생활 배상 책임' }
-        ],
-        coverages: [
-            { label: '통원/입원/수술 의료비', amount: '치료비의 70% (연 1,500만원)' },
-            { label: '슬개골/고관절 질환 특별 보장', amount: '포함' },
-            { label: '개물림 등 타인 신체 상해 배상', amount: '최대 500만원' }
-        ]
-    }
-};
+import { ChevronLeft, Pill, ShieldCheck, FileText, ChevronRight, CheckCircle2, Shield, Activity, Sparkles, Loader2 } from 'lucide-react';
+import { getCapsuleDetail } from '@/features/mypage/api/mypage.api';
 
 const CapsuleDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [capsule, setCapsule] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        // 실제 API 연동 시 fetch 데이터를 가져옵니다.
-        // 임시 목업 데이터를 보여줍니다.
-        const data = MOCK_CAPSULES[id] || MOCK_CAPSULES['1'];
-        setCapsule(data);
+        const fetchDetail = async () => {
+            try {
+                setLoading(true);
+                const data = await getCapsuleDetail(id);
+                setCapsule(data);
+            } catch (err) {
+                console.error(err);
+                setError('캡슐 정보를 불러오는데 실패했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDetail();
     }, [id]);
 
-    if (!capsule) return null;
+    if (loading) {
+        return (
+            <div className="w-full h-screen bg-[#0B0E14] flex flex-col items-center justify-center">
+                <Loader2 className="w-8 h-8 text-[#82D8FC] animate-spin mb-4" />
+                <p className="text-[#9D9DA4] text-sm">상세 정보를 불러오는 중입니다...</p>
+            </div>
+        );
+    }
+
+    if (error || !capsule) {
+        return (
+            <div className="w-full h-screen bg-[#0B0E14] flex flex-col items-center justify-center">
+                <p className="text-red-400 mb-4">{error || '데이터를 찾을 수 없습니다.'}</p>
+                <button 
+                    onClick={() => navigate(-1)} 
+                    className="px-6 py-2 bg-[#1C212E] rounded-xl text-white hover:bg-[#1E2535] transition-colors"
+                >
+                    돌아가기
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full flex flex-col flex-1">
