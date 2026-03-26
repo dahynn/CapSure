@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.auth.application;
 
 import com.capsule.insurance.auth.domain.UserAccount;
@@ -6,6 +5,7 @@ import com.capsule.insurance.auth.domain.UserStatus;
 import com.capsule.insurance.auth.dto.AuthResult;
 import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.SignupRequest;
+import com.capsule.insurance.auth.dto.UserProfileResponse;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Service
 public class AuthService {
@@ -60,6 +61,14 @@ public class AuthService {
 
         userAccountMapper.withdraw(Long.valueOf(userId));
         this.logout(userId, accessToken);
+    }
+
+    public UserProfileResponse getProfile(String userId) {
+        UserAccount user = userAccountMapper.findByUserId(Long.valueOf(userId));
+        if (Objects.isNull(user)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "계정 정보를 찾을 수 없습니다.");
+        }
+        return UserProfileResponse.from(user);
     }
 
     public AuthResult login(LoginRequest request) {
