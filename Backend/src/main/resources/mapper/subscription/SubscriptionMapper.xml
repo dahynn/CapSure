@@ -101,4 +101,101 @@
         order by subscription_item_id
     </select>
 
+    <!-- ── 신규: subscriptionId로 구독 단건 조회 ── -->
+    <select id="findSubscriptionById" resultMap="subscriptionAggregateResultMap">
+        select
+            subscription_id,
+            user_id,
+            subscription_status,
+            billing_anchor_day,
+            current_cycle_start_at,
+            current_cycle_end_at,
+            next_billing_at,
+            expected_next_amount,
+            paused_at,
+            cancelled_at,
+            created_at,
+            updated_at
+        from subscription
+        where subscription_id = #{subscriptionId}
+    </select>
+
+    <!-- ── 신규: NEXT 아이템 단건 조회 ── -->
+    <select id="findNextItemById" resultMap="subscriptionItemResultMap">
+        select
+            subscription_item_id,
+            subscription_id,
+            capsule_product_id,
+            plan_version,
+            item_status,
+            coverage_amount_snapshot,
+            monthly_price_snapshot,
+            effective_start_at,
+            effective_end_at,
+            editable_after_at,
+            created_at,
+            updated_at
+        from subscription_item
+        where subscription_item_id = #{subscriptionItemId}
+          and plan_version = 'NEXT'
+    </select>
+
+    <!-- ── 신규: 동일 상품 CURRENT/NEXT 존재 여부 ── -->
+    <select id="existsProductInCurrentOrNext" resultType="boolean">
+        select count(*) > 0
+        from subscription_item
+        where subscription_id = #{subscriptionId}
+          and capsule_product_id = #{capsuleProductId}
+          and plan_version in ('CURRENT', 'NEXT')
+          and item_status not in ('CANCELLED')
+    </select>
+
+    <!-- ── 신규: NEXT 아이템 삽입 ── -->
+    <insert id="insertNextItem">
+        insert into subscription_item (
+            subscription_id,
+            capsule_product_id,
+            plan_version,
+            item_status,
+            coverage_amount_snapshot,
+            monthly_price_snapshot,
+            created_at,
+            updated_at
+        )
+        select
+            #{subscriptionId},
+            #{capsuleProductId},
+            'NEXT',
+            'RESERVED_ADD',
+            cp.coverage_amount,
+            cp.monthly_price,
+            now(),
+            now()
+        from capsule_product cp
+        where cp.capsule_product_id = #{capsuleProductId}
+    </insert>
+
+    <!-- ── 신규: NEXT 아이템 삭제 ── -->
+    <delete id="deleteNextItem">
+        delete from subscription_item
+        where subscription_item_id = #{subscriptionItemId}
+          and plan_version = 'NEXT'
+    </delete>
+
+    <!-- ── 신규: NEXT 아이템 수 조회 ── -->
+    <select id="countNextItems" resultType="int">
+        select count(*)
+        from subscription_item
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'NEXT'
+          and item_status = 'RESERVED_ADD'
+    </select>
+
+    <!-- ── 신규: 구독 updated_at 갱신 ── -->
+    <update id="updateSubscriptionUpdatedAt">
+        update subscription
+        set updated_at = now()
+        where subscription_id = #{subscriptionId}
+    </update>
+
 </mapper>
