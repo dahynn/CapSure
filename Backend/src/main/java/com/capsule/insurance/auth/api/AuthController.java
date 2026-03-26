@@ -20,18 +20,15 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
     private final EmailService emailService;
-
-    public AuthController(AuthService authService, EmailService emailService) {
-        this.authService = authService;
-        this.emailService = emailService;
-    }
 
     @PostMapping("/login")
     public ApiResponse<AuthResult> login(@Valid @RequestBody LoginRequest request) {

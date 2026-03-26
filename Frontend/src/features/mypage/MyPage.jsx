@@ -179,11 +179,15 @@ const MyPage = ({ initialView = 'main' }) => {
                 
                 <div className="grid grid-cols-3 gap-4">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="aspect-square bg-[#1C212E] rounded-2xl flex items-center justify-center border border-slate-700/50">
-                            <div className="w-8 h-8 rounded-full bg-[#82D8FC]/20 text-[#82D8FC]">
-                                <Pill className="w-4 h-4 m-2" />
+                        <button 
+                            key={i} 
+                            onClick={() => navigate(`/mypage/capsule/${i}`)}
+                            className="aspect-square bg-[#1C212E] hover:bg-slate-800 transition-colors rounded-2xl flex items-center justify-center border border-slate-700/50 cursor-pointer shadow-lg hover:shadow-cyan-900/20"
+                        >
+                            <div className="w-8 h-8 rounded-full bg-[#82D8FC]/20 text-[#82D8FC] flex items-center justify-center">
+                                <Pill className="w-4 h-4" />
                             </div>
-                        </div>
+                        </button>
                     ))}
                     {[4, 5, 6, 7, 8, 9].map(i => (
                         <div key={i} className="aspect-square bg-[#141925]/50 rounded-2xl border border-slate-800/20"></div>
