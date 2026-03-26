@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.common.security.jwt;
 
 import jakarta.servlet.FilterChain;

@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.audit.domain;
 
 public enum AuditEventType {
