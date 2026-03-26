@@ -16,6 +16,7 @@ import CapsureTermsPage from '@/features/capsure/CapsureTermsPage';
 
 // MyPage Features
 import MyPage from '@/features/mypage/MyPage';
+import ProfileEditPage from '@/features/mypage/components/ProfileEditPage';
 
 import OnboardingPage from '@/features/onboarding/components/OnboardingPage';
 
@@ -52,6 +53,7 @@ const AppRouter = () => {
           {/* consolidated MyPage Routes */}
           <Route path="/mypage">
             <Route index element={<MyPage initialView="main" />} />
+            <Route path="edit" element={<ProfileEditPage />} />
             <Route path="capsure" element={<MyPage initialView="capsule" />} />
             <Route path="history" element={<MyPage initialView="history" />} />
           </Route>

@@ -17,4 +17,6 @@ public interface UserAccountMapper {
     void insert(UserAccount userAccount);
 
     void withdraw(@Param("userId") Long userId);
+
+    void updateProfile(UserAccount userAccount);
 }

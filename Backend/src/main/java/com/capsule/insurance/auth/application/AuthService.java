@@ -2,10 +2,12 @@ package com.capsule.insurance.auth.application;
 
 import com.capsule.insurance.auth.domain.UserAccount;
 import com.capsule.insurance.auth.domain.UserStatus;
+import com.capsule.insurance.auth.domain.Gender;
 import com.capsule.insurance.auth.dto.AuthResult;
 import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.SignupRequest;
 import com.capsule.insurance.auth.dto.UserProfileResponse;
+import com.capsule.insurance.auth.dto.UserProfileUpdateRequest;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
@@ -68,6 +70,18 @@ public class AuthService {
         if (Objects.isNull(user)) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "계정 정보를 찾을 수 없습니다.");
         }
+        return UserProfileResponse.from(user);
+    }
+
+    public UserProfileResponse updateProfile(String userId, UserProfileUpdateRequest request) {
+        UserAccount user = userAccountMapper.findByUserId(Long.valueOf(userId));
+        if (Objects.isNull(user)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "계정 정보를 찾을 수 없습니다.");
+        }
+
+        user.updateProfile(request.name(), request.phone(), request.birthDate(), Gender.valueOf(request.gender()));
+        userAccountMapper.updateProfile(user);
+
         return UserProfileResponse.from(user);
     }
 
