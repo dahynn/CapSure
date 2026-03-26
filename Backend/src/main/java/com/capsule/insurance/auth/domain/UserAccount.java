@@ -27,4 +27,11 @@ public class UserAccount {
     private LocalDateTime withdrawnAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public void updateProfile(String name, String phone, java.time.LocalDate birthDate, Gender gender) {
+        this.name = name;
+        this.phone = phone;
+        this.birthDate = birthDate;
+        this.gender = gender;
+    }
 }
