@@ -79,4 +79,14 @@
         WHERE user_id = #{userId}
     </update>
 
+    <update id="updateProfile">
+        UPDATE usr_user
+        SET name = #{name},
+            phone = #{phone},
+            birth_date = #{birthDate},
+            gender = #{gender},
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
 </mapper>
