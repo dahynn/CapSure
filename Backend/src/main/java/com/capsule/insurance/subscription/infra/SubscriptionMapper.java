@@ -12,7 +12,23 @@ public interface SubscriptionMapper {
 
     Subscription findSubscriptionAggregateByUserId(@Param("userId") Long userId);
 
+    Subscription findSubscriptionById(@Param("subscriptionId") Long subscriptionId);
+
     List<SubscriptionItem> findCurrentItemsBySubscriptionId(@Param("subscriptionId") Long subscriptionId);
 
     List<SubscriptionItem> findNextItemsBySubscriptionId(@Param("subscriptionId") Long subscriptionId);
+
+    SubscriptionItem findNextItemById(@Param("subscriptionItemId") Long subscriptionItemId);
+
+    boolean existsProductInCurrentOrNext(@Param("subscriptionId") Long subscriptionId,
+                                         @Param("capsuleProductId") Long capsuleProductId);
+
+    void insertNextItem(@Param("subscriptionId") Long subscriptionId,
+                        @Param("capsuleProductId") Long capsuleProductId);
+
+    void deleteNextItem(@Param("subscriptionItemId") Long subscriptionItemId);
+
+    int countNextItems(@Param("subscriptionId") Long subscriptionId);
+
+    void updateSubscriptionUpdatedAt(@Param("subscriptionId") Long subscriptionId);
 }
