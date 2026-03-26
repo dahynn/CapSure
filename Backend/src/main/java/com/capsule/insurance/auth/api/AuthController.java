@@ -8,6 +8,7 @@ import com.capsule.insurance.auth.dto.EmailAuthVerifyRequest;
 import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.SignupRequest;
 import com.capsule.insurance.auth.dto.UserProfileResponse;
+import com.capsule.insurance.auth.dto.UserProfileUpdateRequest;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.common.response.ApiResponse;
@@ -15,6 +16,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -86,6 +88,14 @@ public class AuthController {
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
-        return ApiResponse.success("GET - 상세 정보 불러오기를 성공했습니다.", authService.getProfile(authentication.getName()));
+        return ApiResponse.success("프로필 정보 불러오기를 성공했습니다.", authService.getProfile(authentication.getName()));
+    }
+
+    @PutMapping("/profile")
+    public ApiResponse<UserProfileResponse> updateProfile(org.springframework.security.core.Authentication authentication, @Valid @RequestBody UserProfileUpdateRequest request) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        return ApiResponse.success("PUT - 프로필 수정을 성공했습니다.", authService.updateProfile(authentication.getName(), request));
     }
 }
