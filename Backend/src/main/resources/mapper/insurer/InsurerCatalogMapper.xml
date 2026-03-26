@@ -19,6 +19,18 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <resultMap id="productSourceResultMap" type="com.capsule.insurance.insurer.dto.ProductSummaryResponse">
+        <id property="productSourceId" column="product_source_id"/>
+        <result property="companyName" column="company_name"/>
+        <result property="productName" column="product_name"/>
+        <result property="insurerSector" column="insurer_sector"/>
+        <result property="coverageCategoryCode" column="coverage_category_code"/>
+        <result property="coverageCode" column="coverage_code"/>
+        <result property="monthlyPrice" column="monthly_price"/>
+        <result property="loadedAt" column="loaded_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
     <resultMap id="capsuleProductResultMap" type="com.capsule.insurance.insurer.domain.CapsuleProduct">
         <id property="capsuleProductId" column="capsule_product_id"/>
         <result property="capsuleCode" column="capsule_code"/>
@@ -62,12 +74,15 @@
         select
             capsule_product_id,
             capsule_code,
-            capsule_name,
+            product_name,
+            company_name,
+            insurer_sector,
             coverage_category_code,
             coverage_code,
             coverage_amount,
             coverage_unit,
-            monthly_price,
+            monthly_price_male,
+            monthly_price_female,
             min_retention_days,
             sale_status,
             is_duplicate_check_target,
@@ -85,12 +100,15 @@
         select
             capsule_product_id,
             capsule_code,
-            capsule_name,
+            product_name,
+            company_name,
+            insurer_sector,
             coverage_category_code,
             coverage_code,
             coverage_amount,
             coverage_unit,
-            monthly_price,
+            monthly_price_male,
+            monthly_price_female,
             min_retention_days,
             sale_status,
             is_duplicate_check_target,
@@ -103,4 +121,40 @@
         where capsule_product_id = #{capsuleProductId}
     </select>
 
+    <select id="findProductSourcesByFilter" resultType="com.capsule.insurance.insurer.dto.ProductSummaryResponse">
+        SELECT
+            product_source_id,
+            company_name,
+            product_name,
+            insurer_sector,
+            coverage_category_code,
+            coverage_code,
+            <choose>
+                <when test="gender == 'M'.toString()">monthly_premium_male</when>
+                <when test="gender == 'F'.toString()">monthly_premium_female</when>
+                <otherwise>NULL</otherwise>
+            </choose> AS monthly_price,
+            loaded_at,
+            updated_at
+        FROM insurance.product_source
+        WHERE mapping_status = 'AUTO_MAPPED'::insurance.mapping_status
+        <if test="category != null and category != ''">
+            AND coverage_category_code = #{category}::insurance.coverage_category_code
+        </if>
+        <choose>
+            <when test="gender == 'M'.toString()">
+                AND (monthly_premium_male IS NOT NULL AND monthly_premium_male > 0)
+                <if test="maxPrice != null">
+                    AND monthly_premium_male &lt;= #{maxPrice}
+                </if>
+            </when>
+            <when test="gender == 'F'.toString()">
+                AND (monthly_premium_female IS NOT NULL AND monthly_premium_female > 0)
+                <if test="maxPrice != null">
+                    AND monthly_premium_female &lt;= #{maxPrice}
+                </if>
+            </when>
+        </choose>
+        ORDER BY product_source_id ASC
+    </select>
 </mapper>

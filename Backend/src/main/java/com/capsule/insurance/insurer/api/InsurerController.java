@@ -1,3 +1,4 @@
+// #Demo Setting
 package com.capsule.insurance.insurer.api;
 
 import com.capsule.insurance.common.response.ApiResponse;
@@ -7,6 +8,7 @@ import com.capsule.insurance.insurer.dto.FixedTermsPdfSummaryResponse;
 import com.capsule.insurance.insurer.dto.InsurerProductSummary;
 import com.capsule.insurance.insurer.dto.ProductSourceLightSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceTermsSummaryResponse;
+import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,8 +31,13 @@ public class InsurerController {
     }
 
     @GetMapping("/products")
-    public ApiResponse<List<InsurerProductSummary>> getProducts() {
-        return ApiResponse.success(insurerService.getProducts());
+    public ApiResponse<List<ProductSummaryResponse>> getProducts(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String category,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Integer budget,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        Long userId = Long.parseLong(authentication.getName()); // 유저 성별로 보험료 조회
+        return ApiResponse.success(insurerService.getProducts(category, budget, userId));
     }
 
     @GetMapping("/product-sources/{productSourceId}/terms-summary")
