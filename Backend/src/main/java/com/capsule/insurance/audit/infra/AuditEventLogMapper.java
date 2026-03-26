@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.audit.infra;
 
 import com.capsule.insurance.audit.domain.AuditEventLog;

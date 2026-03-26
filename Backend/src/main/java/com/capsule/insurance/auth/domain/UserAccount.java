@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.auth.domain;
 
 import java.time.Instant;

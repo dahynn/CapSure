@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.audit.domain;
 
 import com.fasterxml.jackson.core.JsonProcessingException;

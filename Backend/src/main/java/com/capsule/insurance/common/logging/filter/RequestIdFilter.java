@@ -1,4 +1,3 @@
-// #Demo Setting
 package com.capsule.insurance.common.logging.filter;
 
 import jakarta.servlet.FilterChain;
