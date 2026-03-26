@@ -21,12 +21,20 @@ const MyPage = ({ initialView = 'main' }) => {
     const [history, setHistory] = useState([]);
     const [showToast, setShowToast] = useState(false);
     
-    // Mock user data (백엔드 연동 시 이 state를 API 응답으로 대체)
-    const [user] = useState({
-        name: '정정교',
+    const [user, setUser] = useState({
+        name: '고객',
         email: 'capsure_user@email.com',
         subscriptionCount: 3
     });
+
+    useEffect(() => {
+        import('./api/mypage.api')
+            .then(({ getUserProfile }) => getUserProfile())
+            .then(data => {
+                if (data) setUser(prev => ({ ...prev, name: data.name || '고객', email: data.email || prev.email }));
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         setView(initialView);

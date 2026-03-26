@@ -76,7 +76,7 @@ const SignupPage = () => {
         password: '',
         passwordConfirm: '',
         phone: '',
-        gender: '', // 'male' | 'female'
+        gender: '', // 'M' | 'F'
     });
     
     const [birthYear, setBirthYear] = useState('');
@@ -114,7 +114,7 @@ const SignupPage = () => {
             await authApi.signup({
                 ...signupForm,
                 birthDate,
-                name: '사용자', // 와이어프레임에 이름 필드가 없어서 기본값 처리 (필요시 백엔드 스펙 조율)
+                fullName: '사용자', // 와이어프레임에 이름 필드가 없어서 기본값 처리
             });
             setView('signup-success');
             setTimeout(() => {
@@ -229,9 +229,9 @@ const SignupPage = () => {
                         <div className="flex gap-3">
                             <button
                                 type="button"
-                                onClick={() => setSignupForm({ ...signupForm, gender: 'male' })}
+                                onClick={() => setSignupForm({ ...signupForm, gender: 'M' })}
                                 className={`flex-1 py-4 rounded-2xl text-sm font-medium transition-all ${
-                                    signupForm.gender === 'male' 
+                                    signupForm.gender === 'M' 
                                     ? 'bg-[#1E2A40] text-white border border-[#38bdf8]' 
                                     : 'bg-[#131B2E] text-slate-300 border border-[#1E2A40]'
                                 }`}
@@ -240,9 +240,9 @@ const SignupPage = () => {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setSignupForm({ ...signupForm, gender: 'female' })}
+                                onClick={() => setSignupForm({ ...signupForm, gender: 'F' })}
                                 className={`flex-1 py-4 rounded-2xl text-sm font-medium transition-all ${
-                                    signupForm.gender === 'female' 
+                                    signupForm.gender === 'F' 
                                     ? 'bg-[#1E2A40] text-white border border-[#38bdf8]' 
                                     : 'bg-[#131B2E] text-slate-300 border border-[#1E2A40]'
                                 }`}

@@ -118,10 +118,10 @@ public class AuthService {
             throw new BusinessException(ErrorCode.DUPLICATED_EMAIL);
         }
         
-        // 3. 이메일 인증 확인
-        if (!emailService.isEmailVerified(request.email())) {
-            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
-        }
+        // 3. 이메일 인증 확인 - TODO: 프론트 이메일 인증 UI 연동 후 주석 해제
+        // if (!emailService.isEmailVerified(request.email())) {
+        //     throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
+        // }
         
         // 4. 유저 생성 및 비밀번호 암호화
         UserAccount userAccount = UserAccount.builder()
