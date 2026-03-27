@@ -4,8 +4,10 @@ package com.capsule.insurance.insurer.api;
 import com.capsule.insurance.common.response.ApiResponse;
 import com.capsule.insurance.insurer.application.FixedTermsPdfSummaryService;
 import com.capsule.insurance.insurer.application.InsurerService;
+import com.capsule.insurance.insurer.application.ProductSourceAiSummaryService;
 import com.capsule.insurance.insurer.dto.ProductDetailResponse;
 import com.capsule.insurance.insurer.dto.FixedTermsPdfSummaryResponse;
+import com.capsule.insurance.insurer.dto.ProductSourceAiSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceLightSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceTermsSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
@@ -21,13 +23,16 @@ public class InsurerController {
 
     private final InsurerService insurerService;
     private final FixedTermsPdfSummaryService fixedTermsPdfSummaryService;
+    private final ProductSourceAiSummaryService productSourceAiSummaryService;
 
     public InsurerController(
             InsurerService insurerService,
-            FixedTermsPdfSummaryService fixedTermsPdfSummaryService
+            FixedTermsPdfSummaryService fixedTermsPdfSummaryService,
+            ProductSourceAiSummaryService productSourceAiSummaryService
     ) {
         this.insurerService = insurerService;
         this.fixedTermsPdfSummaryService = fixedTermsPdfSummaryService;
+        this.productSourceAiSummaryService = productSourceAiSummaryService;
     }
 
     @GetMapping("/products")
@@ -72,6 +77,13 @@ public class InsurerController {
             @PathVariable("productSourceId") Long productSourceId
     ) {
         return ApiResponse.success(insurerService.getProductSourceLightSummary(productSourceId));
+    }
+
+    @GetMapping("/product-sources/{productSourceId}/ai-summary")
+    public ApiResponse<ProductSourceAiSummaryResponse> getProductSourceAiSummary(
+            @PathVariable("productSourceId") Long productSourceId
+    ) {
+        return ApiResponse.success(productSourceAiSummaryService.getProductSourceAiSummary(productSourceId));
     }
 
     @GetMapping("/fixed-terms-pdf/summary")

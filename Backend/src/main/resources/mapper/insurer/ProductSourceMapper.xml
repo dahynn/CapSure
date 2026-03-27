@@ -48,6 +48,7 @@
         <result property="expectedRenewalPremiumText" column="expected_renewal_premium"/>
         <result property="productSummaryText" column="product_summary"/>
         <result property="productFeatureText" column="product_feature"/>
+        <result property="aiSummaryJson" column="ai_summary_json"/>
         <result property="surrenderValueText" column="surrender_value"/>
         <result property="minimumDeathBenefitText" column="minimum_death_benefit"/>
         <result property="minimumDeathBenefitMethodText" column="minimum_death_benefit_method"/>
@@ -113,6 +114,7 @@
             expected_renewal_premium,
             product_summary,
             product_feature,
+            ai_summary_json,
             surrender_value,
             minimum_death_benefit,
             minimum_death_benefit_method,
