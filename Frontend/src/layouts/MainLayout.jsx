@@ -50,7 +50,7 @@ const MainLayout = () => {
 
                 {/* Main Content Area */}
                 <main className="flex-1 w-full relative flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
-                    <div className="flex-1 w-full pb-24 md:pb-8">
+                    <div className="flex-1 w-full pb-6 md:pb-8">
                         <Outlet />
                     </div>
                 </main>

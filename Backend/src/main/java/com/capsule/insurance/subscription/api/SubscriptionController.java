@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import com.capsule.insurance.subscription.dto.CreateSubscriptionRequest;
+
 @RestController
 @RequestMapping("/subscriptions")
 public class SubscriptionController {
@@ -32,6 +34,15 @@ public class SubscriptionController {
 
     public SubscriptionController(SubscriptionService subscriptionService) {
         this.subscriptionService = subscriptionService;
+    }
+
+    /* ── 최초 캡슐 가입 ── */
+    @PostMapping("")
+    public ApiResponse<Long> createInitialSubscription(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody CreateSubscriptionRequest request) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        return ApiResponse.success(subscriptionService.createInitialSubscription(userId, request));
     }
 
     @PostMapping("/quote")

@@ -35,12 +35,6 @@ public class AuthController {
     private final EmailService emailService;
     private final SmsService smsService;
 
-    public AuthController(AuthService authService, EmailService emailService, SmsService smsService) {
-        this.authService = authService;
-        this.emailService = emailService;
-        this.smsService = smsService;
-    }
-
     @PostMapping("/login")
     public ApiResponse<AuthResult> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success(authService.login(request));
@@ -68,21 +62,27 @@ public class AuthController {
     }
 
     @GetMapping("/profile")
-    public ApiResponse<UserProfileResponse> getProfile(org.springframework.security.core.Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+    public ApiResponse<UserProfileResponse> getProfile(
+            org.springframework.security.core.Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         return ApiResponse.success("프로필 정보 불러오기를 성공했습니다.", authService.getProfile(authentication.getName()));
     }
 
     @PutMapping("/profile")
-    public ApiResponse<UserProfileResponse> updateProfile(org.springframework.security.core.Authentication authentication, @Valid @RequestBody UserProfileUpdateRequest request) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+    public ApiResponse<UserProfileResponse> updateProfile(
+            org.springframework.security.core.Authentication authentication,
+            @Valid @RequestBody UserProfileUpdateRequest request) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
-        return ApiResponse.success("PUT - 프로필 수정을 성공했습니다.", authService.updateProfile(authentication.getName(), request));
+        return ApiResponse.success("PUT - 프로필 수정을 성공했습니다.",
+                authService.updateProfile(authentication.getName(), request));
     }
-    
+
     @PostMapping("/phone/send-code")
     public ApiResponse<String> sendPhoneVerificationCode(@Valid @RequestBody SmsAuthRequest request) {
         smsService.sendVerificationCode(request.phone());
@@ -99,25 +99,31 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ApiResponse<String> logout(org.springframework.security.core.Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+    public ApiResponse<String> logout(org.springframework.security.core.Authentication authentication,
+            jakarta.servlet.http.HttpServletRequest request) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         String authorization = request.getHeader("Authorization");
-        String accessToken = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : null;
-        
+        String accessToken = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7)
+                : null;
+
         authService.logout(authentication.getName(), accessToken);
         return ApiResponse.success("로그아웃 되었습니다.");
     }
 
     @DeleteMapping("/withdraw")
-    public ApiResponse<String> withdraw(org.springframework.security.core.Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+    public ApiResponse<String> withdraw(org.springframework.security.core.Authentication authentication,
+            jakarta.servlet.http.HttpServletRequest request) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         String authorization = request.getHeader("Authorization");
-        String accessToken = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : null;
-        
+        String accessToken = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7)
+                : null;
+
         authService.withdraw(authentication.getName(), accessToken);
         return ApiResponse.success("회원 탈퇴가 완료되었습니다.");
     }

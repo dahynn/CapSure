@@ -33,41 +33,69 @@ const CapsureTermsPage = () => {
     const [checkedTerms, setCheckedTerms] = useState(
         REQUIRED_TERMS.reduce((acc, t) => ({ ...acc, [t.id]: false }), {})
     );
+    // 각 상품별 체크 상태 추가
+    const [checkedProducts, setCheckedProducts] = useState({});
 
     const fetchedRef = React.useRef(new Set());
 
-    // 모든 선택 상품의 약관 요약 API 호출
+    // 모든 선택 상품의 약관 요약 API 호출 및 초기 체크 상태 설정
     useEffect(() => {
+        const initialProducts = {};
         selectedProducts.forEach(async (product) => {
             const pid = product.productSourceId || product.id;
+            initialProducts[pid] = false;
+            
             if (fetchedRef.current.has(pid)) return;
             fetchedRef.current.add(pid);
 
             setLoadingIds(prev => new Set([...prev, pid]));
-            console.log(`[TermsPage] Fetching terms for productSourceId: ${pid}`);
             const data = await fetchTermsSummary(pid);
-            console.log(`[TermsPage] Got terms for ${pid}:`, data);
             setSummaries(prev => ({ ...prev, [pid]: data || null }));
             setLoadingIds(prev => { const s = new Set(prev); s.delete(pid); return s; });
         });
+        setCheckedProducts(prev => ({ ...initialProducts, ...prev }));
     }, [selectedProducts]);
 
-    const requiredChecked = REQUIRED_TERMS.filter(t => t.required).every(t => checkedTerms[t.id]);
-    const allChecked = REQUIRED_TERMS.every(t => checkedTerms[t.id]);
+    const allProductsChecked = selectedProducts.every(p => checkedProducts[p.productSourceId || p.id]);
+    const requiredChecked = REQUIRED_TERMS.filter(t => t.required).every(t => checkedTerms[t.id]) && allProductsChecked;
+    const allChecked = REQUIRED_TERMS.every(t => checkedTerms[t.id]) && allProductsChecked;
 
     const handleToggleAll = () => {
         const newValue = !allChecked;
         setCheckedTerms(REQUIRED_TERMS.reduce((acc, t) => ({ ...acc, [t.id]: newValue }), {}));
+        
+        const newProductsChecked = {};
+        selectedProducts.forEach(p => {
+            newProductsChecked[p.productSourceId || p.id] = newValue;
+        });
+        setCheckedProducts(newProductsChecked);
     };
 
     const handleToggleTerm = (id) => {
         setCheckedTerms(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    const handleNext = () => {
+    const handleToggleProduct = (pid) => {
+        setCheckedProducts(prev => ({ ...prev, [pid]: !prev[pid] }));
+    };
+
+    const handleNext = async () => {
         if (!requiredChecked) return;
-        completeSubscription?.();
-        navigate('/home', { state: { subscriptionSuccess: true } });
+        
+        try {
+            const productSourceIds = selectedProducts.map(p => p.productSourceId || p.id);
+            const res = await httpClient.post('/subscriptions', { productSourceIds });
+            
+            if (res.data.success) {
+                completeSubscription?.();
+                navigate('../result', { state: { subscriptionId: res.data.data } });
+            } else {
+                alert(res.data.message || '가입 처리 중 오류가 발생했습니다.');
+            }
+        } catch (e) {
+            console.error('Subscription error', e);
+            alert('서버 응답 오류가 발생했습니다. 다시 시도해 주세요.');
+        }
     };
 
     if (selectedProducts.length === 0) {
@@ -111,6 +139,8 @@ const CapsureTermsPage = () => {
                                 product={product}
                                 summary={summary}
                                 isLoading={isLoading}
+                                isChecked={checkedProducts[pid]}
+                                onToggle={() => handleToggleProduct(pid)}
                             />
                         );
                     })}
@@ -170,7 +200,7 @@ const CapsureTermsPage = () => {
 };
 
 // ─── 상품별 약관 요약 카드 컴포넌트 ────────────────────────────────────────────
-const TermsSummaryCard = ({ product, summary, isLoading }) => {
+const TermsSummaryCard = ({ product, summary, isLoading, isChecked, onToggle }) => {
     const productName = product.productName || product.name || '보험 상품';
     const companyName = product.companyName || product.company || '보험사';
     const termsUri = product.termsUri || '#';
@@ -182,7 +212,7 @@ const TermsSummaryCard = ({ product, summary, isLoading }) => {
     ].filter(Boolean) : [];
 
     return (
-        <div className="bg-[#0D1526]/80 backdrop-blur-sm border border-slate-700/40 rounded-3xl overflow-hidden transition-all hover:bg-[#111A2C] group">
+        <div className={`bg-[#0D1526]/80 backdrop-blur-sm border rounded-3xl overflow-hidden transition-all hover:bg-[#111A2C] group ${isChecked ? 'border-brand-blue/50' : 'border-slate-700/40'}`}>
             {/* 카드 헤더 */}
             <div className="flex items-start justify-between px-6 pt-6 pb-4">
                 <div className="flex flex-col flex-1 min-w-0 pr-2">
@@ -239,12 +269,25 @@ const TermsSummaryCard = ({ product, summary, isLoading }) => {
                 )}
             </div>
 
-            {/* 면책 사항 */}
-            {summary?.disclaimer && (
-                <div className="mx-5 mb-4 p-3 bg-slate-800/40 rounded-xl">
-                    <p className="text-slate-500 text-xs leading-relaxed">{summary.disclaimer}</p>
+            {/* 면책 사항 (로딩 중이 아니며 정보가 있을 때만 표시) */}
+            {!isLoading && summary?.disclaimer && (
+                <div className="mx-5 mb-1 p-3 bg-slate-800/20 rounded-xl">
+                    <p className="text-slate-500 text-[11px] leading-relaxed">{summary.disclaimer}</p>
                 </div>
             )}
+
+            {/* 카드 하단 개별 동의 체크박스 */}
+            <div 
+                onClick={onToggle}
+                className={`mx-5 mb-4 mt-2 p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all border ${isChecked ? 'bg-brand-blue/10 border-brand-blue/30' : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800/60'}`}
+            >
+                <div className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${isChecked ? 'bg-brand-blue border-brand-blue' : 'border-slate-600'}`}>
+                    {isChecked && <Check className="w-3.5 h-3.5 text-[#020715]" strokeWidth={3} />}
+                </div>
+                <span className={`text-sm font-bold ${isChecked ? 'text-brand-blue' : 'text-slate-400'}`}>
+                    위 상품 약관을 모두 확인했습니다
+                </span>
+            </div>
         </div>
     );
 };

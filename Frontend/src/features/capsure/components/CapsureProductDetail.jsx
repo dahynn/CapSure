@@ -88,7 +88,12 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
                             <div className="w-full h-[1px] bg-slate-800/80" />
                             <div className="flex flex-col gap-1.5">
                                 <span className="text-slate-500 text-capsure-sm font-bold">지급 금액</span>
-                                <span className="text-brand-blue text-2xl font-black">{product.joinAmount || '상세 약관 참조'}</span>
+                                <span className="text-brand-blue text-2xl font-black">
+                                    {product.payoutAmount || product.joinAmount || '상세 약관 참조'}
+                                </span>
+                                {(product.payoutAmount && product.joinAmount && product.payoutAmount !== product.joinAmount) && (
+                                    <span className="text-slate-500 text-xs mt-1">가입금액: {product.joinAmount}</span>
+                                )}
                             </div>
                         </div>
                     </div>
