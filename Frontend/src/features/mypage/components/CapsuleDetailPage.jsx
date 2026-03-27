@@ -121,8 +121,8 @@ const CapsuleDetailPage = () => {
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-extrabold text-[#141925] bg-[#82D8FC] px-2 py-[2px] rounded-full">{product.type}</span>
                                     </div>
-                                    <h4 className="text-white text-sm font-bold tracking-tight">{product.name}</h4>
-                                    <p className="text-[#9D9DA4] text-[11px] font-medium">{product.company}</p>
+                                    <h4 className="text-white text-sm font-bold tracking-tight">{product.productName}</h4>
+                                    <p className="text-[#9D9DA4] text-[11px] font-medium">{product.companyName}</p>
                                 </div>
                                 <div className="w-8 h-8 rounded-full bg-[#0B0E14] border border-slate-800/50 flex items-center justify-center text-[#4E5669] group-hover:border-[#82D8FC]/30 group-hover:text-[#82D8FC] transition-all shrink-0 z-10 group-hover:translate-x-1">
                                     <ChevronRight className="w-4 h-4" />

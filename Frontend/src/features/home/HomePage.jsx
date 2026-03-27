@@ -58,7 +58,7 @@ const HomePage = () => {
         },
         {
             id: 2,
-            title: "우리 가족 건강 지키미",
+            title: "여름 맞이 보험",
             date: "2024.01.05",
             themeColor: "#F6CD3C", // 옐로우
             coverages: [
@@ -94,7 +94,7 @@ const HomePage = () => {
     ]);
 
     return (
-        <div className="px-8 py-8 md:px-12 md:py-10 space-y-12 max-w-[560px] mx-auto w-full transition-all">
+        <div className="px-8 pt-8 pb-4 md:px-12 md:py-10 space-y-8 max-w-[560px] mx-auto w-full transition-all">
             <WelcomeHeader user={user} />
             <AiRecommendations recommendations={aiRecommendations} />
             <SubscribedCapsures subscribedCapsures={subscribedCapsures} />

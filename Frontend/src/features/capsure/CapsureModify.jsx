@@ -219,7 +219,7 @@ const CapsureModify = () => {
                                     >
                                         {cell ? (
                                             <span className="font-bold text-[10px] sm:text-xs text-center px-1 leading-tight">
-                                                {cell.name}
+                                                {cell.productName}
                                             </span>
                                         ) : (
                                             <Plus className="w-6 h-6 text-slate-300" />
@@ -310,12 +310,12 @@ const CapsureModify = () => {
                                                                     <div className="flex flex-col">
                                                                         <span className="font-bold text-slate-700">
                                                                             {
-                                                                                item.name
+                                                                                item.productName
                                                                             }
                                                                         </span>
                                                                         <span className="text-xs text-slate-500 mt-1">
                                                                             {
-                                                                                item.description
+                                                                                item.companyName
                                                                             }
                                                                         </span>
                                                                     </div>

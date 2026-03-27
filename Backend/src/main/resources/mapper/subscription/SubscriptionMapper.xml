@@ -163,16 +163,19 @@
             updated_at
         )
         select
-            #{subscriptionId},
-            #{capsuleProductId},
+            s.subscription_id,
+            cp.capsule_product_id,
             'NEXT',
             'RESERVED_ADD',
             cp.coverage_amount,
-            cp.monthly_price,
+            case when u.gender = 'F' then cp.monthly_price_female else cp.monthly_price_male end,
             now(),
             now()
-        from capsule_product cp
-        where cp.capsule_product_id = #{capsuleProductId}
+        from subscription s
+        join usr_user u on u.user_id = s.user_id
+        cross join capsule_product cp
+        where s.subscription_id = #{subscriptionId}
+          and cp.capsule_product_id = #{capsuleProductId}
     </insert>
 
     <!-- ── 신규: NEXT 아이템 삭제 ── -->
@@ -190,6 +193,68 @@
           and plan_version = 'NEXT'
           and item_status = 'RESERVED_ADD'
     </select>
+
+    <!-- ── 신규: 구독 마스터 삽입 ── -->
+    <insert id="insertSubscription" useGeneratedKeys="true" keyProperty="subscriptionId">
+        insert into subscription (
+            user_id,
+            subscription_status,
+            billing_anchor_day,
+            current_cycle_start_at,
+            current_cycle_end_at,
+            next_billing_at,
+            expected_next_amount,
+            created_at,
+            updated_at
+        ) values (
+            #{userId},
+            #{subscriptionStatus},
+            #{billingAnchorDay},
+            #{currentCycleStartAt},
+            #{currentCycleEndAt},
+            #{nextBillingAt},
+            0,
+            now(),
+            now()
+        )
+    </insert>
+
+    <!-- ── 신규: 총 보험료 업데이트 ── -->
+    <update id="updateSubscriptionExpectedAmount">
+        update subscription
+        set expected_next_amount = #{expectedAmount},
+            updated_at = now()
+        where subscription_id = #{subscriptionId}
+    </update>
+
+    <!-- ── 신규: 가입 시 CURRENT 아이템 개별 삽입 ── -->
+    <insert id="insertInitialSubscriptionItem">
+        insert into subscription_item (
+            subscription_id,
+            capsule_product_id,
+            plan_version,
+            item_status,
+            coverage_amount_snapshot,
+            monthly_price_snapshot,
+            effective_start_at,
+            effective_end_at,
+            created_at,
+            updated_at
+        )
+        select
+            #{subscriptionId},
+            product_source_id,
+            'CURRENT',
+            'ACTIVE',
+            99999999, -- TODO: 실제 보장 금액 스냅샷 로직 필요
+            #{monthlyPriceSnapshot},
+            #{effectiveStartAt},
+            #{effectiveEndAt},
+            now(),
+            now()
+        from product_source
+        where product_source_id = #{capsuleProductId}
+    </insert>
 
     <!-- ── 신규: 구독 updated_at 갱신 ── -->
     <update id="updateSubscriptionUpdatedAt">

@@ -16,8 +16,9 @@ const CapsureMakerPage = () => {
     };
 
     const handleViewDetail = (product) => {
-        // Here we pass the product ID in URL and product data in state
-        navigate(`/capsure-insurance/detail/${product.id}`, { state: { product } });
+        // Use productSourceId from backend
+        const productId = product.productSourceId || product.id;
+        navigate(`/capsure-insurance/detail/${productId}`, { state: { product } });
     };
 
     return (

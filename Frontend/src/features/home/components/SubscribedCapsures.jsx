@@ -9,7 +9,7 @@ const SubscribedCapsures = ({ subscribedCapsures }) => {
     return (
         <section className="animate-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both pb-10">
             <div className="flex justify-between items-end mb-6 px-1">
-                <h2 className="text-[22px] font-bold text-white tracking-tight">나의 가입 캡슐</h2>
+                <h2 className="text-[22px] font-semibold text-white tracking-tight">나의 가입 캡슐</h2>
                 <button 
                     onClick={() => navigate('/my-capsure')}
                     className="text-[14px] text-[#82D8FC] font-medium transition-opacity hover:opacity-80"
@@ -46,7 +46,7 @@ const SubscribedCapsures = ({ subscribedCapsures }) => {
                                 
                                 <div className="flex justify-between items-start relative z-10">
                                     <div>
-                                        <h3 className="text-xl md:text-[22px] font-bold text-white mb-1 tracking-tight">{capsure.title}</h3>
+                                        <h3 className="text-xl md:text-[22px] font-semibold text-white mb-1 tracking-tight">{capsure.title}</h3>
                                         <p className="text-[#9D9DA4] text-[12px] font-medium flex items-center gap-1">
                                             가입일: <span style={{ color: capsure.themeColor }} className="font-bold">{capsure.date}</span>
                                         </p>
@@ -64,8 +64,8 @@ const SubscribedCapsures = ({ subscribedCapsures }) => {
                             <div className="rounded-b-[32px] rounded-t-[8px] bg-[#0A0E17] p-6 flex flex-wrap gap-2.5 border border-slate-800/80 border-t-0 z-10">
                                 {capsure.coverages.map(cov => {
                                     const style = cov.isActive ? {
-                                        borderColor: '#82D8FC66',
-                                        color: '#82D8FC',
+                                        borderColor: `${capsure.themeColor}66`,
+                                        color: capsure.themeColor,
                                         backgroundColor: 'transparent'
                                     } : {};
 

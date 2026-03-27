@@ -14,8 +14,8 @@ public record SubscriptionDetailResponse(
 ) {
     public record ProductDto(
             Long id,
-            String name,
-            String company,
+            String productName,  // name -> productName
+            String companyName,  // company -> companyName
             String type
     ) {}
 

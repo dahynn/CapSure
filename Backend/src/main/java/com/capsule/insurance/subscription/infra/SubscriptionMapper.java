@@ -21,14 +21,26 @@ public interface SubscriptionMapper {
     SubscriptionItem findNextItemById(@Param("subscriptionItemId") Long subscriptionItemId);
 
     boolean existsProductInCurrentOrNext(@Param("subscriptionId") Long subscriptionId,
-                                         @Param("capsuleProductId") Long capsuleProductId);
+            @Param("capsuleProductId") Long capsuleProductId);
 
     void insertNextItem(@Param("subscriptionId") Long subscriptionId,
-                        @Param("capsuleProductId") Long capsuleProductId);
+            @Param("capsuleProductId") Long capsuleProductId);
 
     void deleteNextItem(@Param("subscriptionItemId") Long subscriptionItemId);
 
     int countNextItems(@Param("subscriptionId") Long subscriptionId);
 
     void updateSubscriptionUpdatedAt(@Param("subscriptionId") Long subscriptionId);
+
+    void insertSubscription(Subscription subscription);
+
+    void updateSubscriptionExpectedAmount(@Param("subscriptionId") Long subscriptionId,
+            @Param("expectedAmount") java.math.BigDecimal expectedAmount);
+
+    void insertInitialSubscriptionItem(
+            @Param("subscriptionId") Long subscriptionId,
+            @Param("capsuleProductId") Long capsuleProductId,
+            @Param("monthlyPriceSnapshot") java.math.BigDecimal monthlyPriceSnapshot,
+            @Param("effectiveStartAt") java.time.Instant effectiveStartAt,
+            @Param("effectiveEndAt") java.time.Instant effectiveEndAt);
 }

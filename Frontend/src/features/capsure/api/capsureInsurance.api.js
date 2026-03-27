@@ -6,33 +6,33 @@
 
 const dummyCapsureItems = [
     // 실손 보험 (shilson)
-    { id: 's1', categoryId: 'shilson', name: '기본형 실손의료비', company: '삼성화재', price: 1 },
-    { id: 's2', categoryId: 'shilson', name: '종합형 실손의료비', company: '현대해상', price: 3 },
-    { id: 's3', categoryId: 'shilson', name: '프리미엄 실손 보장', company: '메리츠화재', price: 5 },
-    { id: 's4', categoryId: 'shilson', name: '다이렉트 실손', company: 'DB손해보험', price: 2 },
+    { id: 's1', categoryId: 'shilson', productName: '기본형 실손의료비', companyName: '삼성화재', monthlyPrice: 10000 },
+    { id: 's2', categoryId: 'shilson', productName: '종합형 실손의료비', companyName: '현대해상', monthlyPrice: 30000 },
+    { id: 's3', categoryId: 'shilson', productName: '프리미엄 실손 보장', companyName: '메리츠화재', monthlyPrice: 50000 },
+    { id: 's4', categoryId: 'shilson', productName: '다이렉트 실손', companyName: 'DB손해보험', monthlyPrice: 20000 },
 
     // 질병 보험 (disease)
-    { id: 'd1', categoryId: 'disease', name: '암 진단비 집중', company: '한화생명', price: 3 },
-    { id: 'd2', categoryId: 'disease', name: '3대 질병 든든보장', company: '교보생명', price: 5 },
-    { id: 'd3', categoryId: 'disease', name: '경증 질환 커버', company: '신한라이프', price: 1 },
-    { id: 'd4', categoryId: 'disease', name: '수술비 전용 보험', company: '흥국생명', price: 4 },
+    { id: 'd1', categoryId: 'disease', productName: '암 진단비 집중', companyName: '한화생명', monthlyPrice: 30000 },
+    { id: 'd2', categoryId: 'disease', productName: '3대 질병 든든보장', companyName: '교보생명', monthlyPrice: 50000 },
+    { id: 'd3', categoryId: 'disease', productName: '경증 질환 커버', companyName: '신한라이프', monthlyPrice: 10000 },
+    { id: 'd4', categoryId: 'disease', productName: '수술비 전용 보험', companyName: '흥국생명', monthlyPrice: 40000 },
 
     // 생활 배상 보험 (liability)
-    { id: 'l1', categoryId: 'liability', name: '가족 일상생활중 배상', company: 'KB손해보험', price: 1 },
-    { id: 'l2', categoryId: 'liability', name: '자전거/킥보드 배상', company: 'DB손해보험', price: 2 },
-    { id: 'l3', categoryId: 'liability', name: '주택 화재 배상 종합', company: '삼성화재', price: 4 },
+    { id: 'l1', categoryId: 'liability', productName: '가족 일상생활중 배상', companyName: 'KB손해보험', monthlyPrice: 10000 },
+    { id: 'l2', categoryId: 'liability', productName: '자전거/킥보드 배상', companyName: 'DB손해보험', monthlyPrice: 20000 },
+    { id: 'l3', categoryId: 'liability', productName: '주택 화재 배상 종합', companyName: '삼성화재', monthlyPrice: 40000 },
 
     // 펫 보험 (pet)
-    { id: 'p1', categoryId: 'pet', name: '댕댕이 의료비 70%', company: '메리츠화재', price: 3 },
-    { id: 'p2', categoryId: 'pet', name: '냥냥이 의료비 50%', company: 'DB손해보험', price: 2 },
-    { id: 'p3', categoryId: 'pet', name: '반려견 배상책임 전용', company: '현대해상', price: 1 },
-    { id: 'p4', categoryId: 'pet', name: '프리미엄 펫 케어', company: '삼성화재', price: 5 },
+    { id: 'p1', categoryId: 'pet', productName: '댕댕이 의료비 70%', companyName: '메리츠화재', monthlyPrice: 30000 },
+    { id: 'p2', categoryId: 'pet', productName: '냥냥이 의료비 50%', companyName: 'DB손해보험', monthlyPrice: 20000 },
+    { id: 'p3', categoryId: 'pet', productName: '반려견 배상책임 전용', companyName: '현대해상', monthlyPrice: 10000 },
+    { id: 'p4', categoryId: 'pet', productName: '프리미엄 펫 케어', companyName: '삼성화재', monthlyPrice: 50000 },
 
     // 상시 운전자 보험 (driver)
-    { id: 'dr1', categoryId: 'driver', name: '초보 운전자 안심', company: '한화손해보험', price: 3 },
-    { id: 'dr2', categoryId: 'driver', name: '핵심 보장 운전자', company: 'DB손해보험', price: 1 },
-    { id: 'dr3', categoryId: 'driver', name: '주말 운전자 전용', company: 'KB손해보험', price: 2 },
-    { id: 'dr4', categoryId: 'driver', name: 'VIP 운전자 종합', company: '삼성화재', price: 5 },
+    { id: 'dr1', categoryId: 'driver', productName: '초보 운전자 안심', companyName: '한화손해보험', monthlyPrice: 30000 },
+    { id: 'dr2', categoryId: 'driver', productName: '핵심 보장 운전자', companyName: 'DB손해보험', monthlyPrice: 10000 },
+    { id: 'dr3', categoryId: 'driver', productName: '주말 운전자 전용', companyName: 'KB손해보험', monthlyPrice: 20000 },
+    { id: 'dr4', categoryId: 'driver', productName: 'VIP 운전자 종합', companyName: '삼성화재', monthlyPrice: 50000 },
 ];
 
 /**
@@ -47,14 +47,14 @@ export const getCapsureItems = async (categoryId, maxPrice = null) => {
             let filtered = dummyCapsureItems.filter(item => item.categoryId === categoryId);
 
             if (maxPrice !== null) {
-                filtered = filtered.filter(item => item.price <= maxPrice);
+                filtered = filtered.filter(item => item.monthlyPrice <= maxPrice);
             }
 
             // Add coverages and terms text to each item
             const enhanced = filtered.map(item => {
                 const coverages = [
-                    { label: '입원 일당', amount: item.price * 100 + '만원' },
-                    { label: '수술비 지원', amount: item.price * 300 + '만원' },
+                    { label: '입원 일당', amount: (item.monthlyPrice / 100) + '만원' },
+                    { label: '수술비 지원', amount: (item.monthlyPrice / 33) + '만원' },
                 ];
                 if (item.categoryId === 'pet') {
                     coverages.push({ label: '반려동물 치료비', amount: '300만원' });
@@ -65,7 +65,7 @@ export const getCapsureItems = async (categoryId, maxPrice = null) => {
                 return {
                     ...item,
                     coverages,
-                    termsText: `${item.name} 약관 상세 내용입니다.\n\n제1조(목적)\n이 약관은 보험계약자와 보험회사 간의 권리와 의무를 규정합니다.\n\n제2조(용어의 정의)\n1. "보험계약자"란 회사와 계약을 체결하고 보험료를 납입할 의무를 지는 사람을 말합니다.\n2. "피보험자"란 보험사고의 대상이 되는 사람을 말합니다.`
+                    termsText: `${item.productName} 약관 상세 내용입니다.\n\n제1조(목적)\n이 약관은 보험계약자와 보험회사 간의 권리와 의무를 규정합니다.\n\n제2조(용어의 정의)\n1. "보험계약자"란 회사와 계약을 체결하고 보험료를 납입할 의무를 지는 사람을 말합니다.\n2. "피보험자"란 보험사고의 대상이 되는 사람을 말합니다.`
                 };
             });
 
@@ -87,8 +87,8 @@ export const getInsuranceCoverages = async (insuranceIds) => {
 
                 // Mock dynamic coverages based on category/price
                 const detail = [
-                    { label: '입원 일당', amount: item.price * 100 + '만원' },
-                    { label: '수술비 지원', amount: item.price * 300 + '만원' },
+                    { label: '입원 일당', amount: (item.monthlyPrice / 100) + '만원' },
+                    { label: '수술비 지원', amount: (item.monthlyPrice / 33) + '만원' },
                 ];
                 if (item.categoryId === 'pet') {
                     detail.push({ label: '개물림 사고 처벌 벌금 지원', amount: '300만원' });
@@ -99,7 +99,7 @@ export const getInsuranceCoverages = async (insuranceIds) => {
 
                 return {
                     id: item.id,
-                    title: `${item.name} - ${item.company}`,
+                    title: `${item.productName} - ${item.companyName}`,
                     details: detail
                 };
             }).filter(Boolean);
@@ -146,11 +146,11 @@ export const getMyCapsureInsurance = async () => {
             resolve({
                 targetAmount: 5,
                 selectedCells: [
-                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, name: '암 진단비 집중 (3만)', company: '한화생명', groupId: 'g1' },
-                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, name: '암 진단비 집중 (3만)', company: '한화생명', groupId: 'g1' },
-                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, name: '암 진단비 집중 (3만)', company: '한화생명', groupId: 'g1' },
-                    { category: { id: 'liability', name: '생활 배상 보험', color: 'bg-blue-100 border-blue-300 text-blue-700' }, name: '자전거/킥보드 배상 (2만)', company: 'DB손해보험', groupId: 'g2' },
-                    { category: { id: 'liability', name: '생활 배상 보험', color: 'bg-blue-100 border-blue-300 text-blue-700' }, name: '자전거/킥보드 배상 (2만)', company: 'DB손해보험', groupId: 'g2' },
+                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, productName: '암 진단비 집중 (3만)', companyName: '한화생명', groupId: 'g1' },
+                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, productName: '암 진단비 집중 (3만)', companyName: '한화생명', groupId: 'g1' },
+                    { category: { id: 'disease', name: '질병 보험', color: 'bg-rose-100 border-rose-300 text-rose-700' }, productName: '암 진단비 집중 (3만)', companyName: '한화생명', groupId: 'g1' },
+                    { category: { id: 'liability', name: '생활 배상 보험', color: 'bg-blue-100 border-blue-300 text-blue-700' }, productName: '자전거/킥보드 배상 (2만)', companyName: 'DB손해보험', groupId: 'g2' },
+                    { category: { id: 'liability', name: '생활 배상 보험', color: 'bg-blue-100 border-blue-300 text-blue-700' }, productName: '자전거/킥보드 배상 (2만)', companyName: 'DB손해보험', groupId: 'g2' },
                 ]
             });
         }, 300);

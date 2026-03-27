@@ -59,10 +59,9 @@ class SubscriptionServiceTest {
 
         CapsuleProduct product = CapsuleProduct.builder()
                 .capsuleProductId(101L)
-                .capsuleName("자전거 배상")
+                .productName("자전거 배상")
                 .coverageCategory(CoverageCategory.LIABILITY)
                 .coverageAmount(BigDecimal.valueOf(1000))
-                .coverageUnit("만원")
                 .build();
 
         when(subscriptionMapper.findSubscriptionAggregateByUserId(userId)).thenReturn(subscription);

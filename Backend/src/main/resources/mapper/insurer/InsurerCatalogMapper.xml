@@ -19,16 +19,58 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <resultMap id="productSourceResultMap" type="com.capsule.insurance.insurer.dto.ProductSummaryResponse">
+        <constructor>
+            <idArg column="product_source_id" javaType="java.lang.Long"/>
+            <arg column="company_name" javaType="java.lang.String"/>
+            <arg column="product_name" javaType="java.lang.String"/>
+            <arg column="insurer_sector" javaType="com.capsule.insurance.insurer.domain.InsurerSector"/>
+            <arg column="coverage_category_code" javaType="java.lang.String"/>
+            <arg column="coverage_code" javaType="java.lang.String"/>
+            <arg column="monthly_price" javaType="java.math.BigDecimal"/>
+            <arg column="loaded_at" javaType="java.time.Instant"/>
+            <arg column="updated_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="productDetailResultMap" type="com.capsule.insurance.insurer.dto.ProductDetailResponse">
+        <constructor>
+            <idArg column="product_source_id" javaType="java.lang.Long"/>
+            <arg column="company_name" javaType="java.lang.String"/>
+            <arg column="product_name" javaType="java.lang.String"/>
+            <arg column="insurer_sector" javaType="com.capsule.insurance.insurer.domain.InsurerSector"/>
+            <arg column="sale_channel" javaType="java.lang.String"/>
+            <arg column="coverage_name" javaType="java.lang.String"/>
+            <arg column="claim_reason" javaType="java.lang.String"/>
+            <arg column="payout_amount" javaType="java.lang.String"/>
+            <arg column="join_amount" javaType="java.lang.String"/>
+            <arg column="minimum_join_premium" javaType="java.lang.String"/>
+            <arg column="payment_cycle" javaType="java.lang.String"/>
+            <arg column="payment_term" javaType="java.lang.String"/>
+            <arg column="coverage_term" javaType="java.lang.String"/>
+            <arg column="coverage_category_code" javaType="java.lang.String"/>
+            <arg column="coverage_code" javaType="java.lang.String"/>
+            <arg column="monthly_price" javaType="java.math.BigDecimal"/>
+            <arg column="product_summary" javaType="java.lang.String"/>
+            <arg column="product_feature" javaType="java.lang.String"/>
+            <arg column="special_note" javaType="java.lang.String"/>
+            <arg column="contact_phone" javaType="java.lang.String"/>
+            <arg column="sale_date" javaType="java.time.LocalDate"/>
+            <arg column="current_announced_rate" javaType="java.lang.String"/>
+            <arg column="fixed_rate" javaType="java.lang.String"/>
+            <arg column="minimum_guaranteed_rate" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
     <resultMap id="capsuleProductResultMap" type="com.capsule.insurance.insurer.domain.CapsuleProduct">
         <id property="capsuleProductId" column="capsule_product_id"/>
-        <result property="capsuleCode" column="capsule_code"/>
-        <result property="capsuleName" column="capsule_name"/>
+        <result property="productName" column="product_name"/>
+        <result property="companyName" column="company_name"/>
         <result property="coverageCategory" column="coverage_category_code"/>
-        <result property="coverageCode" column="coverage_code"/>
+        <result property="coverageName" column="coverage_name"/>
         <result property="coverageAmount" column="coverage_amount"/>
-        <result property="coverageUnit" column="coverage_unit"/>
-        <result property="monthlyPrice" column="monthly_price"/>
-        <result property="minRetentionDays" column="min_retention_days"/>
+        <result property="monthlyPriceMale" column="monthly_price_male"/>
+        <result property="monthlyPriceFemale" column="monthly_price_female"/>
         <result property="saleStatus" column="sale_status"/>
         <result property="duplicateCheckTarget" column="is_duplicate_check_target"/>
         <result property="termsUri" column="terms_uri"/>
@@ -62,12 +104,15 @@
         select
             capsule_product_id,
             capsule_code,
-            capsule_name,
+            product_name,
+            company_name,
+            insurer_sector,
             coverage_category_code,
             coverage_code,
             coverage_amount,
             coverage_unit,
-            monthly_price,
+            monthly_price_male,
+            monthly_price_female,
             min_retention_days,
             sale_status,
             is_duplicate_check_target,
@@ -85,12 +130,15 @@
         select
             capsule_product_id,
             capsule_code,
-            capsule_name,
+            product_name,
+            company_name,
+            insurer_sector,
             coverage_category_code,
             coverage_code,
             coverage_amount,
             coverage_unit,
-            monthly_price,
+            monthly_price_male,
+            monthly_price_female,
             min_retention_days,
             sale_status,
             is_duplicate_check_target,
@@ -103,4 +151,73 @@
         where capsule_product_id = #{capsuleProductId}
     </select>
 
+    <select id="findProductSourcesByFilter" resultMap="productSourceResultMap">
+        SELECT
+            product_source_id,
+            company_name,
+            product_name,
+            insurer_sector::text as insurer_sector,
+            coverage_category_code::text as coverage_category_code,
+            coverage_code,
+            <choose>
+                <when test="gender == 'M'.toString()">monthly_premium_male</when>
+                <when test="gender == 'F'.toString()">monthly_premium_female</when>
+                <otherwise>NULL</otherwise>
+            </choose> AS monthly_price,
+            loaded_at,
+            updated_at
+        FROM insurance.product_source
+        WHERE 1=1
+        <if test="category != null and category != ''">
+            AND coverage_category_code = #{category}::insurance.coverage_category_code
+        </if>
+        <choose>
+            <when test="gender == 'M'.toString()">
+                AND (monthly_premium_male IS NOT NULL AND monthly_premium_male > 0)
+                <if test="maxPrice != null">
+                    AND monthly_premium_male &lt;= #{maxPrice}
+                </if>
+            </when>
+            <when test="gender == 'F'.toString()">
+                AND (monthly_premium_female IS NOT NULL AND monthly_premium_female > 0)
+                <if test="maxPrice != null">
+                    AND monthly_premium_female &lt;= #{maxPrice}
+                </if>
+            </when>
+        </choose>
+        ORDER BY product_source_id ASC
+    </select>
+    <select id="findProductSourceDetail" resultMap="productDetailResultMap">
+        SELECT
+            product_source_id,
+            company_name,
+            product_name,
+            insurer_sector::text as insurer_sector,
+            sale_channel,
+            coverage_name,
+            claim_reason,
+            payout_amount,
+            join_amount,
+            minimum_join_premium,
+            payment_cycle,
+            payment_term,
+            coverage_term,
+            coverage_category_code::text as coverage_category_code,
+            coverage_code,
+            CASE 
+                WHEN #{gender} = 'M' THEN monthly_premium_male
+                WHEN #{gender} = 'F' THEN monthly_premium_female
+                ELSE 0.00
+            END as monthly_price,
+            product_summary,
+            product_feature,
+            special_note,
+            contact_phone,
+            sale_date,
+            current_announced_rate,
+            fixed_rate,
+            minimum_guaranteed_rate
+        FROM insurance.product_source
+        WHERE product_source_id = #{productSourceId}
+    </select>
 </mapper>

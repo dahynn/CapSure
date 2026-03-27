@@ -1,9 +1,15 @@
 package com.capsule.insurance.insurer.application;
 
+import com.capsule.insurance.auth.domain.Gender;
+import com.capsule.insurance.auth.domain.UserAccount;
+import com.capsule.insurance.auth.infra.UserAccountMapper;
+import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
+import com.capsule.insurance.insurer.dto.ProductDetailResponse;
+import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
+import java.math.BigDecimal;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.insurer.domain.ProductSource;
-import com.capsule.insurance.insurer.dto.InsurerProductSummary;
 import com.capsule.insurance.insurer.dto.ProductSourceLightSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceTermsSummaryResponse;
 import com.capsule.insurance.insurer.infra.ProductSourceMapper;
@@ -30,22 +36,51 @@ public class InsurerService {
     private static final Pattern NUMBER_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
 
     private final ProductSourceMapper productSourceMapper;
+    private final InsurerCatalogMapper insurerCatalogMapper;
+    private final UserAccountMapper userAccountMapper;
     private final ChatClient chatClient;
     private final String openAiApiKey;
 
     public InsurerService(
             ProductSourceMapper productSourceMapper,
+            InsurerCatalogMapper insurerCatalogMapper,
+            UserAccountMapper userAccountMapper,
             ObjectProvider<ChatClient.Builder> chatClientBuilderProvider,
             @Value("${spring.ai.openai.api-key:}") String openAiApiKey
     ) {
         this.productSourceMapper = productSourceMapper;
+        this.insurerCatalogMapper = insurerCatalogMapper;
+        this.userAccountMapper = userAccountMapper;
         ChatClient.Builder chatClientBuilder = chatClientBuilderProvider.getIfAvailable();
         this.chatClient = chatClientBuilder == null ? null : chatClientBuilder.build();
         this.openAiApiKey = openAiApiKey;
     }
 
-    public List<InsurerProductSummary> getProducts() {
-        return List.of(new InsurerProductSummary("INSURER-A", "PROD-001", "Starter Plan"));
+    public List<ProductSummaryResponse> getProducts(String category, Integer budget, Long userId) {
+        String gender = "M";
+        try {
+            UserAccount user = userAccountMapper.findByUserId(userId);
+            if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
+                gender = user.getGender().name();
+            }
+        } catch (Exception e) {
+            // Ignore and use default gender
+        }
+        BigDecimal maxPrice = (budget != null) ? BigDecimal.valueOf(budget) : null;
+        return insurerCatalogMapper.findProductSourcesByFilter(category, maxPrice, gender);
+    }
+
+    public ProductDetailResponse getProductDetail(Long productSourceId, Long userId) {
+        String gender = "M";
+        try {
+            UserAccount user = userAccountMapper.findByUserId(userId);
+            if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
+                gender = user.getGender().name();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
     }
 
     public ProductSourceTermsSummaryResponse getProductSourceTermsSummary(Long productSourceId) {

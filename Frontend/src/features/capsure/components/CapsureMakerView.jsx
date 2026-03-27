@@ -3,23 +3,62 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import CapsureProgress from './maker/CapsureProgress';
 import ProductList from './maker/ProductList';
+import { httpClient } from '@/common/api/httpClient';
 
-const mockProducts = [
-    { id: 1, category: '실손', name: 'KB 4세대 실손보험', price: 12500, company: 'KB', isRecommended: true },
-    { id: 2, category: '암', name: '삼성화재 다이렉트 암보험', price: 18200, company: '삼성화재', isRecommended: true },
-    { id: 3, category: '뇌/심장', name: 'DB손보 뇌심장 집중보장', price: 24000, company: 'DB손보' },
-    { id: 4, category: '수술', name: '현대해상 수술비 플랜', price: 9800, company: '현대해상' },
-    { id: 5, category: '치아', name: '라이나생명 치아보험', price: 15000, company: '라이나생명' },
-];
+const categories = ['전체', '사망', '암', '뇌/심장', '실손', '수술', '기타'];
 
-const categories = ['전체', '사망', '암', '뇌/심장', '실손', '수술', '치아'];
+// Category to Backend Enum Mapping
+const CATEGORY_MAP = {
+    '사망': 'DEATH',
+    '암': 'CANCER',
+    '뇌/심장': 'BRAIN_HEART',
+    '실손': 'ACTUAL_LOSS',
+    '수술': 'SURGERY',
+    '기타': 'ETC'
+};
 
 const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveItem, onConfirm, onViewDetail }) => {
     const navigate = useNavigate();
     
     // Filter & Sort State
     const [activeCategories, setActiveCategories] = useState(['전체']);
-    const [sortBy, setSortBy] = useState('price');
+    const [sortBy, setSortBy] = useState('popular');
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch Products from Backend
+    const fetchProducts = async () => {
+        setIsLoading(true);
+        try {
+            // Build query params
+            const params = new URLSearchParams();
+            if (totalBudget) params.append('budget', totalBudget);
+            
+            // If multiple categories are supported by backend, handle here. 
+            // Currently backend getProducts takes a single String category.
+            // We'll use the first active category that isn't '전체'
+            const filteredCat = activeCategories.find(c => c !== '전체');
+            if (filteredCat) {
+                params.append('category', CATEGORY_MAP[filteredCat] || filteredCat);
+            }
+
+            const response = await httpClient.get(`/insurers/products?${params.toString()}`);
+            const data = response.data;
+            
+            if (data.success) {
+                setProducts(data.data || []);
+            }
+        } catch (error) {
+            console.error("Failed to fetch products:", error);
+            setProducts([]); // Clear on error
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchProducts();
+    }, [activeCategories, totalBudget]);
 
     const handleCategoryClick = (cat) => {
         if (cat === '전체') {
@@ -31,19 +70,31 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
                     const removed = newCats.filter(c => c !== cat);
                     return removed.length === 0 ? ['전체'] : removed;
                 } else {
-                    return [...newCats, cat];
+                    return [cat];
                 }
             });
         }
     };
 
-    const currentAmount = selectedProducts.reduce((sum, p) => sum + p.price, 0);
+    const currentAmount = selectedProducts.reduce((sum, p) => {
+        const pPrice = Number(p.monthlyPrice || p.price || 0);
+        return sum + pPrice;
+    }, 0);
     const remainingBudget = totalBudget - currentAmount;
     const progressPercent = Math.min((currentAmount / totalBudget) * 100, 100);
 
-    const filteredProducts = activeCategories.includes('전체')
-        ? mockProducts
-        : mockProducts.filter(p => activeCategories.includes(p.category));
+    const filteredProducts = [...products].sort((a, b) => {
+        if (sortBy === 'price') {
+            const priceA = Number(a.monthlyPrice || a.price || 0);
+            const priceB = Number(b.monthlyPrice || b.price || 0);
+            return priceA - priceB;
+        }
+        if (sortBy === 'popular') {
+            // stable fallback for popular
+            return (b.productSourceId || b.id) - (a.productSourceId || a.id);
+        }
+        return 0;
+    });
 
     return (
         <div className="flex flex-col min-h-screen pb-28">
