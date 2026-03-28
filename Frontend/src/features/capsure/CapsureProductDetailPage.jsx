@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams, Navigate } from 'react-router-dom'
 import CapsureProductDetail from './components/CapsureProductDetail';
 import { useCapsure } from './context/CapsureContext';
 import { httpClient } from '@/common/api/httpClient';
+import { getProductSourceId, normalizeProductSource } from './utils/productSource';
 
 const CapsureProductDetailPage = () => {
     const { id } = useParams();
@@ -11,7 +12,9 @@ const CapsureProductDetailPage = () => {
     const { selectedProducts, handleAddItem } = useCapsure();
     
     // Fallback to location state but we prefer fresh fetch
-    const [product, setProduct] = useState(location.state?.product || null);
+    const [product, setProduct] = useState(
+        location.state?.product ? normalizeProductSource(location.state.product) : null
+    );
     const [isLoading, setIsLoading] = useState(!product);
 
     useEffect(() => {
@@ -21,7 +24,7 @@ const CapsureProductDetailPage = () => {
                 const response = await httpClient.get(`/insurers/products/${id}`);
                 const data = response.data;
                 if (data.success) {
-                    setProduct(data.data);
+                    setProduct(normalizeProductSource(data.data));
                 }
             } catch (error) {
                 console.error("Failed to fetch product detail:", error);
@@ -47,8 +50,8 @@ const CapsureProductDetailPage = () => {
         return <div className="min-h-screen bg-[#020715] flex items-center justify-center text-white">정보를 찾을 수 없습니다.</div>;
     }
 
-    const productId = product.productSourceId || product.id;
-    const isAdded = !!selectedProducts.find((p) => (p.productSourceId || p.id) === productId);
+    const productId = getProductSourceId(product);
+    const isAdded = !!selectedProducts.find((p) => getProductSourceId(p) === productId);
 
     const handleAdd = () => {
         if (!isAdded) {

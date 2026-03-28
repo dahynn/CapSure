@@ -1,12 +1,17 @@
 import React from 'react';
-import { ArrowRight, CreditCard, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CreditCard, Loader2, ShieldCheck } from 'lucide-react';
 
-const Payment = ({ onNext, onPrev }) => {
+const Payment = ({ totalPremium, isSubmitting, onNext, onPrev }) => {
     return (
         <div className="max-w-md mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
             <div className="text-center py-6">
                 <h2 className="text-3xl font-black text-slate-800 tracking-tight">마지막 단계입니다</h2>
                 <p className="text-slate-500 mt-3 text-lg">결제 수단을 선택하고 구독을 시작하세요.</p>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100">
+                <p className="text-sm font-semibold text-slate-500">이번 달 총 결제 금액</p>
+                <p className="text-3xl font-black text-slate-800 mt-2">{totalPremium.toLocaleString()}원</p>
             </div>
 
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 flex flex-col items-center gap-8">
@@ -18,6 +23,7 @@ const Payment = ({ onNext, onPrev }) => {
                     {/* Only Toss Payment Button is available for now */}
                     <button
                         onClick={onNext}
+                        disabled={isSubmitting}
                         className="w-full flex items-center justify-between p-5 rounded-2xl border-2 border-[#0064FF] bg-[#F2F6FF] hover:bg-[#E5EDFF] transition-colors"
                     >
                         <div className="flex items-center gap-3">
@@ -25,9 +31,15 @@ const Payment = ({ onNext, onPrev }) => {
                             <div className="w-8 h-8 rounded-full bg-[#0064FF] flex items-center justify-center text-white font-black text-xs">
                                 toss
                             </div>
-                            <span className="font-bold text-[#0064FF] text-lg">토스 결제하기</span>
+                            <span className="font-bold text-[#0064FF] text-lg">
+                                {isSubmitting ? '결제 처리 중...' : '토스 결제하기'}
+                            </span>
                         </div>
-                        <ArrowRight className="w-5 h-5 text-[#0064FF]" />
+                        {isSubmitting ? (
+                            <Loader2 className="w-5 h-5 text-[#0064FF] animate-spin" />
+                        ) : (
+                            <ArrowRight className="w-5 h-5 text-[#0064FF]" />
+                        )}
                     </button>
 
                     <button disabled className="w-full flex items-center justify-start p-5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed">

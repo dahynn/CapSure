@@ -1,10 +1,38 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import WelcomeHeader from "./components/WelcomeHeader";
-import AiRecommendations from "./components/AiRecommendations";
+import CategoryRecommend from "./components/CategoryRecommend";
 import SubscribedCapsures from "./components/SubscribedCapsures";
 import ActiveInsurances from "./components/ActiveInsurances";
+import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
+import { getCategoryRecommendations, getHomeDashboard } from './api/home.api';
+
+const CATEGORY_LABEL_MAP = {
+    DEATH: '사망',
+    CANCER: '암',
+    BRAIN_HEART: '뇌/심장',
+    ACTUAL_LOSS: '실손',
+    SURGERY: '수술',
+    ACCIDENT: '상해',
+    LIABILITY: '일상배상책임',
+    ETC: '기타',
+};
+
+const BADGE_COLORS = ['#82D8FC', '#F6CD3C', '#F2BEF7', '#8EE7A7', '#FDBA74'];
+const ALL_CATEGORY_CODES = ['DEATH', 'CANCER', 'BRAIN_HEART', 'ACTUAL_LOSS', 'SURGERY', 'ACCIDENT', 'LIABILITY', 'ETC'];
+
+const buildCoverageBadges = (activeCategories = []) => {
+    const activeSet = new Set((activeCategories ?? []).map((category) => String(category).trim()));
+
+    return ALL_CATEGORY_CODES.map((code) => {
+        const label = CATEGORY_LABEL_MAP[code];
+        const isActive = activeSet.has(code) || activeSet.has(label);
+        return { name: label, isActive };
+    });
+};
 
 const HomePage = () => {
+    const navigate = useNavigate();
     // User data state
     const [user, setUser] = React.useState({
         name: '고객',
@@ -19,84 +47,105 @@ const HomePage = () => {
             .catch(() => console.error("프로필 조회를 실패했습니다."));
     }, []);
 
-    // Mock AI Recommendations
-    const [aiRecommendations] = React.useState([
-        {
-            id: 1,
-            badgeColor: "#82D8FC",
-            title: "운전자 보험\n업그레이드 제안",
-            desc: "현재 보장 대비 24% 효율 증가",
-            btnColor: "#82D8FC",
-            btnText: "분석하기"
-        },
-        {
-            id: 2,
-            badgeColor: "#F6CD3C",
-            title: "암 보험\n맞춤형 플랜",
-            desc: "내 가족력 기반 최적의 보장",
-            btnColor: "#F6CD3C",
-            btnText: "알아보기"
-        }
-    ]);
+    const [subscribedCapsures, setSubscribedCapsures] = React.useState([]);
+    const [activeInsurances, setActiveInsurances] = React.useState([]);
+    const [categoryRecommendations, setCategoryRecommendations] = React.useState([]);
 
-    // Mock subscribed capsures
-    const [subscribedCapsures] = React.useState([
-        {
-            id: 1,
-            title: "나의 든든한 일상",
-            date: "2023.10.12",
-            themeColor: "#82D8FC", // 브랜드 블루
-            coverages: [
-                { name: "실손", isActive: true },
-                { name: "상해", isActive: true },
-                { name: "배상", isActive: true },
-                { name: "사망", isActive: false },
-                { name: "암", isActive: true },
-                { name: "수술", isActive: true },
-                { name: "뇌/심장", isActive: false }
-            ]
-        },
-        {
-            id: 2,
-            title: "여름 맞이 보험",
-            date: "2024.01.05",
-            themeColor: "#F6CD3C", // 옐로우
-            coverages: [
-                { name: "사망", isActive: true },
-                { name: "암", isActive: true },
-                { name: "뇌/심장", isActive: true },
-                { name: "실손", isActive: true },
-                { name: "수술", isActive: true },
-                { name: "상해", isActive: false },
-                { name: "배상", isActive: false }
-            ]
-        }
-    ]);
+    React.useEffect(() => {
+        getCategoryRecommendations()
+            .then((recommendations) => {
+                const mapped = (recommendations ?? []).map((item, index) => {
+                    const badgeColor = BADGE_COLORS[index % BADGE_COLORS.length];
+                    const categoryLabel = CATEGORY_LABEL_MAP[item.coverageCategoryCode] ?? item.coverageCategoryCode;
+                    const monthlyPrice = Number(item.monthlyPrice ?? 0);
+                    return {
+                        id: item.productSourceId,
+                        productSourceId: item.productSourceId,
+                        title: `${categoryLabel} 추천\n${item.productName}`,
+                        desc: `${item.companyName} · 월 ${monthlyPrice.toLocaleString()}원 · 가입 ${item.subscriberCount}건`,
+                        badgeColor,
+                        btnColor: badgeColor,
+                        btnText: '자세히 보기',
+                    };
+                });
+                setCategoryRecommendations(mapped);
+            })
+            .catch(() => setCategoryRecommendations([]));
+    }, []);
 
-    // Mock active insurances
-    const [activeInsurances] = React.useState([
-        {
-            id: 1,
-            status: "정상 유지",
-            statusColor: "#82D8FC", // Blue
-            productName: "카카오 정기 보험",
-            paymentDay: 15,
-            monthlyPremium: 45000
-        },
-        {
-            id: 2,
-            status: "납입 대기",
-            statusColor: "#F6CD3C", // Yellow
-            productName: "현대해상 실손의료비",
-            paymentDay: 25,
-            monthlyPremium: 12000
+    React.useEffect(() => {
+        const toPaymentDay = (nextBillingAt) => {
+            if (!nextBillingAt) {
+                return '-';
+            }
+            const split = nextBillingAt.split('.');
+            return split.length === 3 ? Number(split[2]) : '-';
+        };
+
+        getHomeDashboard()
+            .then((dashboard) => {
+                const mappedCapsules = (dashboard?.subscribedCapsules ?? []).map((capsule, index) => ({
+                    id: capsule.capsuleSnapshotId ?? `${capsule.subscriptionId}-${index}`,
+                    subscriptionId: capsule.subscriptionId,
+                    title: capsule.capsuleName,
+                    date: capsule.subscribedDate,
+                    themeColor: index % 2 === 0 ? '#82D8FC' : '#F6CD3C',
+                    coverages: buildCoverageBadges(capsule.categories ?? []),
+                }));
+
+                const mappedInsurances = (dashboard?.activeInsurances ?? []).map((insurance) => ({
+                    id: `${insurance.subscriptionId}-${insurance.productSourceId}`,
+                    status: insurance.daysUntilRenewal <= 7 ? '갱신 임박' : '정상 유지',
+                    statusColor: insurance.daysUntilRenewal <= 7 ? '#F6CD3C' : '#82D8FC',
+                    productName: insurance.productName,
+                    paymentDay: toPaymentDay(insurance.nextBillingAt),
+                    monthlyPremium: Number(insurance.monthlyPremium ?? 0),
+                }));
+
+                setSubscribedCapsures(mappedCapsules);
+                setActiveInsurances(mappedInsurances);
+            })
+            .catch(() => {
+                setSubscribedCapsures([]);
+                setActiveInsurances([]);
+            });
+    }, []);
+
+    React.useEffect(() => {
+        const latestCapsule = getLatestCapsureSubscription();
+        if (!latestCapsule) {
+            return;
         }
-    ]);
+
+        const mappedCoverages = buildCoverageBadges(
+            [...new Set(latestCapsule.products.map((product) => product.categoryLabel))]
+        );
+
+        setSubscribedCapsures((previousCapsures) => {
+            const filteredCapsures = previousCapsures.filter(
+                (capsule) => String(capsule.id) !== String(latestCapsule.subscriptionId)
+            );
+
+            return [
+                {
+                    id: latestCapsule.subscriptionId,
+                    title: latestCapsule.capsuleName,
+                    date: new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
+                    themeColor: '#82D8FC',
+                    coverages: mappedCoverages,
+                },
+                ...filteredCapsures,
+            ].slice(0, 2);
+        });
+    }, []);
 
     return (
         <div className="px-8 pt-8 pb-4 md:px-12 md:py-10 space-y-8 max-w-[560px] mx-auto w-full transition-all">
             <WelcomeHeader user={user} />
-            <AiRecommendations recommendations={aiRecommendations} />
+            <CategoryRecommend
+                recommendations={categoryRecommendations}
+                onViewDetail={(productSourceId) => navigate(`/capsure-insurance/detail/${productSourceId}`)}
+            />
             <SubscribedCapsures subscribedCapsures={subscribedCapsures} />
             <ActiveInsurances activeInsurances={activeInsurances} />
         </div>

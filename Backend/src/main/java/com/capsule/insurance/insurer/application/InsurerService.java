@@ -5,19 +5,24 @@ import com.capsule.insurance.auth.domain.UserAccount;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
 import com.capsule.insurance.insurer.dto.ProductDetailResponse;
+import com.capsule.insurance.insurer.dto.CategoryRecommendResponse;
 import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
-import java.math.BigDecimal;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.insurer.domain.ProductSource;
 import com.capsule.insurance.insurer.dto.ProductSourceLightSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceTermsSummaryResponse;
 import com.capsule.insurance.insurer.infra.ProductSourceMapper;
+import com.capsule.insurance.insurer.infra.projection.PopularProductProjection;
+import com.capsule.insurance.insurer.infra.projection.ProductSourceDetailProjection;
+import com.capsule.insurance.insurer.infra.projection.ProductSourceSummaryProjection;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -57,37 +62,24 @@ public class InsurerService {
     }
 
     public List<ProductSummaryResponse> getProducts(String category, Integer budget, Long userId) {
-        String gender = "M";
-        try {
-            UserAccount user = userAccountMapper.findByUserId(userId);
-            if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
-                gender = user.getGender().name();
-            }
-        } catch (Exception e) {
-            // Ignore and use default gender
-        }
+        String gender = resolveGender(userId);
         BigDecimal maxPrice = (budget != null) ? BigDecimal.valueOf(budget) : null;
-        return insurerCatalogMapper.findProductSourcesByFilter(category, maxPrice, gender);
+        return insurerCatalogMapper.findProductSourcesByFilter(category, maxPrice, gender, userId).stream()
+                .map(this::toProductSummaryResponse)
+                .toList();
     }
 
     public ProductDetailResponse getProductDetail(Long productSourceId, Long userId) {
-        String gender = "M";
-        try {
-            UserAccount user = userAccountMapper.findByUserId(userId);
-            if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
-                gender = user.getGender().name();
-            }
-        } catch (Exception e) {
-            // Ignore
+        String gender = resolveGender(userId);
+        ProductSourceDetailProjection detail = insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
+        if (detail == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 product_source를 찾을 수 없습니다.");
         }
-        return insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
+        return toProductDetailResponse(detail);
     }
 
     public ProductSourceTermsSummaryResponse getProductSourceTermsSummary(Long productSourceId) {
-        ProductSource productSource = productSourceMapper.findById(productSourceId);
-        if (productSource == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 product_source를 찾을 수 없습니다.");
-        }
+        ProductSource productSource = getProductSourceOrThrow(productSourceId);
 
         ProductSourceTermsSummaryResponse.PriceComparison priceComparison = buildPriceComparison(productSource);
         AiTermsSummary aiTermsSummary = generateTermsSummary(productSource, priceComparison);
@@ -111,10 +103,7 @@ public class InsurerService {
     }
 
     public ProductSourceLightSummaryResponse getProductSourceLightSummary(Long productSourceId) {
-        ProductSource productSource = productSourceMapper.findById(productSourceId);
-        if (productSource == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 product_source를 찾을 수 없습니다.");
-        }
+        ProductSource productSource = getProductSourceOrThrow(productSourceId);
 
         ProductSourceTermsSummaryResponse.PriceComparison priceComparison = buildPriceComparison(productSource);
         AiLightSummary aiLightSummary = generateLightSummary(productSource, priceComparison);
@@ -127,6 +116,128 @@ public class InsurerService {
                 valueOrInfo(aiLightSummary.coverageSummary()),
                 valueOrInfo(aiLightSummary.featureSummary()),
                 LIGHT_TERMS_DISCLAIMER
+        );
+    }
+
+    public List<CategoryRecommendResponse> getCategoryRecommendations(Long userId) {
+        String gender = resolveGender(userId);
+        List<String> onboardingCategories = userAccountMapper.findOnboardingCategoriesByUserId(userId);
+        List<String> categoryCodes = (onboardingCategories == null || onboardingCategories.isEmpty())
+                ? List.of("CANCER", "DEATH", "SURGERY")
+                : onboardingCategories;
+
+        List<PopularProductProjection> candidates =
+                insurerCatalogMapper.findPopularProductsByCategories(categoryCodes, gender, userId);
+        return mixCategoryRecommendations(candidates, categoryCodes, 5);
+    }
+
+    private String resolveGender(Long userId) {
+        try {
+            UserAccount user = userAccountMapper.findByUserId(userId);
+            if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
+                return user.getGender().name();
+            }
+        } catch (Exception exception) {
+            log.debug("Failed to resolve gender for userId={}", userId, exception);
+        }
+        return "M";
+    }
+
+    private ProductSource getProductSourceOrThrow(Long productSourceId) {
+        ProductSource productSource = productSourceMapper.findById(productSourceId);
+        if (productSource == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 product_source를 찾을 수 없습니다.");
+        }
+        return productSource;
+    }
+
+    private ProductSummaryResponse toProductSummaryResponse(ProductSourceSummaryProjection projection) {
+        return new ProductSummaryResponse(
+                projection.productSourceId(),
+                projection.companyName(),
+                projection.productName(),
+                projection.insurerSector(),
+                projection.coverageCategoryCode(),
+                projection.coverageCode(),
+                projection.monthlyPrice(),
+                projection.loadedAt(),
+                projection.updatedAt()
+        );
+    }
+
+    private List<CategoryRecommendResponse> mixCategoryRecommendations(
+            List<PopularProductProjection> candidates,
+            List<String> categoryCodes,
+            int maxItems
+    ) {
+        if (candidates == null || candidates.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, List<PopularProductProjection>> byCategory = new LinkedHashMap<>();
+        for (String categoryCode : categoryCodes) {
+            byCategory.put(categoryCode, new ArrayList<>());
+        }
+        for (PopularProductProjection candidate : candidates) {
+            byCategory.computeIfAbsent(candidate.coverageCategoryCode(), key -> new ArrayList<>()).add(candidate);
+        }
+
+        List<CategoryRecommendResponse> results = new ArrayList<>();
+        int round = 0;
+        while (results.size() < maxItems) {
+            boolean addedInRound = false;
+            for (String categoryCode : byCategory.keySet()) {
+                List<PopularProductProjection> list = byCategory.get(categoryCode);
+                if (list == null || round >= list.size()) {
+                    continue;
+                }
+                PopularProductProjection picked = list.get(round);
+                results.add(new CategoryRecommendResponse(
+                        picked.productSourceId(),
+                        picked.companyName(),
+                        picked.productName(),
+                        picked.coverageCategoryCode(),
+                        picked.monthlyPrice(),
+                        picked.subscriberCount()));
+                addedInRound = true;
+                if (results.size() >= maxItems) {
+                    break;
+                }
+            }
+            if (!addedInRound) {
+                break;
+            }
+            round++;
+        }
+        return results;
+    }
+
+    private ProductDetailResponse toProductDetailResponse(ProductSourceDetailProjection projection) {
+        return new ProductDetailResponse(
+                projection.productSourceId(),
+                projection.companyName(),
+                projection.productName(),
+                projection.insurerSector(),
+                projection.saleChannel(),
+                projection.coverageName(),
+                projection.claimReason(),
+                projection.payoutAmount(),
+                projection.joinAmount(),
+                projection.minimumJoinPremium(),
+                projection.paymentCycle(),
+                projection.paymentTerm(),
+                projection.coverageTerm(),
+                projection.coverageCategoryCode(),
+                projection.coverageCode(),
+                projection.monthlyPrice(),
+                projection.productSummary(),
+                projection.productFeature(),
+                projection.specialNote(),
+                projection.contactPhone(),
+                projection.saleDate(),
+                projection.currentAnnouncedRate(),
+                projection.fixedRate(),
+                projection.minimumGuaranteedRate()
         );
     }
 

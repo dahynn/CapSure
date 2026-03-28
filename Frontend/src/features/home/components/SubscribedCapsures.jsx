@@ -52,7 +52,7 @@ const SubscribedCapsures = ({ subscribedCapsures }) => {
                                         </p>
                                     </div>
                                     <button 
-                                        onClick={() => navigate(`/mypage/capsule/${capsure.id}`)}
+                                        onClick={() => navigate(`/mypage/capsule/${capsure.subscriptionId ?? capsure.id}`)}
                                         className="px-4 py-2 rounded-[14px] bg-slate-700/50 hover:bg-slate-700 text-white text-[13px] font-medium transition-colors border border-slate-600/50 active:scale-95"
                                     >
                                         상세보기

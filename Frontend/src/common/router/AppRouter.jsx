@@ -13,6 +13,8 @@ import CapsureBudgetPage from '@/features/capsure/CapsureBudgetPage';
 import CapsureMakerPage from '@/features/capsure/CapsureMakerPage';
 import CapsureProductDetailPage from '@/features/capsure/CapsureProductDetailPage';
 import CapsureTermsPage from '@/features/capsure/CapsureTermsPage';
+import CapsurePaymentSummaryPage from '@/features/capsure/CapsurePaymentSummaryPage';
+import CapsurePaymentPage from '@/features/capsure/CapsurePaymentPage';
 import CapsureResultPage from '@/features/capsure/CapsureResultPage';
 
 // MyPage Features
@@ -48,6 +50,8 @@ const AppRouter = () => {
             <Route path="maker" element={<CapsureMakerPage />} />
             <Route path="detail/:id" element={<CapsureProductDetailPage />} />
             <Route path="terms" element={<CapsureTermsPage />} />
+            <Route path="payment-summary" element={<CapsurePaymentSummaryPage />} />
+            <Route path="payment" element={<CapsurePaymentPage />} />
             <Route path="result" element={<CapsureResultPage />} />
           </Route>
 
@@ -62,6 +66,7 @@ const AppRouter = () => {
               <Route path="capsule/:id" element={<CapsuleDetailPage />} />
               <Route path="capsule/:id/edit" element={<CapsuleEditPage />} />
               <Route path="history" element={<MyPage initialView="history" />} />
+              <Route path="payment-methods" element={<MyPage initialView="payment" />} />
             </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />

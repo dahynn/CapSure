@@ -18,7 +18,11 @@ import com.capsule.insurance.common.security.jwt.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 public class AuthService {
@@ -173,5 +177,62 @@ public class AuthService {
         emailService.completeSignup(request.email());
         smsService.completeSignup(request.phone());
         
+    }
+
+    public List<String> saveOnboardingCategories(String userId, List<String> categoryCodes) {
+        Long parsedUserId = Long.valueOf(userId);
+        UserAccount user = userAccountMapper.findByUserId(parsedUserId);
+        if (Objects.isNull(user)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "계정 정보를 찾을 수 없습니다.");
+        }
+
+        List<String> normalizedCategories = normalizeOnboardingCategories(categoryCodes);
+        if (normalizedCategories.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "카테고리는 최소 1개 이상 선택해야 합니다.");
+        }
+
+        userAccountMapper.deleteOnboardingCategoriesByUserId(parsedUserId);
+        for (String categoryCode : normalizedCategories) {
+            userAccountMapper.insertOnboardingCategory(parsedUserId, categoryCode);
+        }
+        return normalizedCategories;
+    }
+
+    public List<String> getOnboardingCategories(String userId) {
+        Long parsedUserId = Long.valueOf(userId);
+        UserAccount user = userAccountMapper.findByUserId(parsedUserId);
+        if (Objects.isNull(user)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "계정 정보를 찾을 수 없습니다.");
+        }
+        return userAccountMapper.findOnboardingCategoriesByUserId(parsedUserId);
+    }
+
+    private List<String> normalizeOnboardingCategories(List<String> categoryCodes) {
+        if (categoryCodes == null || categoryCodes.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> deduplicated = new LinkedHashSet<>();
+        for (String categoryCode : categoryCodes) {
+            if (categoryCode == null) {
+                continue;
+            }
+            String normalized = categoryCode.trim().toUpperCase();
+            if (normalized.isBlank()) {
+                continue;
+            }
+            deduplicated.add(normalized);
+        }
+
+        List<String> result = new ArrayList<>();
+        for (String normalized : deduplicated) {
+            try {
+                com.capsule.insurance.insurer.domain.CoverageCategory.valueOf(normalized);
+                result.add(normalized);
+            } catch (IllegalArgumentException ignored) {
+                // unsupported category code is skipped
+            }
+        }
+        return result;
     }
 }

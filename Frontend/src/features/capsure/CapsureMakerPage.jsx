@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import CapsureMakerView from './components/CapsureMakerView';
 import { useCapsure } from './context/CapsureContext';
+import { getProductSourceId } from './utils/productSource';
 
 const CapsureMakerPage = () => {
     const navigate = useNavigate();
@@ -16,8 +17,7 @@ const CapsureMakerPage = () => {
     };
 
     const handleViewDetail = (product) => {
-        // Use productSourceId from backend
-        const productId = product.productSourceId || product.id;
+        const productId = getProductSourceId(product);
         navigate(`/capsure-insurance/detail/${productId}`, { state: { product } });
     };
 

@@ -11,6 +11,7 @@ import com.capsule.insurance.insurer.dto.ProductSourceAiSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceLightSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceTermsSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
+import com.capsule.insurance.insurer.dto.CategoryRecommendResponse;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,6 +53,14 @@ public class InsurerController {
     ) {
         Long userId = getUserId(authentication);
         return ApiResponse.success(insurerService.getProductDetail(productSourceId, userId));
+    }
+
+    @GetMapping("/products/category-recommendations")
+    public ApiResponse<List<CategoryRecommendResponse>> getCategoryRecommendations(
+            org.springframework.security.core.Authentication authentication
+    ) {
+        Long userId = getUserId(authentication);
+        return ApiResponse.success(insurerService.getCategoryRecommendations(userId));
     }
 
     private Long getUserId(org.springframework.security.core.Authentication authentication) {

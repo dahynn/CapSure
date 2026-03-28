@@ -122,7 +122,7 @@ export const getInsuranceTerms = async (insuranceIds) => {
 
                 return {
                     id: item.id,
-                    title: `${item.name} - ${item.company}`,
+                    title: `${item.productName} - ${item.companyName}`,
                     termsList: [
                         { id: `${id}-t1`, title: '가입 동의서 및 주요 내용 설명서', content: '본 약관은 보험계약자와 보험회사 간의 권리와 의무를 규정합니다. 엄청 긴 내용의 약관이 여기에 포함되어 확인이 필요합니다. \n\n제1조 (목적)\n이 약관은 당사와 보험계약자 사이에 체결된 보험계약에 대하여 적용됩니다...\n제2조 (용어의 정의)\n이 약관에서 사용하는 용어의 정의는 다음과 같습니다...' },
                         { id: `${id}-t2`, title: '개인정보 수집 및 이용 동의', content: '당사는 보험계약의 체결 및 이행을 위하여 아래와 같이 개인정보를 수집 및 이용합니다. \n1. 수집항목: 성명, 주민등록번호, 연락처 등\n2. 수집목적: 보험계약 체결, 심사, 유지, 보험금 지급 등...\n3. 보유 및 이용기간: 거래 종료일로부터 5년' },

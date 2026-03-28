@@ -1,18 +1,6 @@
 import React from 'react';
 import { X, Plus, Check, Building2 } from 'lucide-react';
-
-// Mapping for badge labels
-const CATEGORY_LABEL_MAP = {
-    'DEATH': '사망',
-    'CANCER': '암',
-    'BRAIN_HEART': '뇌/심장',
-    'ACTUAL_LOSS': '실손',
-    'SURGERY': '수술',
-    'DENTAL': '치아',
-    'ETC': '기타',
-    'ACCIDENT': '상해',
-    'LIABILITY': '배상'
-};
+import { getProductSourceId } from '../../utils/productSource';
 
 const ProductList = ({ 
     categories, 
@@ -58,10 +46,10 @@ const ProductList = ({
                         </div>
                     ) : (
                         selectedProducts.map(p => {
-                            const pId = p.productSourceId || p.id;
-                            const pName = p.productName || p.name;
-                            const pPrice = Math.floor(Number(p.monthlyPrice || p.price || 0));
-                            const pCategory = CATEGORY_LABEL_MAP[p.coverageCategoryCode] || p.category;
+                            const pId = getProductSourceId(p);
+                            const pName = p.productName;
+                            const pPrice = Math.floor(p.monthlyPrice);
+                            const pCategory = p.categoryLabel;
 
                             return (
                                 <div key={pId} className="flex-shrink-0 flex flex-col bg-capsure-card border border-slate-700/50 rounded-xl px-3.5 py-3 w-[160px] h-[92px]">
@@ -105,11 +93,11 @@ const ProductList = ({
                     <div className="py-20 text-center text-slate-500 font-bold">검색 결과가 없습니다.</div>
                 ) : (
                     filteredProducts?.map(product => {
-                        const productId = product.productSourceId || product.id;
-                        const productName = product.productName || product.name;
-                        const productPrice = Math.floor(Number(product.monthlyPrice || product.price || 0));
-                        const productCategoryLabel = CATEGORY_LABEL_MAP[product.coverageCategoryCode] || product.category;
-                        const isSelected = selectedProducts.some(p => (p.productSourceId || p.id) === productId);
+                        const productId = getProductSourceId(product);
+                        const productName = product.productName;
+                        const productPrice = Math.floor(product.monthlyPrice);
+                        const productCategoryLabel = product.categoryLabel;
+                        const isSelected = selectedProducts.some(p => getProductSourceId(p) === productId);
                         const sectorLabel = product.insurerSector === 'LIFE' ? '생명보험' : '손해보험';
 
                         return (
@@ -126,7 +114,7 @@ const ProductList = ({
                                     </div>
                                     <div className="flex items-center gap-1.5 text-slate-500 text-micro font-bold">
                                         <Building2 className="w-3 h-3" />
-                                        {product.companyName || product.company}
+                                        {product.companyName}
                                     </div>
                                 </div>
 

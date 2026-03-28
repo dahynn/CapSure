@@ -4,18 +4,8 @@ import { ChevronLeft } from 'lucide-react';
 import CapsureProgress from './maker/CapsureProgress';
 import ProductList from './maker/ProductList';
 import { httpClient } from '@/common/api/httpClient';
-
-const categories = ['전체', '사망', '암', '뇌/심장', '실손', '수술', '기타'];
-
-// Category to Backend Enum Mapping
-const CATEGORY_MAP = {
-    '사망': 'DEATH',
-    '암': 'CANCER',
-    '뇌/심장': 'BRAIN_HEART',
-    '실손': 'ACTUAL_LOSS',
-    '수술': 'SURGERY',
-    '기타': 'ETC'
-};
+import { getProductSourceId, normalizeProductSource } from '../utils/productSource';
+import { CAPSURE_CATEGORY_CODE_BY_LABEL, CAPSURE_CATEGORY_OPTIONS } from '../constants/categories';
 
 const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveItem, onConfirm, onViewDetail }) => {
     const navigate = useNavigate();
@@ -39,14 +29,14 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
             // We'll use the first active category that isn't '전체'
             const filteredCat = activeCategories.find(c => c !== '전체');
             if (filteredCat) {
-                params.append('category', CATEGORY_MAP[filteredCat] || filteredCat);
+                params.append('category', CAPSURE_CATEGORY_CODE_BY_LABEL[filteredCat] || filteredCat);
             }
 
             const response = await httpClient.get(`/insurers/products?${params.toString()}`);
             const data = response.data;
             
             if (data.success) {
-                setProducts(data.data || []);
+                setProducts((data.data || []).map(normalizeProductSource));
             }
         } catch (error) {
             console.error("Failed to fetch products:", error);
@@ -77,21 +67,18 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     };
 
     const currentAmount = selectedProducts.reduce((sum, p) => {
-        const pPrice = Number(p.monthlyPrice || p.price || 0);
-        return sum + pPrice;
+        return sum + p.monthlyPrice;
     }, 0);
     const remainingBudget = totalBudget - currentAmount;
     const progressPercent = Math.min((currentAmount / totalBudget) * 100, 100);
 
     const filteredProducts = [...products].sort((a, b) => {
         if (sortBy === 'price') {
-            const priceA = Number(a.monthlyPrice || a.price || 0);
-            const priceB = Number(b.monthlyPrice || b.price || 0);
-            return priceA - priceB;
+            return a.monthlyPrice - b.monthlyPrice;
         }
         if (sortBy === 'popular') {
             // stable fallback for popular
-            return (b.productSourceId || b.id) - (a.productSourceId || a.id);
+            return getProductSourceId(b) - getProductSourceId(a);
         }
         return 0;
     });
@@ -117,7 +104,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
                 />
 
                 <ProductList 
-                    categories={categories}
+                    categories={CAPSURE_CATEGORY_OPTIONS}
                     activeCategories={activeCategories}
                     handleCategoryClick={handleCategoryClick}
                     selectedProducts={selectedProducts}
@@ -131,7 +118,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
             </div>
 
             {/* Sticky Bottom Action */}
-            <div className="fixed bottom-[72px] left-0 right-0 max-w-[560px] mx-auto p-6 z-50">
+            <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto p-6 z-40">
                 <button 
                     onClick={onConfirm}
                     className="w-full py-4 rounded-xl font-bold text-[#020715] text-base bg-brand-blue shadow-[0_0_20px_rgba(130,216,252,0.2)] hover:bg-[#6BC1E6] active:scale-[0.98] transition-all"

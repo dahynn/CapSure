@@ -20,7 +20,7 @@ import org.springframework.util.StringUtils;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    private final long accessTokenValidTime = 1000L * 60 * 60; // 1시간
+    private final long accessTokenValidTime = 1000L * 60 * 60 * 24; // 1시간
     private final long refreshTokenValidTime = 1000L * 60 * 60 * 24 * 7; // 7일
 
     public JwtTokenProvider(@Value("${jwt.secret:defaultSecretKeyForLocalTestOnlyPlzChangeInProdEnvironment!!xyz123}") String secret) {

@@ -1,4 +1,5 @@
 // src/features/home/api/home.api.js
+import { httpClient } from '@/common/api/httpClient';
 
 /**
  * 더미 데이터를 제공하는 Mock API
@@ -95,4 +96,22 @@ export const getMyInsurances = async () => {
             ]);
         }, 500);
     });
+};
+
+export const getHomeDashboard = async () => {
+    const response = await httpClient.get('/dashboard/home');
+    const payload = response.data;
+    if (!payload?.success) {
+        throw new Error(payload?.message || '홈 대시보드 조회에 실패했습니다.');
+    }
+    return payload.data;
+};
+
+export const getCategoryRecommendations = async () => {
+    const response = await httpClient.get('/insurers/products/category-recommendations');
+    const payload = response.data;
+    if (!payload?.success) {
+        throw new Error(payload?.message || '카테고리 추천 조회에 실패했습니다.');
+    }
+    return payload.data ?? [];
 };
