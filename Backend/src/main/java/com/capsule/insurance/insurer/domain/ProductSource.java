@@ -59,6 +59,7 @@ public class ProductSource {
     private String expectedRenewalPremiumText;
     private String productSummaryText;
     private String productFeatureText;
+    private String aiSummaryJson;
     private String surrenderValueText;
     private String minimumDeathBenefitText;
     private String minimumDeathBenefitMethodText;

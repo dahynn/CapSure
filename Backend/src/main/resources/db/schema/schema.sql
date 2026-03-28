@@ -657,7 +657,7 @@ CREATE TABLE insurance.product_source (
     expected_renewal_premium TEXT,
     product_summary TEXT,
     product_feature TEXT,
-    ai_summary_text TEXT,
+    ai_summary_json JSON,
     surrender_value TEXT,
     minimum_death_benefit TEXT,
     minimum_death_benefit_method TEXT,
