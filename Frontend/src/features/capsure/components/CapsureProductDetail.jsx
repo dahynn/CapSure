@@ -1,18 +1,5 @@
 import React, { useEffect } from 'react';
-import { ChevronLeft, Share2, ShieldCheck, ChevronRight, Info, Zap, Receipt, Pill, PlusSquare, Building2, Phone } from 'lucide-react';
-
-// Reverse mapping for badge labels
-const CATEGORY_LABEL_MAP = {
-    'DEATH': '사망',
-    'CANCER': '암',
-    'BRAIN_HEART': '뇌/심장',
-    'ACTUAL_LOSS': '실손',
-    'SURGERY': '수술',
-    'DENTAL': '치아',
-    'ETC': '기타',
-    'ACCIDENT': '상해',
-    'LIABILITY': '배상'
-};
+import { ChevronLeft, Share2, ShieldCheck, Info, Zap, Receipt, Building2, Phone } from 'lucide-react';
 
 const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
     // Scroll to top on mount
@@ -20,10 +7,10 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
         window.scrollTo(0, 0);
     }, []);
 
-    const productName = product.productName || product.name;
-    const price = Number(product.monthlyPrice || product.price || 0);
-    const categoryLabel = CATEGORY_LABEL_MAP[product.coverageCategoryCode] || product.category;
-    const companyName = product.companyName || product.company;
+    const productName = product.productName;
+    const price = product.monthlyPrice;
+    const categoryLabel = product.categoryLabel;
+    const companyName = product.companyName;
 
     return (
         <div className="flex flex-col min-h-screen bg-[#020715] animate-in fade-in slide-in-from-bottom-4 duration-300 pb-28">
@@ -51,7 +38,7 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
                         {product.insurerSector === 'LIFE' ? '생명보험' : '손해보험'}
                     </span>
                     <span className="bg-[#1C2C28] text-[#4ADE80] text-capsure-sm font-bold px-3 py-1.5 rounded-lg border border-[#4ADE80]/20 min-w-fit whitespace-nowrap">
-                        {product.saleChannel || '다이렉트'}
+                        {product.saleChannel}
                     </span>
                 </div>
                 
@@ -155,7 +142,7 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
             </div>
 
             {/* Sticky Bottom Action */}
-            <div className="fixed bottom-0 left-0 right-0 max-w-[560px] mx-auto bg-gradient-to-t from-[#020715] via-[#020715] to-transparent pt-12 px-6 pb-8 z-50">
+            <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto bg-gradient-to-t from-[#020715] via-[#020715] to-transparent pt-12 px-6 pb-8 z-40">
                 <button 
                     onClick={onAdd}
                     className={`w-full py-4 rounded-[16px] font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2 ${

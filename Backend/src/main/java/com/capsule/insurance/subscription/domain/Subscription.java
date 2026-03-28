@@ -19,6 +19,7 @@ public class Subscription {
 
     private Long subscriptionId;
     private Long userId;
+    private String capsuleName;
     private SubscriptionStatus subscriptionStatus;
     private Integer billingAnchorDay;
     private Instant currentCycleStartAt;

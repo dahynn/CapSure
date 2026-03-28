@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Settings, 
     Pill, 
     CreditCard, 
     ReceiptText, 
@@ -9,10 +8,13 @@ import {
     LogOut, 
     ChevronRight,
     ChevronLeft,
-    CheckCircle2
+    CheckCircle2,
+    CircleAlert,
+    Landmark,
+    ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getPaymentHistory } from './api/mypage.api';
+import { getPaymentHistory, getCurrentPaymentMethod, registerPaymentMethod } from './api/mypage.api';
 
 const MyPage = ({ initialView = 'main' }) => {
     const navigate = useNavigate();
@@ -20,6 +22,15 @@ const MyPage = ({ initialView = 'main' }) => {
     const [view, setView] = useState(initialView);
     const [history, setHistory] = useState([]);
     const [showToast, setShowToast] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState(null);
+    const [paymentLoading, setPaymentLoading] = useState(false);
+    const [paymentSaving, setPaymentSaving] = useState(false);
+    const [paymentError, setPaymentError] = useState('');
+    const [paymentForm, setPaymentForm] = useState({
+        provider: 'TOSS',
+        methodType: 'BANK_ACCOUNT',
+        maskedNumber: '',
+    });
     
     const [user, setUser] = useState({
         name: '고객',
@@ -58,6 +69,92 @@ const MyPage = ({ initialView = 'main' }) => {
             fetchHistory();
         }
     }, [view]);
+
+    useEffect(() => {
+        if (view !== 'payment') {
+            return;
+        }
+
+        const fetchPaymentMethod = async () => {
+            setPaymentLoading(true);
+            setPaymentError('');
+            try {
+                const data = await getCurrentPaymentMethod();
+                setPaymentMethod(data);
+                if (data) {
+                    setPaymentForm({
+                        provider: data.provider || 'TOSS',
+                        methodType: data.methodType || 'BANK_ACCOUNT',
+                        maskedNumber: data.maskedNumber || '',
+                    });
+                }
+            } catch (error) {
+                console.error('Payment method load error', error);
+                setPaymentError('결제수단 정보를 불러오지 못했습니다.');
+            } finally {
+                setPaymentLoading(false);
+            }
+        };
+
+        fetchPaymentMethod();
+    }, [view]);
+
+    const getMethodLabel = (methodType) => {
+        if (methodType === 'BANK_ACCOUNT') return '계좌';
+        if (methodType === 'CARD') return '카드';
+        return methodType || '결제수단';
+    };
+
+    const handlePaymentFormChange = (key, value) => {
+        setPaymentForm(prev => ({ ...prev, [key]: value }));
+    };
+
+    const showSavedToast = () => {
+        setShowToast(true);
+        window.setTimeout(() => setShowToast(false), 2500);
+    };
+
+    const handlePaymentSave = async () => {
+        if (paymentSaving) {
+            return;
+        }
+
+        const trimmedMaskedNumber = paymentForm.maskedNumber.trim();
+        if (!trimmedMaskedNumber) {
+            setPaymentError('카드 또는 계좌 정보를 입력해 주세요.');
+            return;
+        }
+
+        setPaymentSaving(true);
+        setPaymentError('');
+        try {
+            await registerPaymentMethod({
+                provider: paymentForm.provider,
+                methodType: paymentForm.methodType,
+                maskedNumber: trimmedMaskedNumber,
+            });
+
+            const savedPaymentMethod = {
+                provider: paymentForm.provider,
+                methodType: paymentForm.methodType,
+                maskedNumber: trimmedMaskedNumber,
+                active: true,
+            };
+
+            setPaymentMethod(savedPaymentMethod);
+            setPaymentForm({
+                provider: savedPaymentMethod.provider,
+                methodType: savedPaymentMethod.methodType,
+                maskedNumber: savedPaymentMethod.maskedNumber,
+            });
+            showSavedToast();
+        } catch (error) {
+            console.error('Payment method save error', error);
+            setPaymentError('결제수단 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        } finally {
+            setPaymentSaving(false);
+        }
+    };
 
     const renderMain = () => (
         <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-12">
@@ -114,7 +211,10 @@ const MyPage = ({ initialView = 'main' }) => {
                         return (
                             <button 
                                 key={idx}
-                                onClick={() => item.id === 'history' ? navigate('/mypage/history') : null}
+                                onClick={() => {
+                                    if (item.id === 'history') navigate('/mypage/history');
+                                    if (item.id === 'payment') navigate('/mypage/payment-methods');
+                                }}
                                 className="w-full flex items-center justify-between p-5 bg-[#141925] hover:bg-[#1E2535] rounded-[24px] transition-all group border border-slate-800/30"
                             >
                                 <div className="flex items-center gap-4">
@@ -136,6 +236,126 @@ const MyPage = ({ initialView = 'main' }) => {
                     <LogOut className="w-5 h-5" />
                     <span className="font-medium">로그아웃</span>
                 </button>
+            </div>
+        </div>
+    );
+
+    const renderPayment = () => (
+        <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex items-center gap-4 mb-8">
+                <button onClick={() => navigate('/mypage')} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-white">
+                    <ChevronLeft className="w-6 h-6" />
+                </button>
+                <h1 className="text-2xl font-bold text-white">결제 수단 관리</h1>
+            </div>
+
+            <div className="space-y-5">
+                <div className="p-5 bg-[#141925] rounded-[24px] border border-slate-800/30">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                            <div className="w-11 h-11 rounded-2xl bg-[#1C212E] text-[#82D8FC] flex items-center justify-center">
+                                <CreditCard className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-[#9D9DA4] mb-1">현재 연결된 결제수단</p>
+                                {paymentLoading ? (
+                                    <p className="text-white font-bold">불러오는 중...</p>
+                                ) : paymentMethod ? (
+                                    <>
+                                        <p className="text-white font-bold text-lg">{paymentMethod.provider} {getMethodLabel(paymentMethod.methodType)}</p>
+                                        <p className="text-[#9D9DA4] text-sm mt-1">{paymentMethod.maskedNumber}</p>
+                                    </>
+                                ) : (
+                                    <p className="text-white font-bold">등록된 결제수단이 없습니다</p>
+                                )}
+                            </div>
+                        </div>
+                        {paymentMethod ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-300 text-xs font-bold">
+                                <ShieldCheck className="w-4 h-4" />
+                                활성
+                            </div>
+                        ) : (
+                            <div className="px-3 py-1.5 rounded-full bg-slate-700/40 text-slate-300 text-xs font-bold">
+                                미등록
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="p-6 bg-[#141925] rounded-[24px] border border-slate-800/30 space-y-5">
+                    <div>
+                        <h2 className="text-white text-lg font-bold">결제수단 등록 및 변경</h2>
+                        <p className="text-[#9D9DA4] text-sm mt-1">마스킹된 카드번호 또는 계좌번호 형식으로 입력해 주세요.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                        <label className="space-y-2">
+                            <span className="text-sm text-[#9D9DA4] font-medium">결제사</span>
+                            <select
+                                value={paymentForm.provider}
+                                onChange={(e) => handlePaymentFormChange('provider', e.target.value)}
+                                className="w-full rounded-2xl bg-[#1C212E] border border-slate-700 px-4 py-3 text-white outline-none focus:border-[#82D8FC]"
+                            >
+                                <option value="TOSS">토스페이</option>
+                                <option value="KAKAO_PAY">카카오페이</option>
+                                <option value="NAVER_PAY">네이버페이</option>
+                            </select>
+                        </label>
+
+                        <label className="space-y-2">
+                            <span className="text-sm text-[#9D9DA4] font-medium">수단 유형</span>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => handlePaymentFormChange('methodType', 'BANK_ACCOUNT')}
+                                    className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-colors ${paymentForm.methodType === 'BANK_ACCOUNT' ? 'border-[#82D8FC] bg-[#82D8FC]/10 text-[#82D8FC]' : 'border-slate-700 bg-[#1C212E] text-white'}`}
+                                >
+                                    <span className="flex items-center justify-center gap-2">
+                                        <Landmark className="w-4 h-4" />
+                                        계좌
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handlePaymentFormChange('methodType', 'CARD')}
+                                    className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-colors ${paymentForm.methodType === 'CARD' ? 'border-[#82D8FC] bg-[#82D8FC]/10 text-[#82D8FC]' : 'border-slate-700 bg-[#1C212E] text-white'}`}
+                                >
+                                    <span className="flex items-center justify-center gap-2">
+                                        <CreditCard className="w-4 h-4" />
+                                        카드
+                                    </span>
+                                </button>
+                            </div>
+                        </label>
+
+                        <label className="space-y-2">
+                            <span className="text-sm text-[#9D9DA4] font-medium">{paymentForm.methodType === 'CARD' ? '카드 번호' : '계좌 번호'}</span>
+                            <input
+                                value={paymentForm.maskedNumber}
+                                onChange={(e) => handlePaymentFormChange('maskedNumber', e.target.value)}
+                                placeholder={paymentForm.methodType === 'CARD' ? '예: 1234-****-****-5678' : '예: 신한 ****-****-1234'}
+                                className="w-full rounded-2xl bg-[#1C212E] border border-slate-700 px-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-[#82D8FC]"
+                            />
+                        </label>
+                    </div>
+
+                    {paymentError && (
+                        <div className="flex items-center gap-2 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                            <CircleAlert className="w-4 h-4 shrink-0" />
+                            <span>{paymentError}</span>
+                        </div>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={handlePaymentSave}
+                        disabled={paymentSaving}
+                        className="w-full rounded-2xl bg-[#82D8FC] hover:bg-[#6fcaef] disabled:bg-[#82D8FC]/50 text-[#09111D] font-black py-4 transition-colors"
+                    >
+                        {paymentSaving ? '저장 중...' : paymentMethod ? '결제수단 변경하기' : '결제수단 등록하기'}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -212,7 +432,9 @@ const MyPage = ({ initialView = 'main' }) => {
                 <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
                     <div className="bg-[#1C212E]/90 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-2xl border border-slate-700 flex items-center gap-3">
                         <CheckCircle2 className="w-5 h-5 text-[#82D8FC]" />
-                        <span className="text-sm font-bold whitespace-nowrap">프로필이 성공적으로 수정되었습니다</span>
+                        <span className="text-sm font-bold whitespace-nowrap">
+                            {view === 'payment' ? '결제수단이 성공적으로 저장되었습니다' : '프로필이 성공적으로 수정되었습니다'}
+                        </span>
                     </div>
                 </div>
             )}
@@ -220,6 +442,7 @@ const MyPage = ({ initialView = 'main' }) => {
             {view === 'main' && renderMain()}
             {view === 'history' && renderHistory()}
             {view === 'capsule' && renderCapsule()}
+            {view === 'payment' && renderPayment()}
         </div>
     );
 };

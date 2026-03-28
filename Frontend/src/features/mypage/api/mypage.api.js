@@ -114,3 +114,19 @@ export const confirmNext = async (subscriptionId) => {
     const response = await httpClient.put(`/subscriptions/${subscriptionId}/confirm-next`, {});
     return response.data.data;
 };
+
+/**
+ * 현재 결제 수단 조회
+ */
+export const getCurrentPaymentMethod = async () => {
+    const response = await httpClient.get('/subscriptions/payment-methods/current');
+    return response.data.data;
+};
+
+/**
+ * 결제 수단 등록/변경
+ */
+export const registerPaymentMethod = async (paymentMethodData) => {
+    const response = await httpClient.post('/subscriptions/payment-methods', paymentMethodData);
+    return response.data.data;
+};

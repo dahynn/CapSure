@@ -2,6 +2,7 @@ import React from 'react';
 import { Info, Check, FileText } from 'lucide-react';
 
 const TermsCard = ({ product, termsList, isChecked, onToggle }) => {
+    const companyDisplayName = product.companyName || product.company || '보험사';
     return (
         <div className="bg-[#192235] border border-slate-800/80 rounded-2xl p-5 mb-4 shadow-sm relative">
             {/* Top Info Icon */}
@@ -20,7 +21,7 @@ const TermsCard = ({ product, termsList, isChecked, onToggle }) => {
                     </div>
                 </div>
                 <div className="flex flex-col items-start gap-1">
-                    <h3 className="text-white font-bold text-base leading-none">{product.company || product.name.split(' ')[0]}</h3>
+                    <h3 className="text-white font-bold text-base leading-none">{companyDisplayName}</h3>
                     <div className="flex items-center gap-1 bg-[#2C213B] px-2 py-0.5 rounded-full">
                         <span className="text-[10px]">✨</span>
                         <span className="text-[#A78BFA] text-[10px] font-bold">AI 보장 요약</span>

@@ -58,7 +58,7 @@ const LoginPage = () => {
               value={loginForm.email}
               onChange={handleChange}
               required
-              placeholder="이메일 주소를 입력해 주세요"
+              placeholder="이메일을 입력해주세요."
               className="w-full rounded-2xl px-4 py-4 text-sm text-white placeholder-gray-500 outline-none transition-all bg-[#131B2E] border border-[#1E2A40] focus:ring-2 focus:ring-[#82D8FC] autofill:!bg-[#131B2E] autofill:!shadow-[inset_0_0_0px_1000px_#131B2E] autofill:[-webkit-text-fill-color:white]"
             />
           </div>
@@ -72,7 +72,7 @@ const LoginPage = () => {
               value={loginForm.password}
               onChange={handleChange}
               required
-              placeholder="••••••••"
+              placeholder="암호를 입력해주세요."
               className="w-full rounded-2xl px-4 py-4 text-sm text-white placeholder-gray-500 outline-none transition-all bg-[#131B2E] border border-[#1E2A40] focus:ring-2 focus:ring-[#82D8FC] autofill:!bg-[#131B2E] autofill:!shadow-[inset_0_0_0px_1000px_#131B2E] autofill:[-webkit-text-fill-color:white]"
             />
           </div>

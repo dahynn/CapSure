@@ -39,10 +39,22 @@ export const authApi = {
      * 최초 로그인 여부 확인
      */
     checkFirstLogin: async () => {
-        // 회원가입 후 온보딩 여부는 서버에서 받거나, 로그인 응답에 포함된 정보로 판단
-        // 임시: 로컬스토리지에 온보딩 완료 여부 저장
-        const onboardingDone = localStorage.getItem('onboardingDone');
-        return { isFirstLogin: !onboardingDone };
+        try {
+            const response = await httpClient.get('/auth/onboarding/categories');
+            const categoryCodes = response.data?.data;
+            const isCompleted = Array.isArray(categoryCodes) && categoryCodes.length >= 1;
+
+            if (isCompleted) {
+                localStorage.setItem('onboardingDone', 'true');
+            } else {
+                localStorage.removeItem('onboardingDone');
+            }
+
+            return { isFirstLogin: !isCompleted };
+        } catch (error) {
+            const onboardingDone = localStorage.getItem('onboardingDone');
+            return { isFirstLogin: !onboardingDone };
+        }
     },
 
     /**
@@ -64,6 +76,16 @@ export const authApi = {
      */
     extendSession: async () => {
         const response = await httpClient.post('/auth/extend-session', {});
+        return response.data?.data;
+    },
+
+    saveOnboardingCategories: async (categoryCodes) => {
+        const response = await httpClient.post('/auth/onboarding/categories', { categoryCodes });
+        return response.data?.data;
+    },
+
+    getOnboardingCategories: async () => {
+        const response = await httpClient.get('/auth/onboarding/categories');
         return response.data?.data;
     },
 };

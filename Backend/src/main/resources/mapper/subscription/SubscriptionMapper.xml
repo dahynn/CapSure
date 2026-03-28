@@ -7,6 +7,7 @@
     <resultMap id="subscriptionAggregateResultMap" type="com.capsule.insurance.subscription.domain.Subscription">
         <id property="subscriptionId" column="subscription_id"/>
         <result property="userId" column="user_id"/>
+        <result property="capsuleName" column="capsule_name"/>
         <result property="subscriptionStatus" column="subscription_status"/>
         <result property="billingAnchorDay" column="billing_anchor_day"/>
         <result property="currentCycleStartAt" column="current_cycle_start_at"/>
@@ -43,10 +44,50 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <resultMap id="recentSubscriptionHomeResultMap" type="com.capsule.insurance.subscription.infra.projection.RecentSubscriptionHomeProjection">
+        <constructor>
+            <idArg column="capsule_snapshot_id" javaType="java.lang.Long"/>
+            <idArg column="subscription_id" javaType="java.lang.Long"/>
+            <arg column="capsule_name" javaType="java.lang.String"/>
+            <arg column="created_at" javaType="java.time.Instant"/>
+            <arg column="next_billing_at" javaType="java.time.Instant"/>
+            <arg column="expected_next_amount" javaType="java.math.BigDecimal"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="dueSubscriptionBillingResultMap" type="com.capsule.insurance.subscription.infra.projection.DueSubscriptionBillingProjection">
+        <constructor>
+            <idArg column="subscription_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="capsule_name" javaType="java.lang.String"/>
+            <arg column="next_billing_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="snapshotCategoryCodeResultMap" type="com.capsule.insurance.subscription.infra.projection.SnapshotCategoryCodeProjection">
+        <constructor>
+            <idArg column="capsule_snapshot_id" javaType="java.lang.Long"/>
+            <arg column="coverage_category_code" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="renewalSoonInsuranceResultMap" type="com.capsule.insurance.subscription.infra.projection.RenewalSoonInsuranceProjection">
+        <constructor>
+            <idArg column="subscription_id" javaType="java.lang.Long"/>
+            <arg column="product_source_id" javaType="java.lang.Long"/>
+            <arg column="product_name" javaType="java.lang.String"/>
+            <arg column="company_name" javaType="java.lang.String"/>
+            <arg column="coverage_category_code" javaType="java.lang.String"/>
+            <arg column="monthly_price" javaType="java.math.BigDecimal"/>
+            <arg column="next_billing_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
     <select id="findSubscriptionAggregateByUserId" resultMap="subscriptionAggregateResultMap">
         select
             subscription_id,
             user_id,
+            capsule_name,
             subscription_status,
             billing_anchor_day,
             current_cycle_start_at,
@@ -59,6 +100,8 @@
             updated_at
         from subscription
         where user_id = #{userId}
+        order by created_at desc, subscription_id desc
+        limit 1
     </select>
 
     <select id="findCurrentItemsBySubscriptionId" resultMap="subscriptionItemResultMap">
@@ -106,6 +149,7 @@
         select
             subscription_id,
             user_id,
+            capsule_name,
             subscription_status,
             billing_anchor_day,
             current_cycle_start_at,
@@ -198,6 +242,7 @@
     <insert id="insertSubscription" useGeneratedKeys="true" keyProperty="subscriptionId">
         insert into subscription (
             user_id,
+            capsule_name,
             subscription_status,
             billing_anchor_day,
             current_cycle_start_at,
@@ -208,7 +253,8 @@
             updated_at
         ) values (
             #{userId},
-            #{subscriptionStatus},
+            #{capsuleName},
+            #{subscriptionStatus}::public.subscription_status_enum,
             #{billingAnchorDay},
             #{currentCycleStartAt},
             #{currentCycleEndAt},
@@ -252,7 +298,7 @@
             #{effectiveEndAt},
             now(),
             now()
-        from product_source
+        from insurance.product_source
         where product_source_id = #{capsuleProductId}
     </insert>
 
@@ -262,5 +308,225 @@
         set updated_at = now()
         where subscription_id = #{subscriptionId}
     </update>
+
+    <select id="findRecentSubscriptionsForHome" resultMap="recentSubscriptionHomeResultMap">
+        select
+            scs.capsule_snapshot_id,
+            scs.subscription_id,
+            scs.capsule_name,
+            scs.created_at,
+            scs.cycle_ended_at as next_billing_at,
+            round(scs.total_premium, 0) as expected_next_amount
+        from subscription_capsule_snapshot scs
+        where scs.user_id = #{userId}
+        order by scs.created_at desc
+        limit 2
+    </select>
+
+    <select id="findCategoryCodesBySnapshotIds" resultMap="snapshotCategoryCodeResultMap">
+        select distinct
+            scsi.capsule_snapshot_id,
+            scsi.coverage_category_code::text as coverage_category_code
+        from subscription_capsule_snapshot_item scsi
+        where scsi.capsule_snapshot_id in
+        <foreach collection="capsuleSnapshotIds" item="capsuleSnapshotId" open="(" separator="," close=")">
+            #{capsuleSnapshotId}
+        </foreach>
+    </select>
+
+    <select id="findRenewalSoonInsurancesForHome" resultMap="renewalSoonInsuranceResultMap">
+        select
+            s.subscription_id,
+            ps.product_source_id,
+            ps.product_name,
+            ps.company_name,
+            ps.coverage_category_code::text as coverage_category_code,
+            round(coalesce(si.monthly_price_snapshot, 0), 0) as monthly_price,
+            s.next_billing_at
+        from subscription s
+        join subscription_item si
+          on si.subscription_id = s.subscription_id
+         and si.plan_version = 'CURRENT'
+         and si.item_status = 'ACTIVE'
+        join insurance.product_source ps
+          on ps.product_source_id = si.capsule_product_id
+        where s.user_id = #{userId}
+          and s.subscription_status = 'ACTIVE'
+        order by s.next_billing_at asc, si.subscription_item_id asc
+        limit 5
+    </select>
+
+    <select id="findDueSubscriptionsForRenewal" resultMap="dueSubscriptionBillingResultMap">
+        select
+            s.subscription_id,
+            s.user_id,
+            s.capsule_name,
+            s.next_billing_at
+        from subscription s
+        where s.subscription_status = 'ACTIVE'
+          and s.next_billing_at is not null
+          and s.next_billing_at &lt;= #{now}
+        order by s.next_billing_at asc
+    </select>
+
+    <select id="existsActivePaymentMethod" resultType="boolean">
+        select count(*) &gt; 0
+        from usr_payment_method upm
+        where upm.user_id = #{userId}
+          and upm.is_active = true
+    </select>
+
+    <select id="findActivePaymentMethodByUserId" resultType="com.capsule.insurance.subscription.dto.CurrentPaymentMethodResponse">
+        select
+            upm.provider,
+            upm.method_type,
+            upm.masked_number,
+            upm.is_active as active
+        from usr_payment_method upm
+        where upm.user_id = #{userId}
+          and upm.is_active = true
+        order by upm.updated_at desc, upm.payment_method_id desc
+        limit 1
+    </select>
+
+    <delete id="deleteCurrentItemsBySubscriptionId">
+        delete from subscription_item
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'CURRENT'
+    </delete>
+
+    <update id="promoteNextItemsToCurrent">
+        update subscription_item
+        set plan_version = 'CURRENT',
+            item_status = 'ACTIVE',
+            effective_start_at = #{effectiveStartAt},
+            effective_end_at = #{effectiveEndAt},
+            updated_at = now()
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'NEXT'
+          and item_status = 'ACTIVE'
+    </update>
+
+    <update id="updateNextItemsStatus">
+        update subscription_item
+        set item_status = #{toStatus},
+            updated_at = now()
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'NEXT'
+          and item_status = #{fromStatus}
+    </update>
+
+    <delete id="deleteNextItemsBySubscriptionId">
+        delete from subscription_item
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'NEXT'
+    </delete>
+
+    <update id="updateCurrentItemsEffectivePeriod">
+        update subscription_item
+        set effective_start_at = #{effectiveStartAt},
+            effective_end_at = #{effectiveEndAt},
+            updated_at = now()
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'CURRENT'
+          and item_status = 'ACTIVE'
+    </update>
+
+    <select id="sumCurrentItemsMonthlyPrice" resultType="java.math.BigDecimal">
+        select coalesce(sum(monthly_price_snapshot), 0)
+        from subscription_item
+        where subscription_id = #{subscriptionId}
+          and plan_version = 'CURRENT'
+          and item_status = 'ACTIVE'
+    </select>
+
+    <update id="updateSubscriptionCycle">
+        update subscription
+        set current_cycle_start_at = #{currentCycleStartAt},
+            current_cycle_end_at = #{currentCycleEndAt},
+            next_billing_at = #{nextBillingAt},
+            expected_next_amount = #{expectedNextAmount},
+            updated_at = now()
+        where subscription_id = #{subscriptionId}
+    </update>
+
+    <insert id="insertCapsuleSnapshot" useGeneratedKeys="true" keyProperty="capsuleSnapshotId">
+        insert into subscription_capsule_snapshot (
+            subscription_id,
+            user_id,
+            capsule_name,
+            total_premium,
+            cycle_started_at,
+            cycle_ended_at,
+            created_at
+        ) values (
+            #{subscriptionId},
+            #{userId},
+            #{capsuleName},
+            #{totalPremium},
+            #{cycleStartedAt},
+            #{cycleEndedAt},
+            now()
+        )
+    </insert>
+
+    <insert id="insertCapsuleSnapshotItemsFromCurrent">
+        insert into subscription_capsule_snapshot_item (
+            capsule_snapshot_id,
+            product_source_id,
+            product_name,
+            company_name,
+            coverage_category_code,
+            monthly_price_snapshot,
+            created_at
+        )
+        select
+            #{capsuleSnapshotId},
+            ps.product_source_id,
+            ps.product_name,
+            ps.company_name,
+            ps.coverage_category_code::text::public.coverage_category_code_enum,
+            si.monthly_price_snapshot,
+            now()
+        from subscription_item si
+        join insurance.product_source ps
+          on ps.product_source_id = si.capsule_product_id
+        where si.subscription_id = #{subscriptionId}
+          and si.plan_version = 'CURRENT'
+          and si.item_status = 'ACTIVE'
+    </insert>
+
+    <update id="deactivatePaymentMethods">
+        update usr_payment_method
+        set is_active = false,
+            updated_at = now()
+        where user_id = #{userId}
+    </update>
+
+    <select id="existsUserById" resultType="boolean">
+        select count(*) &gt; 0
+        from usr_user
+        where user_id = #{userId}
+    </select>
+
+    <insert id="insertPaymentMethod">
+        insert into usr_payment_method (
+            user_id,
+            provider,
+            method_type,
+            masked_number,
+            is_active,
+            created_at,
+            updated_at
+        ) values (
+            #{userId},
+            #{provider},
+            #{methodType},
+            #{maskedNumber},
+            true,
+            now(),
+            now()
+        )
+    </insert>
 
 </mapper>

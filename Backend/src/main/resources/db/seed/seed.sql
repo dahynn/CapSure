@@ -2,6 +2,19 @@
 -- product_source bulk data is intentionally excluded here.
 
 -- ---------------------------------------------------------------------------
+-- demo user reset (idempotent reseed)
+-- ---------------------------------------------------------------------------
+DELETE FROM public.audit_event_log
+WHERE actor_user_id IN (
+    SELECT u.user_id
+    FROM public.usr_user u
+    WHERE u.email = 'demo@example.com'
+);
+
+DELETE FROM public.usr_user
+WHERE email = 'demo@example.com';
+
+-- ---------------------------------------------------------------------------
 -- login user
 -- plain password: Passw0rd!
 -- ---------------------------------------------------------------------------
@@ -35,6 +48,21 @@ SET
     user_status = EXCLUDED.user_status,
     onboarding_completed_at = EXCLUDED.onboarding_completed_at,
     updated_at = NOW();
+
+INSERT INTO public.usr_onboarding_category (
+    user_id,
+    coverage_category_code
+)
+SELECT u.user_id, v.coverage_category_code::coverage_category_code_enum
+FROM public.usr_user u
+cross join (
+    values
+        ('CANCER'),
+        ('DEATH'),
+        ('SURGERY')
+) as v(coverage_category_code)
+WHERE u.email = 'demo@example.com'
+ON CONFLICT (user_id, coverage_category_code) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
 -- reference coverage catalog
@@ -75,6 +103,66 @@ VALUES
         'FIXED_BENEFIT',
         'MULTI_PAY_ALLOWED',
         'SUPPRESS_IF_EXISTS'
+    ),
+    (
+        'DEATH_GENERAL',
+        'DEATH',
+        'Death Benefit',
+        'DEATH_GENERAL',
+        'General death coverage.',
+        '["death","life","benefit"]',
+        TRUE,
+        'FIXED_BENEFIT',
+        'CHECK_MANUALLY',
+        'ALLOW_TOPUP'
+    ),
+    (
+        'SURGERY_GENERAL',
+        'SURGERY',
+        'Surgery Benefit',
+        'SURGERY_GENERAL',
+        'General surgery coverage.',
+        '["surgery","operation","procedure"]',
+        TRUE,
+        'FIXED_BENEFIT',
+        'CHECK_MANUALLY',
+        'ALLOW_TOPUP'
+    ),
+    (
+        'BRAIN_HEART_GENERAL',
+        'BRAIN_HEART',
+        'Brain/Heart Benefit',
+        'BRAIN_HEART_GENERAL',
+        'Brain and heart major disease coverage.',
+        '["brain","heart","stroke","cardio"]',
+        TRUE,
+        'FIXED_BENEFIT',
+        'CHECK_MANUALLY',
+        'ALLOW_TOPUP'
+    ),
+    (
+        'ACTUAL_LOSS_GENERAL',
+        'ACTUAL_LOSS',
+        'Actual Loss Medical Benefit',
+        'ACTUAL_LOSS_GENERAL',
+        'Actual loss reimbursement coverage.',
+        '["actual loss","medical","reimbursement"]',
+        TRUE,
+        'INDEMNITY',
+        'MULTI_PAY_ALLOWED',
+        'ALLOW_TOPUP'
+    ),
+    (
+        'LIABILITY_GENERAL',
+        'LIABILITY',
+        'Liability Benefit',
+        'LIABILITY_GENERAL',
+        'Daily liability protection coverage.',
+        '["liability","daily","damage"]',
+        TRUE,
+        'INDEMNITY',
+        'CHECK_MANUALLY',
+        'ALLOW_TOPUP'
     )
 ON CONFLICT (coverage_code) DO UPDATE
 SET
@@ -91,8 +179,87 @@ SET
 
 -- ---------------------------------------------------------------------------
 -- capsule products
+-- 실제 insurance.product_source 에서 카테고리별 샘플을 가져와 시드한다.
 -- ---------------------------------------------------------------------------
+WITH ranked_source AS (
+    SELECT
+        ps.product_source_id,
+        ps.product_name,
+        ps.coverage_category_code::text AS coverage_category_code,
+        ps.monthly_premium_male,
+        ps.monthly_premium_female,
+        ROW_NUMBER() OVER (
+            PARTITION BY ps.coverage_category_code
+            ORDER BY ps.sale_date DESC NULLS LAST, ps.product_source_id ASC
+        ) AS rn
+    FROM insurance.product_source ps
+    WHERE ps.coverage_category_code::text IN (
+        'CANCER',
+        'DEATH',
+        'SURGERY',
+        'BRAIN_HEART',
+        'ACTUAL_LOSS',
+        'ACCIDENT',
+        'LIABILITY'
+    )
+),
+selected_source AS (
+    SELECT
+        rs.product_source_id AS capsule_product_id,
+        CASE
+            WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 1 THEN 'CAPSULE-CANCER-001'
+            WHEN rs.coverage_category_code = 'DEATH' AND rs.rn = 1 THEN 'CAPSULE-DEATH-001'
+            WHEN rs.coverage_category_code = 'SURGERY' AND rs.rn = 1 THEN 'CAPSULE-SURGERY-001'
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' AND rs.rn = 1 THEN 'CAPSULE-BRAINHEART-001'
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' AND rs.rn = 1 THEN 'CAPSULE-ACTUALLOSS-001'
+            WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 1 THEN 'CAPSULE-ACCIDENT-001'
+            WHEN rs.coverage_category_code = 'LIABILITY' AND rs.rn = 1 THEN 'CAPSULE-LIABILITY-001'
+        END AS capsule_code,
+        rs.product_name,
+        rs.coverage_category_code,
+        CASE
+            WHEN rs.coverage_category_code = 'CANCER' THEN 'CANCER_DIAGNOSIS'
+            WHEN rs.coverage_category_code = 'DEATH' THEN 'DEATH_GENERAL'
+            WHEN rs.coverage_category_code = 'SURGERY' THEN 'SURGERY_GENERAL'
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' THEN 'BRAIN_HEART_GENERAL'
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' THEN 'ACTUAL_LOSS_GENERAL'
+            WHEN rs.coverage_category_code = 'ACCIDENT' THEN 'ACCIDENT_INJURY'
+            ELSE 'LIABILITY_GENERAL'
+        END AS coverage_code,
+        CASE
+            WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 1 THEN 10000000
+            WHEN rs.coverage_category_code = 'DEATH' AND rs.rn = 1 THEN 30000000
+            WHEN rs.coverage_category_code = 'SURGERY' AND rs.rn = 1 THEN 3000000
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' AND rs.rn = 1 THEN 20000000
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' AND rs.rn = 1 THEN 5000000
+            WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 1 THEN 3000000
+            ELSE 10000000
+        END AS coverage_amount,
+        COALESCE(rs.monthly_premium_male, 0) AS monthly_price_male,
+        COALESCE(rs.monthly_premium_female, rs.monthly_premium_male, 0) AS monthly_price_female,
+        CASE
+            WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 1 THEN 'Starter cancer protection capsule.'
+            WHEN rs.coverage_category_code = 'DEATH' AND rs.rn = 1 THEN 'General death protection capsule.'
+            WHEN rs.coverage_category_code = 'SURGERY' AND rs.rn = 1 THEN 'General surgery protection capsule.'
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' AND rs.rn = 1 THEN 'Brain/heart focused protection capsule.'
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' AND rs.rn = 1 THEN 'Actual loss medical protection capsule.'
+            WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 1 THEN 'Daily accident protection capsule.'
+            ELSE 'Daily liability protection capsule.'
+        END AS description,
+        CASE
+            WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 1 THEN 'https://example.com/terms/cancer-starter'
+            WHEN rs.coverage_category_code = 'DEATH' AND rs.rn = 1 THEN 'https://example.com/terms/death-basic'
+            WHEN rs.coverage_category_code = 'SURGERY' AND rs.rn = 1 THEN 'https://example.com/terms/surgery-basic'
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' AND rs.rn = 1 THEN 'https://example.com/terms/brain-heart-basic'
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' AND rs.rn = 1 THEN 'https://example.com/terms/actual-loss-basic'
+            WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 1 THEN 'https://example.com/terms/accident-daily'
+            ELSE 'https://example.com/terms/liability-basic'
+        END AS terms_uri
+    FROM ranked_source rs
+    WHERE rs.rn = 1
+)
 INSERT INTO public.capsule_product (
+    capsule_product_id,
     capsule_code,
     product_name,
     coverage_category_code,
@@ -108,39 +275,24 @@ INSERT INTO public.capsule_product (
     terms_version,
     description
 )
-VALUES
-    (
-        'CAPSULE-CANCER-001',
-        'Capsule Cancer Starter',
-        'CANCER',
-        'CANCER_DIAGNOSIS',
-        10000000,
-        'KRW',
-        9900,
-        8900,
-        30,
-        'AVAILABLE',
-        TRUE,
-        'https://example.com/terms/cancer-starter',
-        'v1',
-        'Starter cancer protection capsule.'
-    ),
-    (
-        'CAPSULE-ACCIDENT-001',
-        'Capsule Accident Daily',
-        'ACCIDENT',
-        'ACCIDENT_INJURY',
-        3000000,
-        'KRW',
-        4900,
-        4500,
-        30,
-        'AVAILABLE',
-        TRUE,
-        'https://example.com/terms/accident-daily',
-        'v1',
-        'Daily accident protection capsule.'
-    )
+SELECT
+    ss.capsule_product_id,
+    ss.capsule_code,
+    ss.product_name,
+    ss.coverage_category_code::coverage_category_code_enum,
+    ss.coverage_code,
+    ss.coverage_amount,
+    'KRW',
+    ss.monthly_price_male,
+    ss.monthly_price_female,
+    30,
+    'AVAILABLE',
+    TRUE,
+    ss.terms_uri,
+    'v1',
+    ss.description
+FROM selected_source ss
+WHERE ss.capsule_code IS NOT NULL
 ON CONFLICT (capsule_code) DO UPDATE
 SET
     product_name = EXCLUDED.product_name,
@@ -163,6 +315,7 @@ SET
 -- ---------------------------------------------------------------------------
 INSERT INTO public.subscription (
     user_id,
+    capsule_name,
     subscription_status,
     billing_anchor_day,
     current_cycle_start_at,
@@ -172,23 +325,77 @@ INSERT INTO public.subscription (
 )
 SELECT
     u.user_id,
+    '데모 건강 캡슐',
     'ACTIVE',
     5,
     TIMESTAMPTZ '2026-03-01 00:00:00+09',
     TIMESTAMPTZ '2026-03-31 23:59:59+09',
     TIMESTAMPTZ '2026-04-05 00:00:00+09',
-    14800
+    0
 FROM public.usr_user u
 WHERE u.email = 'demo@example.com'
-ON CONFLICT (user_id) DO UPDATE
-SET
-    subscription_status = EXCLUDED.subscription_status,
-    billing_anchor_day = EXCLUDED.billing_anchor_day,
-    current_cycle_start_at = EXCLUDED.current_cycle_start_at,
-    current_cycle_end_at = EXCLUDED.current_cycle_end_at,
-    next_billing_at = EXCLUDED.next_billing_at,
-    expected_next_amount = EXCLUDED.expected_next_amount,
-    updated_at = NOW();
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.subscription s
+    WHERE s.user_id = u.user_id
+      AND s.capsule_name = '데모 건강 캡슐'
+  );
+
+INSERT INTO public.subscription (
+    user_id,
+    capsule_name,
+    subscription_status,
+    billing_anchor_day,
+    current_cycle_start_at,
+    current_cycle_end_at,
+    next_billing_at,
+    expected_next_amount
+)
+SELECT
+    u.user_id,
+    '데모 상해 캡슐',
+    'ACTIVE',
+    12,
+    TIMESTAMPTZ '2026-03-08 00:00:00+09',
+    TIMESTAMPTZ '2026-04-07 23:59:59+09',
+    TIMESTAMPTZ '2026-04-12 00:00:00+09',
+    0
+FROM public.usr_user u
+WHERE u.email = 'demo@example.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.subscription s
+    WHERE s.user_id = u.user_id
+      AND s.capsule_name = '데모 상해 캡슐'
+  );
+
+INSERT INTO public.subscription (
+    user_id,
+    capsule_name,
+    subscription_status,
+    billing_anchor_day,
+    current_cycle_start_at,
+    current_cycle_end_at,
+    next_billing_at,
+    expected_next_amount
+)
+SELECT
+    u.user_id,
+    '데모 혼합 캡슐',
+    'ACTIVE',
+    18,
+    TIMESTAMPTZ '2026-03-15 00:00:00+09',
+    TIMESTAMPTZ '2026-04-14 23:59:59+09',
+    TIMESTAMPTZ '2026-04-18 00:00:00+09',
+    0
+FROM public.usr_user u
+WHERE u.email = 'demo@example.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.subscription s
+    WHERE s.user_id = u.user_id
+      AND s.capsule_name = '데모 혼합 캡슐'
+  );
 
 INSERT INTO public.subscription_item (
     subscription_id,
@@ -198,6 +405,7 @@ INSERT INTO public.subscription_item (
     coverage_amount_snapshot,
     monthly_price_snapshot,
     effective_start_at,
+    effective_end_at,
     editable_after_at
 )
 SELECT
@@ -208,21 +416,200 @@ SELECT
     cp.coverage_amount,
     CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
     TIMESTAMPTZ '2026-03-01 00:00:00+09',
+    TIMESTAMPTZ '2026-04-01 00:00:00+09',
     TIMESTAMPTZ '2026-04-01 00:00:00+09'
 FROM public.subscription s
 JOIN public.usr_user u
     ON u.user_id = s.user_id
 JOIN public.capsule_product cp
-    ON cp.capsule_code = 'CAPSULE-CANCER-001'
+    ON cp.capsule_code IN (
+        'CAPSULE-CANCER-001',
+        'CAPSULE-BRAINHEART-001',
+        'CAPSULE-ACTUALLOSS-001'
+    )
 WHERE u.email = 'demo@example.com'
+  AND s.capsule_name = '데모 건강 캡슐'
 ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
 SET
     item_status = EXCLUDED.item_status,
     coverage_amount_snapshot = EXCLUDED.coverage_amount_snapshot,
     monthly_price_snapshot = EXCLUDED.monthly_price_snapshot,
     effective_start_at = EXCLUDED.effective_start_at,
+    effective_end_at = EXCLUDED.effective_end_at,
     editable_after_at = EXCLUDED.editable_after_at,
     updated_at = NOW();
+
+INSERT INTO public.subscription_item (
+    subscription_id,
+    capsule_product_id,
+    plan_version,
+    item_status,
+    coverage_amount_snapshot,
+    monthly_price_snapshot,
+    effective_start_at,
+    effective_end_at,
+    editable_after_at
+)
+SELECT
+    s.subscription_id,
+    cp.capsule_product_id,
+    'CURRENT',
+    'ACTIVE',
+    cp.coverage_amount,
+    CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
+    TIMESTAMPTZ '2026-03-08 00:00:00+09',
+    TIMESTAMPTZ '2026-04-08 00:00:00+09',
+    TIMESTAMPTZ '2026-04-08 00:00:00+09'
+FROM public.subscription s
+JOIN public.usr_user u
+    ON u.user_id = s.user_id
+JOIN public.capsule_product cp
+    ON cp.capsule_code IN (
+        'CAPSULE-ACCIDENT-001',
+        'CAPSULE-LIABILITY-001',
+        'CAPSULE-DEATH-001'
+    )
+WHERE u.email = 'demo@example.com'
+  AND s.capsule_name = '데모 상해 캡슐'
+ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
+SET
+    item_status = EXCLUDED.item_status,
+    coverage_amount_snapshot = EXCLUDED.coverage_amount_snapshot,
+    monthly_price_snapshot = EXCLUDED.monthly_price_snapshot,
+    effective_start_at = EXCLUDED.effective_start_at,
+    effective_end_at = EXCLUDED.effective_end_at,
+    editable_after_at = EXCLUDED.editable_after_at,
+    updated_at = NOW();
+
+INSERT INTO public.subscription_item (
+    subscription_id,
+    capsule_product_id,
+    plan_version,
+    item_status,
+    coverage_amount_snapshot,
+    monthly_price_snapshot,
+    effective_start_at,
+    effective_end_at,
+    editable_after_at
+)
+SELECT
+    s.subscription_id,
+    cp.capsule_product_id,
+    'CURRENT',
+    'ACTIVE',
+    cp.coverage_amount,
+    CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
+    TIMESTAMPTZ '2026-03-15 00:00:00+09',
+    TIMESTAMPTZ '2026-04-15 00:00:00+09',
+    TIMESTAMPTZ '2026-04-15 00:00:00+09'
+FROM public.subscription s
+JOIN public.usr_user u
+    ON u.user_id = s.user_id
+JOIN public.capsule_product cp
+    ON cp.capsule_code IN (
+        'CAPSULE-CANCER-001',
+        'CAPSULE-SURGERY-001',
+        'CAPSULE-LIABILITY-001'
+    )
+WHERE u.email = 'demo@example.com'
+  AND s.capsule_name = '데모 혼합 캡슐'
+ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
+SET
+    item_status = EXCLUDED.item_status,
+    coverage_amount_snapshot = EXCLUDED.coverage_amount_snapshot,
+    monthly_price_snapshot = EXCLUDED.monthly_price_snapshot,
+    effective_start_at = EXCLUDED.effective_start_at,
+    effective_end_at = EXCLUDED.effective_end_at,
+    editable_after_at = EXCLUDED.editable_after_at,
+    updated_at = NOW();
+
+UPDATE public.subscription s
+SET
+    expected_next_amount = COALESCE((
+        SELECT SUM(si.monthly_price_snapshot)
+        FROM public.subscription_item si
+        WHERE si.subscription_id = s.subscription_id
+          AND si.plan_version = 'CURRENT'
+          AND si.item_status = 'ACTIVE'
+    ), 0),
+    updated_at = NOW()
+FROM public.usr_user u
+WHERE s.user_id = u.user_id
+  AND u.email = 'demo@example.com';
+
+INSERT INTO public.usr_payment_method (
+    user_id,
+    provider,
+    method_type,
+    masked_number,
+    is_active
+)
+SELECT
+    u.user_id,
+    'TOSS',
+    'BANK_ACCOUNT',
+    '신한 ****-****-1234',
+    true
+FROM public.usr_user u
+WHERE u.email = 'demo@example.com'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.subscription_capsule_snapshot (
+    subscription_id,
+    user_id,
+    capsule_name,
+    total_premium,
+    cycle_started_at,
+    cycle_ended_at,
+    created_at
+)
+SELECT
+    s.subscription_id,
+    s.user_id,
+    s.capsule_name,
+    s.expected_next_amount,
+    s.current_cycle_start_at,
+    s.current_cycle_end_at,
+    s.created_at
+FROM public.subscription s
+JOIN public.usr_user u
+    ON u.user_id = s.user_id
+WHERE u.email = 'demo@example.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.subscription_capsule_snapshot scs
+    WHERE scs.subscription_id = s.subscription_id
+  );
+
+INSERT INTO public.subscription_capsule_snapshot_item (
+    capsule_snapshot_id,
+    product_source_id,
+    product_name,
+    company_name,
+    coverage_category_code,
+    monthly_price_snapshot,
+    created_at
+)
+SELECT
+    scs.capsule_snapshot_id,
+    ps.product_source_id,
+    ps.product_name,
+    ps.company_name,
+    ps.coverage_category_code::text::coverage_category_code_enum,
+    si.monthly_price_snapshot,
+    NOW()
+FROM public.subscription_capsule_snapshot scs
+JOIN public.subscription_item si
+    ON si.subscription_id = scs.subscription_id
+   AND si.plan_version = 'CURRENT'
+   AND si.item_status = 'ACTIVE'
+JOIN insurance.product_source ps
+    ON ps.product_source_id = si.capsule_product_id
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.subscription_capsule_snapshot_item scsi
+    WHERE scsi.capsule_snapshot_id = scs.capsule_snapshot_id
+);
 
 INSERT INTO public.sec_digital_seal (
     user_id,

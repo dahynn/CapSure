@@ -12,6 +12,7 @@ import com.capsule.insurance.auth.dto.UserProfileUpdateRequest;
 import com.capsule.insurance.auth.dto.TokenRefreshRequest;
 import com.capsule.insurance.auth.dto.SmsAuthRequest;
 import com.capsule.insurance.auth.dto.SmsAuthVerifyRequest;
+import com.capsule.insurance.auth.dto.OnboardingCategoryRequest;
 import com.capsule.insurance.auth.application.SmsService;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
@@ -81,6 +83,29 @@ public class AuthController {
         }
         return ApiResponse.success("PUT - 프로필 수정을 성공했습니다.",
                 authService.updateProfile(authentication.getName(), request));
+    }
+
+    @PostMapping("/onboarding/categories")
+    public ApiResponse<List<String>> saveOnboardingCategories(
+            org.springframework.security.core.Authentication authentication,
+            @Valid @RequestBody OnboardingCategoryRequest request) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        return ApiResponse.success(
+                "온보딩 카테고리가 저장되었습니다.",
+                authService.saveOnboardingCategories(authentication.getName(), request.categoryCodes()));
+    }
+
+    @GetMapping("/onboarding/categories")
+    public ApiResponse<List<String>> getOnboardingCategories(
+            org.springframework.security.core.Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        return ApiResponse.success(authService.getOnboardingCategories(authentication.getName()));
     }
 
     @PostMapping("/phone/send-code")

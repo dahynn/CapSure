@@ -13,8 +13,8 @@ services:
     volumes:
       - capsule-postgres-data:/var/lib/postgresql/data
       - ./src/main/resources/db/schema/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
-      - ./src/main/resources/db/seed/seed.sql:/docker-entrypoint-initdb.d/20-seed.sql:ro
-      - ./src/main/resources/db/schema/product_source.sql:/docker-entrypoint-initdb.d/30-product_source.sql:ro
+      - ./src/main/resources/db/schema/product_source.sql:/docker-entrypoint-initdb.d/20-product_source.sql:ro
+      - ./src/main/resources/db/seed/seed.sql:/docker-entrypoint-initdb.d/30-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U capsure -d capsure"]
       interval: 10s
@@ -23,5 +23,4 @@ services:
 
 volumes:
   capsule-postgres-data:
-
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCapsure } from './context/CapsureContext';
 import { ChevronLeft, Sparkles, ChevronRight, Check, FileText } from 'lucide-react';
 import { httpClient } from '@/common/api/httpClient';
+import { getProductSourceId } from './utils/productSource';
 
 // 개별 상품별 약관 요약을 API에서 가져오는 함수
 const fetchTermsSummary = async (productSourceId) => {
@@ -26,7 +27,7 @@ const REQUIRED_TERMS = [
 
 const CapsureTermsPage = () => {
     const navigate = useNavigate();
-    const { selectedProducts, completeSubscription } = useCapsure();
+    const { selectedProducts } = useCapsure();
 
     const [summaries, setSummaries] = useState({}); // { productSourceId: summaryData }
     const [loadingIds, setLoadingIds] = useState(new Set());
@@ -38,11 +39,15 @@ const CapsureTermsPage = () => {
 
     const fetchedRef = React.useRef(new Set());
 
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+    }, []);
+
     // 모든 선택 상품의 약관 요약 API 호출 및 초기 체크 상태 설정
     useEffect(() => {
         const initialProducts = {};
         selectedProducts.forEach(async (product) => {
-            const pid = product.productSourceId || product.id;
+            const pid = getProductSourceId(product);
             initialProducts[pid] = false;
             
             if (fetchedRef.current.has(pid)) return;
@@ -56,7 +61,7 @@ const CapsureTermsPage = () => {
         setCheckedProducts(prev => ({ ...initialProducts, ...prev }));
     }, [selectedProducts]);
 
-    const allProductsChecked = selectedProducts.every(p => checkedProducts[p.productSourceId || p.id]);
+    const allProductsChecked = selectedProducts.every(p => checkedProducts[getProductSourceId(p)]);
     const requiredChecked = REQUIRED_TERMS.filter(t => t.required).every(t => checkedTerms[t.id]) && allProductsChecked;
     const allChecked = REQUIRED_TERMS.every(t => checkedTerms[t.id]) && allProductsChecked;
 
@@ -66,7 +71,7 @@ const CapsureTermsPage = () => {
         
         const newProductsChecked = {};
         selectedProducts.forEach(p => {
-            newProductsChecked[p.productSourceId || p.id] = newValue;
+            newProductsChecked[getProductSourceId(p)] = newValue;
         });
         setCheckedProducts(newProductsChecked);
     };
@@ -79,23 +84,10 @@ const CapsureTermsPage = () => {
         setCheckedProducts(prev => ({ ...prev, [pid]: !prev[pid] }));
     };
 
-    const handleNext = async () => {
+    const handleNext = () => {
         if (!requiredChecked) return;
-        
-        try {
-            const productSourceIds = selectedProducts.map(p => p.productSourceId || p.id);
-            const res = await httpClient.post('/subscriptions', { productSourceIds });
-            
-            if (res.data.success) {
-                completeSubscription?.();
-                navigate('../result', { state: { subscriptionId: res.data.data } });
-            } else {
-                alert(res.data.message || '가입 처리 중 오류가 발생했습니다.');
-            }
-        } catch (e) {
-            console.error('Subscription error', e);
-            alert('서버 응답 오류가 발생했습니다. 다시 시도해 주세요.');
-        }
+
+        navigate('/capsure-insurance/payment-summary');
     };
 
     if (selectedProducts.length === 0) {
@@ -130,7 +122,7 @@ const CapsureTermsPage = () => {
                 {/* 상품별 약관 카드 */}
                 <div className="flex flex-col gap-4 mb-10">
                     {selectedProducts.map(product => {
-                        const pid = product.productSourceId || product.id;
+                        const pid = getProductSourceId(product);
                         const summary = summaries[pid];
                         const isLoading = loadingIds.has(pid);
                         return (
@@ -184,16 +176,16 @@ const CapsureTermsPage = () => {
             </div>
 
             {/* 하단 CTA */}
-            <div className="fixed bottom-0 left-0 right-0 max-w-[560px] mx-auto px-6 pb-8 pt-6 bg-gradient-to-t from-[#020715] via-[#020715] to-transparent z-50">
+            <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto px-6 pb-8 pt-6 bg-gradient-to-t from-[#020715] via-[#020715] to-transparent z-40">
                 <button
                     onClick={handleNext}
                     disabled={!requiredChecked}
                     className={`w-full py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 transition-all ${requiredChecked ? 'bg-brand-blue text-[#020715] hover:opacity-80 active:scale-[0.98]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
                 >
-                    가입 완료하기
+                    결제 정보 확인하기
                     {requiredChecked && <Check className="w-5 h-5" strokeWidth={3} />}
                 </button>
-                <p className="text-center text-slate-600 text-xs mt-3">가입 버튼 클릭 시, 선택하신 보험 상품의 계약이 체결됩니다.</p>
+                <p className="text-center text-slate-600 text-xs mt-3">다음 단계에서 총 결제 금액을 확인한 뒤 결제를 진행합니다.</p>
             </div>
         </div>
     );
@@ -201,9 +193,9 @@ const CapsureTermsPage = () => {
 
 // ─── 상품별 약관 요약 카드 컴포넌트 ────────────────────────────────────────────
 const TermsSummaryCard = ({ product, summary, isLoading, isChecked, onToggle }) => {
-    const productName = product.productName || product.name || '보험 상품';
-    const companyName = product.companyName || product.company || '보험사';
-    const termsUri = product.termsUri || '#';
+    const productName = product.productName;
+    const companyName = product.companyName;
+    const termsUri = product.termsUri;
 
     const bulletPoints = summary ? [
         summary.coverageSummary && { label: '핵심 보장', value: summary.coverageSummary },

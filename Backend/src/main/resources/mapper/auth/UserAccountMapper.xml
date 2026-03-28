@@ -89,4 +89,29 @@
         WHERE user_id = #{userId}
     </update>
 
+    <delete id="deleteOnboardingCategoriesByUserId">
+        delete from usr_onboarding_category
+        where user_id = #{userId}
+    </delete>
+
+    <insert id="insertOnboardingCategory">
+        insert into usr_onboarding_category (
+            user_id,
+            coverage_category_code,
+            created_at
+        ) values (
+            #{userId},
+            #{coverageCategoryCode}::coverage_category_code_enum,
+            now()
+        )
+        on conflict (user_id, coverage_category_code) do nothing
+    </insert>
+
+    <select id="findOnboardingCategoriesByUserId" resultType="string">
+        select coverage_category_code::text
+        from usr_onboarding_category
+        where user_id = #{userId}
+        order by onboarding_category_id asc
+    </select>
+
 </mapper>

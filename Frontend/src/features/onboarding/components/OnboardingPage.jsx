@@ -5,9 +5,20 @@ import { ChevronLeft } from 'lucide-react';
 import DigitalSealStep from './steps/DigitalSealStep';
 import MyDataConsentStep from './steps/MyDataConsentStep';
 import CategorySelectionStep from './steps/CategorySelectionStep';
+import { authApi } from '@/features/auth/api/auth.api';
 
 // 전체 단계 수
 const TOTAL_STEPS = 3;
+const ONBOARDING_CATEGORY_CODE_BY_ID = {
+    death: 'DEATH',
+    cancer: 'CANCER',
+    vital: 'BRAIN_HEART',
+    indemnity: 'ACTUAL_LOSS',
+    surgery: 'SURGERY',
+    injury: 'ACCIDENT',
+    liability: 'LIABILITY',
+    etc: 'ETC',
+};
 
 const OnboardingPage = () => {
     const navigate = useNavigate();
@@ -32,10 +43,18 @@ const OnboardingPage = () => {
     };
 
     // 온보딩 최종 완료 처리
-    const handleComplete = (selectedCategories) => {
-        console.log('선택한 카테고리:', selectedCategories);
-        // 완료 후 홈으로 리다이렉트
-        navigate('/home', { replace: true });
+    const handleComplete = async (selectedCategories) => {
+        const categoryCodes = selectedCategories
+            .map((id) => ONBOARDING_CATEGORY_CODE_BY_ID[id])
+            .filter(Boolean);
+
+        try {
+            await authApi.saveOnboardingCategories(categoryCodes);
+            localStorage.setItem('onboardingDone', 'true');
+            navigate('/home', { replace: true });
+        } catch (error) {
+            console.error('온보딩 카테고리 저장 실패', error);
+        }
     };
 
     return (

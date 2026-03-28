@@ -19,7 +19,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="productSourceResultMap" type="com.capsule.insurance.insurer.dto.ProductSummaryResponse">
+    <resultMap id="productSourceSummaryProjectionResultMap" type="com.capsule.insurance.insurer.infra.projection.ProductSourceSummaryProjection">
         <constructor>
             <idArg column="product_source_id" javaType="java.lang.Long"/>
             <arg column="company_name" javaType="java.lang.String"/>
@@ -33,7 +33,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="productDetailResultMap" type="com.capsule.insurance.insurer.dto.ProductDetailResponse">
+    <resultMap id="productSourceDetailProjectionResultMap" type="com.capsule.insurance.insurer.infra.projection.ProductSourceDetailProjection">
         <constructor>
             <idArg column="product_source_id" javaType="java.lang.Long"/>
             <arg column="company_name" javaType="java.lang.String"/>
@@ -59,6 +59,18 @@
             <arg column="current_announced_rate" javaType="java.lang.String"/>
             <arg column="fixed_rate" javaType="java.lang.String"/>
             <arg column="minimum_guaranteed_rate" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="popularProductProjectionResultMap" type="com.capsule.insurance.insurer.infra.projection.PopularProductProjection">
+        <constructor>
+            <idArg column="product_source_id" javaType="java.lang.Long"/>
+            <arg column="company_name" javaType="java.lang.String"/>
+            <arg column="product_name" javaType="java.lang.String"/>
+            <arg column="coverage_category_code" javaType="java.lang.String"/>
+            <arg column="monthly_price" javaType="java.math.BigDecimal"/>
+            <arg column="subscriber_count" javaType="java.lang.Long"/>
+            <arg column="category_rank" javaType="java.lang.Integer"/>
         </constructor>
     </resultMap>
 
@@ -102,56 +114,60 @@
     <!-- TODO: 이 파트에서 HIDDEN/DISCONTINUED 상품을 어떤 조회에서 노출할지라는 논의점이 있는데, 우선 AVAILABLE 상품만 목록 조회하도록 구현했음. -->
     <select id="findAvailableCapsuleProducts" resultMap="capsuleProductResultMap">
         select
-            capsule_product_id,
-            capsule_code,
-            product_name,
-            company_name,
-            insurer_sector,
-            coverage_category_code,
-            coverage_code,
-            coverage_amount,
-            coverage_unit,
-            monthly_price_male,
-            monthly_price_female,
-            min_retention_days,
-            sale_status,
-            is_duplicate_check_target,
-            terms_uri,
-            terms_version,
-            description,
-            created_at,
-            updated_at
-        from capsule_product
-        where sale_status = 'AVAILABLE'
-        order by capsule_product_id
+            cp.capsule_product_id,
+            cp.capsule_code,
+            cp.product_name,
+            ps.company_name,
+            cp.coverage_category_code,
+            ps.coverage_name,
+            cp.coverage_code,
+            cp.coverage_amount,
+            cp.coverage_unit,
+            cp.monthly_price_male,
+            cp.monthly_price_female,
+            cp.min_retention_days,
+            cp.sale_status,
+            cp.is_duplicate_check_target,
+            cp.terms_uri,
+            cp.terms_version,
+            cp.description,
+            cp.created_at,
+            cp.updated_at
+        from capsule_product cp
+        left join insurance.product_source ps
+          on ps.product_source_id = cp.capsule_product_id
+        where cp.sale_status = 'AVAILABLE'
+        order by cp.capsule_product_id
     </select>
 
     <select id="findCapsuleProductById" resultMap="capsuleProductResultMap">
         select
-            capsule_product_id,
-            capsule_code,
-            product_name,
-            company_name,
-            insurer_sector,
-            coverage_category_code,
-            coverage_code,
-            coverage_amount,
-            coverage_unit,
-            monthly_price_male,
-            monthly_price_female,
-            min_retention_days,
-            sale_status,
-            is_duplicate_check_target,
-            terms_uri,
-            terms_version,
-            description,
-            created_at,
-            updated_at
-        from capsule_product
-        where capsule_product_id = #{capsuleProductId}
+            cp.capsule_product_id,
+            cp.capsule_code,
+            cp.product_name,
+            ps.company_name,
+            cp.coverage_category_code,
+            ps.coverage_name,
+            cp.coverage_code,
+            cp.coverage_amount,
+            cp.coverage_unit,
+            cp.monthly_price_male,
+            cp.monthly_price_female,
+            cp.min_retention_days,
+            cp.sale_status,
+            cp.is_duplicate_check_target,
+            cp.terms_uri,
+            cp.terms_version,
+            cp.description,
+            cp.created_at,
+            cp.updated_at
+        from capsule_product cp
+        left join insurance.product_source ps
+          on ps.product_source_id = cp.capsule_product_id
+        where cp.capsule_product_id = #{capsuleProductId}
     </select>
 
-    <select id="findProductSourcesByFilter" resultMap="productSourceResultMap">
+    <select id="findProductSourcesByFilter" resultMap="productSourceSummaryProjectionResultMap">
         SELECT
             product_source_id,
             company_name,
@@ -160,14 +176,19 @@
             coverage_category_code::text as coverage_category_code,
             coverage_code,
             <choose>
-                <when test="gender == 'M'.toString()">monthly_premium_male</when>
-                <when test="gender == 'F'.toString()">monthly_premium_female</when>
+                <when test="gender == 'M'.toString()">round(monthly_premium_male, 0)</when>
+                <when test="gender == 'F'.toString()">round(monthly_premium_female, 0)</when>
                 <otherwise>NULL</otherwise>
             </choose> AS monthly_price,
             loaded_at,
             updated_at
-        FROM insurance.product_source
+        FROM insurance.product_source ps
         WHERE 1=1
+        AND EXISTS (
+            SELECT 1
+            FROM public.capsule_product cp
+            WHERE cp.capsule_product_id = ps.product_source_id
+        )
         <if test="category != null and category != ''">
             AND coverage_category_code = #{category}::insurance.coverage_category_code
         </if>
@@ -187,7 +208,7 @@
         </choose>
         ORDER BY product_source_id ASC
     </select>
-    <select id="findProductSourceDetail" resultMap="productDetailResultMap">
+    <select id="findProductSourceDetail" resultMap="productSourceDetailProjectionResultMap">
         SELECT
             product_source_id,
             company_name,
@@ -205,8 +226,8 @@
             coverage_category_code::text as coverage_category_code,
             coverage_code,
             CASE 
-                WHEN #{gender} = 'M' THEN monthly_premium_male
-                WHEN #{gender} = 'F' THEN monthly_premium_female
+                WHEN #{gender} = 'M' THEN round(monthly_premium_male, 0)
+                WHEN #{gender} = 'F' THEN round(monthly_premium_female, 0)
                 ELSE 0.00
             END as monthly_price,
             product_summary,
@@ -219,5 +240,76 @@
             minimum_guaranteed_rate
         FROM insurance.product_source
         WHERE product_source_id = #{productSourceId}
+    </select>
+
+    <select id="findPopularProductsByCategories" resultMap="popularProductProjectionResultMap">
+        with candidate as (
+            select
+                ps.product_source_id,
+                ps.company_name,
+                ps.product_name,
+                ps.coverage_category_code::text as coverage_category_code,
+                case
+                    when #{gender} = 'M' then round(ps.monthly_premium_male, 0)
+                    when #{gender} = 'F' then round(ps.monthly_premium_female, 0)
+                    else null
+                end as monthly_price,
+                count(si.subscription_item_id) as subscriber_count
+            from insurance.product_source ps
+            left join public.subscription_item si
+              on si.capsule_product_id = ps.product_source_id
+             and si.plan_version = 'CURRENT'
+             and si.item_status = 'ACTIVE'
+             and coalesce(si.effective_end_at, TIMESTAMPTZ '9999-12-31 00:00:00+00') &gt; now()
+            left join public.subscription s
+              on s.subscription_id = si.subscription_id
+             and s.subscription_status = 'ACTIVE'
+            where ps.coverage_category_code::text in
+            <foreach item="code" collection="categoryCodes" open="(" separator="," close=")">
+                #{code}
+            </foreach>
+            and exists (
+                select 1
+                from public.capsule_product cp
+                where cp.capsule_product_id = ps.product_source_id
+            )
+            group by
+                ps.product_source_id,
+                ps.company_name,
+                ps.product_name,
+                ps.coverage_category_code,
+                case
+                    when #{gender} = 'M' then round(ps.monthly_premium_male, 0)
+                    when #{gender} = 'F' then round(ps.monthly_premium_female, 0)
+                    else null
+                end
+        ),
+        ranked as (
+            select
+                product_source_id,
+                company_name,
+                product_name,
+                coverage_category_code,
+                monthly_price,
+                subscriber_count,
+                row_number() over (
+                    partition by coverage_category_code
+                    order by subscriber_count desc, product_source_id asc
+                ) as category_rank
+            from candidate
+            where monthly_price is not null
+              and monthly_price &gt; 0
+        )
+        select
+            product_source_id,
+            company_name,
+            product_name,
+            coverage_category_code,
+            monthly_price,
+            subscriber_count,
+            category_rank
+        from ranked
+        where category_rank &lt;= 3
+        order by coverage_category_code asc, category_rank asc
     </select>
 </mapper>

@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
+import { getProductSourceId, normalizeProductSource } from '../utils/productSource';
+import { saveLatestCapsureSubscription } from '../utils/capsuleStorage';
 
 const CapsureContext = createContext(null);
 
@@ -13,6 +15,8 @@ export const useCapsure = () => {
 export const CapsureProvider = ({ children }) => {
     // Global Subscription State
     const [hasSubscription, setHasSubscription] = useState(false);
+    const [checkoutSummary, setCheckoutSummary] = useState(null);
+    const [capsuleName, setCapsuleName] = useState('');
     
     // Budget Page State
     const [totalBudget, setTotalBudget] = useState(100000);
@@ -21,32 +25,50 @@ export const CapsureProvider = ({ children }) => {
     const [selectedProducts, setSelectedProducts] = useState([]);
 
     const handleAddItem = (product) => {
-        const price = Number(product.monthlyPrice || product.price || 0);
-        const productId = product.productSourceId || product.id;
+        const normalizedProduct = normalizeProductSource(product);
+        const price = normalizedProduct.monthlyPrice;
+        const productId = getProductSourceId(normalizedProduct);
         
-        const currentAmount = selectedProducts.reduce((sum, p) => sum + Number(p.monthlyPrice || p.price || 0), 0);
+        const currentAmount = selectedProducts.reduce((sum, p) => sum + p.monthlyPrice, 0);
         if (currentAmount + price > totalBudget) {
             alert('예산을 초과할 수 없습니다.');
             return false;
         }
-        if (selectedProducts.find((p) => (p.productSourceId || p.id) === productId)) return false;
+        if (selectedProducts.find((p) => getProductSourceId(p) === productId)) return false;
         
-        setSelectedProducts([...selectedProducts, product]);
+        setSelectedProducts([...selectedProducts, normalizedProduct]);
         return true;
     };
 
     const handleRemoveItem = (id) => {
-        setSelectedProducts(selectedProducts.filter((p) => (p.productSourceId || p.id) !== id));
+        setSelectedProducts(selectedProducts.filter((p) => getProductSourceId(p) !== id));
     };
 
-    const completeSubscription = () => {
+    const completeSubscription = ({ subscriptionId, products, capsuleName: nextCapsuleName }) => {
+        const normalizedProducts = products.map(normalizeProductSource);
+        const totalPremium = normalizedProducts.reduce((sum, product) => sum + product.monthlyPrice, 0);
+        const resolvedCapsuleName = nextCapsuleName?.trim() || capsuleName;
+
         setHasSubscription(true);
+        const summary = {
+            subscriptionId,
+            capsuleName: resolvedCapsuleName,
+            products: normalizedProducts,
+            totalPremium,
+        };
+        setCheckoutSummary(summary);
+        saveLatestCapsureSubscription(summary);
         setSelectedProducts([]);
+        setCapsuleName('');
     };
 
     const value = {
         hasSubscription,
         setHasSubscription,
+        checkoutSummary,
+        setCheckoutSummary,
+        capsuleName,
+        setCapsuleName,
         totalBudget,
         setTotalBudget,
         selectedProducts,

@@ -2,21 +2,20 @@ package com.capsule.insurance.subscription.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.insurer.domain.CapsuleProduct;
 import com.capsule.insurance.insurer.domain.CoverageCategory;
+import com.capsule.insurance.insurer.domain.InsurerSector;
 import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
+import com.capsule.insurance.insurer.infra.projection.ProductSourceDetailProjection;
 import com.capsule.insurance.subscription.domain.Subscription;
 import com.capsule.insurance.subscription.domain.SubscriptionItem;
 import com.capsule.insurance.subscription.domain.SubscriptionStatus;
 import com.capsule.insurance.subscription.dto.SubscriptionDetailResponse;
 import com.capsule.insurance.subscription.infra.SubscriptionMapper;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,15 +56,35 @@ class SubscriptionServiceTest {
                 .currentItems(List.of(item1))
                 .build();
 
-        CapsuleProduct product = CapsuleProduct.builder()
-                .capsuleProductId(101L)
-                .productName("자전거 배상")
-                .coverageCategory(CoverageCategory.LIABILITY)
-                .coverageAmount(BigDecimal.valueOf(1000))
-                .build();
+        ProductSourceDetailProjection product = new ProductSourceDetailProjection(
+                101L,
+                "테스트손해보험",
+                "자전거 배상",
+                InsurerSector.NONLIFE,
+                null,
+                "자전거 배상책임",
+                null,
+                "최대 1,000만원",
+                null,
+                null,
+                null,
+                null,
+                null,
+                "LIABILITY",
+                "LIABILITY",
+                BigDecimal.valueOf(1000),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
 
-        when(subscriptionMapper.findSubscriptionAggregateByUserId(userId)).thenReturn(subscription);
-        when(insurerCatalogMapper.findCapsuleProductById(101L)).thenReturn(product);
+        when(subscriptionMapper.findSubscriptionById(subId)).thenReturn(subscription);
+        when(insurerCatalogMapper.findProductSourceDetail(101L, "M")).thenReturn(product);
 
         // when
         SubscriptionDetailResponse response = subscriptionService.getSubscriptionDetail(userId, subId);
@@ -74,7 +93,7 @@ class SubscriptionServiceTest {
         assertThat(response.subscriptionId()).isEqualTo(subId);
         assertThat(response.totalPremium()).isEqualTo(BigDecimal.valueOf(12000));
         assertThat(response.products()).hasSize(1);
-        assertThat(response.products().get(0).name()).isEqualTo("자전거 배상");
+        assertThat(response.products().get(0).productName()).isEqualTo("자전거 배상");
         assertThat(response.coverages()).hasSize(1);
     }
 
@@ -85,7 +104,7 @@ class SubscriptionServiceTest {
         Long userId = 99L;
         Long subscriptionId = 1L;
 
-        when(subscriptionMapper.findSubscriptionAggregateByUserId(userId)).thenReturn(null);
+        when(subscriptionMapper.findSubscriptionById(subscriptionId)).thenReturn(null);
 
         // when & then
         assertThatThrownBy(() -> subscriptionService.getSubscriptionDetail(userId, subscriptionId))
@@ -122,8 +141,8 @@ class SubscriptionServiceTest {
                 .monthlyPriceSnapshot(BigDecimal.valueOf(5000))
                 .build();
 
-        CapsuleProduct cp1 = CapsuleProduct.builder().capsuleProductId(101L).capsuleName("ProductA").build();
-        CapsuleProduct cp2 = CapsuleProduct.builder().capsuleProductId(202L).capsuleName("ProductB").build();
+        CapsuleProduct cp1 = CapsuleProduct.builder().capsuleProductId(101L).productName("ProductA").build();
+        CapsuleProduct cp2 = CapsuleProduct.builder().capsuleProductId(202L).productName("ProductB").build();
 
         when(subscriptionMapper.findSubscriptionById(subId)).thenReturn(sub);
         when(subscriptionMapper.findCurrentItemsBySubscriptionId(subId)).thenReturn(List.of(currentItem));
@@ -168,7 +187,11 @@ class SubscriptionServiceTest {
         Long cpId = 202L;
 
         Subscription sub = Subscription.builder().subscriptionId(subId).userId(userId).build();
-        CapsuleProduct cp = CapsuleProduct.builder().capsuleProductId(cpId).capsuleName("ProductB").monthlyPrice(BigDecimal.valueOf(5000)).build();
+        CapsuleProduct cp = CapsuleProduct.builder()
+                .capsuleProductId(cpId)
+                .productName("ProductB")
+                .monthlyPriceMale(BigDecimal.valueOf(5000))
+                .build();
         SubscriptionItem nextItem = SubscriptionItem.builder().subscriptionItemId(99L).capsuleProductId(cpId).build();
 
         when(subscriptionMapper.findSubscriptionById(subId)).thenReturn(sub);

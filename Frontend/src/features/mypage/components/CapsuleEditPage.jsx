@@ -237,7 +237,7 @@ const CapsuleEditPage = () => {
             </div>
 
             {/* ── 하단 고정 변경 확정 버튼 ── */}
-            <div className="fixed bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-gradient-to-t from-[#0B0E14] via-[#0B0E14]/95 to-transparent">
+            <div className="fixed app-fixed-cta left-0 right-0 px-6 pb-8 pt-4 bg-gradient-to-t from-[#0B0E14] via-[#0B0E14]/95 to-transparent z-40">
                 <div className="max-w-[560px] mx-auto">
                     <button
                         onClick={handleConfirm}

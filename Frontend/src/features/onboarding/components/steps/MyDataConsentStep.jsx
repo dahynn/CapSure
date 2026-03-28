@@ -26,7 +26,7 @@ const MyDataConsentStep = ({ onNext }) => {
     };
 
     return (
-        <div className="flex flex-col h-full animate-in fade-in duration-500 pt-2 pb-4 w-full">
+        <div className="flex h-full min-h-0 w-full flex-col animate-in fade-in duration-500 pt-2 pb-4">
             
             {/* 상단 텍스트 */}
             <div className="mb-8">
