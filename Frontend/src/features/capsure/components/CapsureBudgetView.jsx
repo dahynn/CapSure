@@ -1,19 +1,71 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Wallet, Shield, ArrowRight } from 'lucide-react';
+import {
+    Droplets,
+    HeartPulse,
+    Scissors,
+    Shield,
+    ShieldAlert,
+    TriangleAlert,
+    Zap,
+} from 'lucide-react';
+import AppButton from '@/common/components/ui/button/AppButton';
 
-const CapsureBudgetView = ({ onProceed }) => {
-    const navigate = useNavigate();
-    const [budgetInput, setBudgetInput] = useState("10000");
+const STACK_CARDS = [
+    { key: 'brain-heart', label: '뇌/심장', icon: HeartPulse, tone: 'purple', position: 'left-0 top-0' },
+    { key: 'injury', label: '상해', icon: ShieldAlert, tone: 'blue', position: 'right-0 top-0' },
+    { key: 'cancer', label: '암', icon: Zap, tone: 'yellow', position: 'left-0 top-[96px]' },
+    { key: 'death', label: '사망', icon: TriangleAlert, tone: 'blue', position: 'left-0 top-[192px]' },
+    { key: 'actual-loss', label: '실손', icon: Droplets, tone: 'purple', position: 'left-[100px] top-[192px]' },
+    { key: 'surgery', label: '수술', icon: Scissors, tone: 'yellow', position: 'right-0 top-[192px]' },
+];
+
+const STACK_TONE_STYLES = {
+    blue: {
+        card: 'border-[#3a86c6] bg-transparent',
+        iconWrap: 'bg-[#142740]',
+        icon: 'text-[#82D8FC]',
+    },
+    purple: {
+        card: 'border-[#6e5a9c] bg-transparent',
+        iconWrap: 'bg-[#2c2442]',
+        icon: 'text-[#F2BEF7]',
+    },
+    yellow: {
+        card: 'border-[#8f7a27] bg-transparent',
+        iconWrap: 'bg-[#272417]',
+        icon: 'text-[#F6CD3C]',
+    },
+};
+
+const StackCard = ({ label, icon: Icon, tone = 'blue', position, motionClass = '' }) => {
+    const style = STACK_TONE_STYLES[tone] ?? STACK_TONE_STYLES.blue;
 
     return (
-        <div className="flex flex-col min-h-screen">
-            <header className="flex items-center p-4 min-h-[56px] relative">
-                <button onClick={() => navigate(-1)} className="p-2 text-white"><ChevronLeft className="w-6 h-6"/></button>
-            </header>
+        <article
+            className={`absolute z-20 ${position} w-[90px] h-[90px] rounded-[28px] border ${style.card} shadow-[0_8px_20px_rgba(0,0,0,0.28)] flex flex-col items-center justify-center ${motionClass}`}
+        >
+            <div className={`w-10 h-10 rounded-[11px] ${style.iconWrap} flex items-center justify-center`}>
+                <Icon className={`w-[18px] h-[18px] ${style.icon}`} />
+            </div>
+            <p className="mt-1 text-white text-[12px] font-bold">{label}</p>
+        </article>
+    );
+};
 
+const CapsureBudgetView = ({ onProceed }) => {
+    const [budgetInput, setBudgetInput] = useState('10000');
+
+    return (
+        <div
+            className="flex flex-col min-h-screen"
+            style={{ paddingBottom: 'calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 122px)' }}
+        >
             <div className="px-6 pt-6 animate-in slide-in-from-right-8 duration-300">
-                <h2 className="text-2xl font-black text-white leading-snug mb-2">이번 달 보험료로<br/>얼마가 적당할까요?</h2>
+                <h2 className="text-2xl font-black text-white leading-snug mb-2">
+                    이번 달 보험료로
+                    <br />
+                    얼마가 적당할까요?
+                </h2>
                 <p className="text-slate-400 text-sm mb-8">맞춤형 캡슐 설계를 위해 목표 예산을 알려주세요.</p>
 
                 <p className="text-slate-400 text-capsure-sm mb-2">목표 예산</p>
@@ -28,9 +80,8 @@ const CapsureBudgetView = ({ onProceed }) => {
                     <span className="text-white font-bold ml-2">원</span>
                 </div>
 
-                {/* Quick Amounts */}
                 <div className="flex gap-2.5 mt-4 overflow-x-auto hide-scrollbar">
-                    {[10000, 30000, 50000, 70000].map(amt => (
+                    {[10000, 30000, 50000, 70000].map((amt) => (
                         <button
                             key={amt}
                             onClick={() => setBudgetInput(amt.toString())}
@@ -42,60 +93,49 @@ const CapsureBudgetView = ({ onProceed }) => {
                 </div>
             </div>
 
-            {/* Static Spinning Graphic Area */}
-            <div className="flex-1 flex flex-col items-center justify-center mt-4 animate-in fade-in duration-500 pb-20">
-                {/* Spinning Graphic Container */}
-                <div className="relative w-[84px] h-[168px] mb-8 mt-4">
-                    {/* The Capsule Outline */}
-                    <div className="w-full h-full rounded-full border-[3px] border-slate-600 bg-transparent flex flex-col items-center justify-center relative shadow-[0_0_40px_rgba(130,216,252,0.05)] z-10">
-                        {/* Static Inner content */}
-                        <div className="absolute w-[86%] h-[92%] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                            <div className="w-full h-full flex flex-col items-center justify-between py-1">
-                                {/* Top Icon */}
-                                <div className="w-[60px] h-[60px] rounded-full bg-[#3D2C42] flex items-center justify-center">
-                                    <Wallet className="w-6 h-6 text-brand-light-purple" strokeWidth={2.5} />
-                                </div>
-                                {/* Divider Dashes */}
-                                <div className="flex items-center justify-center gap-[5px] py-1">
-                                    {[1,2,3,4,5].map(i => <div key={i} className="w-[5px] h-[2px] bg-slate-600 rounded-full" />)}
-                                </div>
-                                {/* Bottom Icon */}
-                                <div className="w-[60px] h-[60px] rounded-full bg-[#182F48] flex items-center justify-center">
-                                    <Shield className="w-6 h-6 text-brand-blue" strokeWidth={2.5} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div className="flex flex-col items-center mt-7 mb-2 animate-in fade-in duration-500">
+                <div className="relative w-[290px] h-[290px] mb-6">
+                    {STACK_CARDS.map((card) => (
+                        <StackCard
+                            key={card.key}
+                            label={card.label}
+                            icon={card.icon}
+                            tone={card.tone}
+                            position={card.position}
+                            motionClass={card.motionClass}
+                        />
+                    ))}
 
-                    {/* Floating spinning dots decoration */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180px] h-[180px] pointer-events-none z-20">
-                        <div className="w-full h-full animate-spin-slow relative">
-                            <div className="absolute top-4 right-6 w-2.5 h-2.5 rounded-full bg-[#8c7426] shadow-[0_0_10px_rgba(212,174,56,0.6)]" />
-                            <div className="absolute bottom-6 left-6 w-2 h-2 rounded-full bg-brand-purple shadow-[0_0_10px_rgba(242,190,247,0.6)]" />
-                        </div>
+                    <div className="absolute z-0 left-[100px] top-[96px] w-[90px] h-[90px] rounded-[28px] border border-dashed border-slate-300/80 flex items-center justify-center bg-[#0b1322] shadow-[0_8px_20px_rgba(0,0,0,0.26)]">
+                        <span className="text-[40px] leading-none font-black text-white/90">?</span>
                     </div>
                 </div>
-                
+
                 <p className="text-center text-slate-400 text-capsure-base leading-relaxed">
-                    설정하신 예산 내에서<br/>최적의 보장 항목을 캡슐에 담아드릴게요.
+                    설정하신 예산 내에서
+                    <br />
+                    최적의 보장 항목을 캡슐에 담아드릴게요.
                 </p>
             </div>
 
-            {/* Sticky Bottom Button */}
-            <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto pt-16 px-6 pb-8 z-40">
-                <button 
+            <div
+                className="fixed left-0 right-0 max-w-[560px] mx-auto px-6 pb-4 pt-6 bg-gradient-to-t from-[#020715] via-[#020715] to-transparent z-40"
+                style={{ bottom: 'calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 2px)' }}
+            >
+                <div className="flex justify-center flex-wrap gap-x-6 gap-y-2 mb-3 text-slate-500 text-capsure-sm font-bold">
+                    <span className="flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5" /> 안전한 보안 진단
+                    </span>
+                    <span className="flex items-center gap-1.5">⚡ 3초 빠른 설계</span>
+                </div>
+                <AppButton
                     onClick={() => {
                         onProceed(Number(budgetInput) || 10000);
                     }}
-                    className="w-full py-4 rounded-xl font-bold text-[#020715] text-base bg-brand-blue shadow-[0_0_20px_rgba(130,216,252,0.2)] hover:bg-[#6BC1E6] active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+                    className="shadow-[0_0_20px_rgba(130,216,252,0.2)]"
                 >
                     캡슐 설계 시작하기
-                    <ArrowRight className="w-5 h-5" strokeWidth={3} />
-                </button>
-                <div className="flex justify-center flex-wrap gap-x-6 gap-y-2 mt-5 text-slate-500 text-capsure-sm font-bold">
-                    <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5"/> 안전한 보안 진단</span>
-                    <span className="flex items-center gap-1.5">⚡ 3초 빠른 설계</span>
-                </div>
+                </AppButton>
             </div>
         </div>
     );

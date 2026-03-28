@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { ChevronLeft, Share2, ShieldCheck, Info, Zap, Receipt, Building2, Phone } from 'lucide-react';
+import AppButton from '@/common/components/ui/button/AppButton';
 
 const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
     // Scroll to top on mount
@@ -12,6 +13,29 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
     const categoryLabel = product.categoryLabel;
     const companyName = product.companyName;
 
+    const handleCopyLink = async () => {
+        const currentUrl = window.location.href;
+        try {
+            await navigator.clipboard.writeText(currentUrl);
+            alert('링크가 복사되었습니다.');
+        } catch (error) {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = currentUrl;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('링크가 복사되었습니다.');
+            } catch (fallbackError) {
+                alert('링크 복사에 실패했습니다.');
+            }
+        }
+    };
+
     return (
         <div className="flex flex-col min-h-screen bg-[#020715] animate-in fade-in slide-in-from-bottom-4 duration-300 pb-28">
             {/* Header */}
@@ -23,7 +47,11 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <h1 className="text-base font-bold text-white absolute left-1/2 -translate-x-1/2">보험 상세 정보</h1>
-                <button className="p-2 text-white hover:bg-slate-800 rounded-full transition-colors">
+                <button
+                    onClick={handleCopyLink}
+                    className="p-2 text-white hover:bg-slate-800 rounded-full transition-colors"
+                    aria-label="링크 복사"
+                >
                     <Share2 className="w-5 h-5" />
                 </button>
             </header>
@@ -143,16 +171,13 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
 
             {/* Sticky Bottom Action */}
             <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto bg-gradient-to-t from-[#020715] via-[#020715] to-transparent pt-12 px-6 pb-8 z-40">
-                <button 
+                <AppButton
                     onClick={onAdd}
-                    className={`w-full py-4 rounded-[16px] font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2 ${
-                        isAdded 
-                            ? 'bg-slate-700 text-white' 
-                            : 'bg-brand-blue text-[#020715] hover:opacity-80'
-                    }`}
+                    tone={isAdded ? 'subtle' : 'primary'}
+                    className="rounded-[16px] text-lg shadow-lg"
                 >
                     {isAdded ? '이미 캡슐에 담겨있어요' : '캡슐에 담기'}
-                </button>
+                </AppButton>
             </div>
         </div>
     );

@@ -91,6 +91,114 @@
   animation: spin-ccw 8s linear infinite;
 }
 
+@keyframes stack-center-pulse {
+  0% {
+    transform: scale(1);
+    border-color: rgba(226, 232, 240, 0.65);
+  }
+  50% {
+    transform: scale(1.035);
+    border-color: rgba(130, 216, 252, 0.85);
+  }
+  100% {
+    transform: scale(1);
+    border-color: rgba(226, 232, 240, 0.65);
+  }
+}
+
+.animate-stack-center-pulse {
+  animation: stack-center-pulse 2.7s ease-in-out infinite;
+}
+
+@keyframes tetris-pattern-a {
+  0%, 7% { transform: translate3d(18px, 18px, 0); }
+  13%, 20% { transform: translate3d(110px, 18px, 0); }
+  27%, 34% { transform: translate3d(110px, 110px, 0); }
+  41%, 48% { transform: translate3d(18px, 110px, 0); }
+  55%, 62% { transform: translate3d(18px, 202px, 0); }
+  69%, 76% { transform: translate3d(110px, 202px, 0); }
+  83%, 90% { transform: translate3d(202px, 202px, 0); }
+  100% { transform: translate3d(18px, 18px, 0); }
+}
+
+@keyframes tetris-pattern-b {
+  0%, 7% { transform: translate3d(202px, 18px, 0); }
+  13%, 20% { transform: translate3d(202px, 110px, 0); }
+  27%, 34% { transform: translate3d(110px, 110px, 0); }
+  41%, 48% { transform: translate3d(18px, 110px, 0); }
+  55%, 62% { transform: translate3d(18px, 202px, 0); }
+  69%, 76% { transform: translate3d(110px, 202px, 0); }
+  83%, 90% { transform: translate3d(202px, 202px, 0); }
+  100% { transform: translate3d(202px, 18px, 0); }
+}
+
+@keyframes tetris-pattern-c {
+  0%, 7% { transform: translate3d(110px, 202px, 0); }
+  13%, 20% { transform: translate3d(18px, 202px, 0); }
+  27%, 34% { transform: translate3d(18px, 110px, 0); }
+  41%, 48% { transform: translate3d(110px, 110px, 0); }
+  55%, 62% { transform: translate3d(202px, 110px, 0); }
+  69%, 76% { transform: translate3d(202px, 18px, 0); }
+  83%, 90% { transform: translate3d(110px, 18px, 0); }
+  100% { transform: translate3d(110px, 202px, 0); }
+}
+
+.animate-tetris-a {
+  animation: tetris-pattern-a 7.2s steps(1, end) infinite;
+}
+
+.animate-tetris-b {
+  animation: tetris-pattern-b 7.2s steps(1, end) infinite;
+}
+
+.animate-tetris-c {
+  animation: tetris-pattern-c 7.2s steps(1, end) infinite;
+}
+
+@keyframes question-hide-on-cover {
+  0%, 14% { opacity: 1; }
+  15%, 42% { opacity: 0; }   /* 암 카드 이동/덮기/복귀 여유 구간 */
+  43%, 56% { opacity: 1; }
+  57%, 84% { opacity: 0; }   /* 실손 카드 이동/덮기/복귀 여유 구간 */
+  85%, 100% { opacity: 1; }
+}
+
+@keyframes cancer-shift-center {
+  0%, 10% {
+    transform: translate(0, 0);
+  }
+  18%, 32% {
+    transform: translate(108px, 0);
+  }
+  40%, 100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes actual-loss-cover-center {
+  0%, 52% {
+    transform: translate(0, 0);
+  }
+  60%, 74% {
+    transform: translate(0, -104px);
+  }
+  82%, 100% {
+    transform: translate(0, 0);
+  }
+}
+
+.animate-question-hide-on-cover {
+  animation: question-hide-on-cover 5.6s steps(1, end) infinite;
+}
+
+.animate-cancer-shift-center {
+  animation: cancer-shift-center 5.6s ease-in-out infinite;
+}
+
+.animate-actual-loss-cover-center {
+  animation: actual-loss-cover-center 5.6s ease-in-out infinite;
+}
+
 .app-main-safe-padding {
   padding-bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 12px);
 }
@@ -109,4 +217,127 @@
 .no-spinner[type='number'] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+@keyframes transition-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.transition-loader-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 9999px;
+  border: 2px solid rgba(2, 7, 21, 0.18);
+  border-top-color: #82d8fc;
+  animation: transition-loader-spin 1s linear infinite;
+}
+
+.transition-loader-snackbar {
+  width: fit-content;
+  max-width: calc(100vw - 48px);
+  min-height: 58px;
+  border-radius: 9999px;
+  background: #05070d;
+  padding: 8px 14px 8px 12px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
+}
+
+.transition-loader-snackbar-fixed {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 12px);
+  z-index: 210;
+}
+
+.transition-loader-icon-wrap {
+  width: 36px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.transition-loader-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  background: #82d8fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 300ms ease;
+  transform: scale(1);
+  will-change: transform, opacity;
+}
+
+.transition-loader-text {
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  max-width: calc(100vw - 132px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  filter: blur(4px);
+  transition: opacity 280ms ease, filter 280ms ease;
+}
+
+.transition-loader-chevron,
+.transition-loader-check {
+  position: absolute;
+}
+
+.transition-loader-chevron {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.transition-loader-check {
+  opacity: 0;
+  transform: scale(0.65);
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.transition-loader-snackbar.is-text-visible .transition-loader-text {
+  opacity: 1;
+  filter: blur(0);
+}
+
+.transition-loader-snackbar.is-done .transition-loader-icon {
+  transform: scale(0.9);
+}
+
+.transition-loader-snackbar.is-done .transition-loader-chevron {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.transition-loader-snackbar.is-done .transition-loader-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.capsule-name-input:-webkit-autofill,
+.capsule-name-input:-webkit-autofill:hover,
+.capsule-name-input:-webkit-autofill:focus,
+.capsule-name-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px rgba(11, 20, 37, 0.55) inset;
+  box-shadow: 0 0 0 1000px rgba(11, 20, 37, 0.55) inset;
+  transition: background-color 9999s ease-in-out 0s;
 }

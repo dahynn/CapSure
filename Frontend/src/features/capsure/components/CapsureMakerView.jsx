@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import CapsureProgress from './maker/CapsureProgress';
 import ProductList from './maker/ProductList';
 import { httpClient } from '@/common/api/httpClient';
 import { getProductSourceId, normalizeProductSource } from '../utils/productSource';
 import { CAPSURE_CATEGORY_CODE_BY_LABEL, CAPSURE_CATEGORY_OPTIONS } from '../constants/categories';
+import AppButton from '@/common/components/ui/button/AppButton';
+import PageTransitionLoading from '@/common/components/ui/loading/PageTransitionLoading';
 
 const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveItem, onConfirm, onViewDetail }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     
     // Filter & Sort State
     const [activeCategories, setActiveCategories] = useState(['전체']);
     const [sortBy, setSortBy] = useState('popular');
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [showTransitionLoading, setShowTransitionLoading] = useState(false);
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
     // Fetch Products from Backend
     const fetchProducts = async () => {
@@ -50,6 +55,49 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
         fetchProducts();
     }, [activeCategories, totalBudget]);
 
+    React.useEffect(() => {
+        const searchParams = new URLSearchParams(location.search);
+        const shouldPreview = searchParams.get('previewLoading') === '1';
+
+        if (!shouldPreview) {
+            setIsPreviewLoading(false);
+            return;
+        }
+
+        setIsPreviewLoading(true);
+        const previewTimer = window.setTimeout(() => {
+            setIsPreviewLoading(false);
+        }, 2800);
+
+        return () => {
+            window.clearTimeout(previewTimer);
+        };
+    }, [location.search]);
+
+    React.useEffect(() => {
+        let openTimer;
+        let closeTimer;
+
+        if (isLoading) {
+            openTimer = window.setTimeout(() => {
+                setShowTransitionLoading(true);
+            }, 250);
+        } else if (showTransitionLoading) {
+            closeTimer = window.setTimeout(() => {
+                setShowTransitionLoading(false);
+            }, 280);
+        }
+
+        return () => {
+            if (openTimer) {
+                window.clearTimeout(openTimer);
+            }
+            if (closeTimer) {
+                window.clearTimeout(closeTimer);
+            }
+        };
+    }, [isLoading, showTransitionLoading]);
+
     const handleCategoryClick = (cat) => {
         if (cat === '전체') {
             setActiveCategories(['전체']);
@@ -82,6 +130,10 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
         }
         return 0;
     });
+
+    if (isPreviewLoading || (showTransitionLoading && isLoading)) {
+        return <PageTransitionLoading message="맞춤 보험 추천으로 이동했어요" />;
+    }
 
     return (
         <div className="flex flex-col min-h-screen pb-28">
@@ -119,12 +171,12 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
 
             {/* Sticky Bottom Action */}
             <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto p-6 z-40">
-                <button 
+                <AppButton
                     onClick={onConfirm}
-                    className="w-full py-4 rounded-xl font-bold text-[#020715] text-base bg-brand-blue shadow-[0_0_20px_rgba(130,216,252,0.2)] hover:bg-[#6BC1E6] active:scale-[0.98] transition-all"
+                    className="shadow-[0_0_20px_rgba(130,216,252,0.2)]"
                 >
                     캡슐 생성 완료하기
-                </button>
+                </AppButton>
             </div>
         </div>
     );
