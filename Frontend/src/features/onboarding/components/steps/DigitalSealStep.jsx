@@ -13,10 +13,10 @@ const DigitalSealStep = ({ onNext }) => {
     };
 
     return (
-        <div className="flex flex-col h-full animate-in fade-in duration-500 w-full pt-8 pb-4">
+        <div className="flex h-full min-h-0 w-full flex-col animate-in fade-in duration-500 pt-2 pb-4">
             
             {/* 상단 텍스트 */}
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-white mb-4 leading-tight">
                     간편한 서명을 위한<br/>디지털 인장을 만드세요
                 </h1>
@@ -26,7 +26,7 @@ const DigitalSealStep = ({ onNext }) => {
             </div>
 
             {/* 메인 비주얼 (빛나는 원형 인장) */}
-            <div className="flex-1 flex flex-col items-center justify-center mb-12">
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center mb-8">
                 <div className="relative w-48 h-48 flex items-center justify-center">
                     {/* 외부 테두리 (점선 + 네온 효과) */}
                     <div className="absolute inset-0 rounded-full border-[3px] border-dashed opacity-50 transition-all duration-700" 

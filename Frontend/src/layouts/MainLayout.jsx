@@ -16,7 +16,7 @@ const MainLayout = () => {
     return (
         <div className="min-h-screen bg-black flex flex-col items-center">
             {/* App Container (Max Width 560px for Mobile Feel) */}
-            <div className="w-full max-w-[560px] flex flex-col min-h-screen relative overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.05)]" style={{ backgroundColor: 'var(--color-bg)' }}>
+            <div className="w-full max-w-[560px] flex flex-col min-h-screen relative shadow-[0_0_40px_rgba(255,255,255,0.05)]" style={{ backgroundColor: 'var(--color-bg)' }}>
 
                 {/* Header Navigation */}
                 <header 
@@ -50,15 +50,15 @@ const MainLayout = () => {
 
                 {/* Main Content Area */}
                 <main className="flex-1 w-full relative flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
-                    <div className="flex-1 w-full pb-6 md:pb-8">
+                    <div className="flex-1 w-full app-main-safe-padding">
                         <Outlet />
                     </div>
                 </main>
 
                 {/* Mobile Bottom Navigation */}
                 <nav 
-                    className="md:hidden sticky bottom-0 w-full z-50 rounded-t-[32px] px-8 py-5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
-                    style={{ backgroundColor: 'var(--color-bg)' }}
+                    className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[560px] z-[70] rounded-t-[32px] px-8 pt-5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-slate-800/70"
+                    style={{ backgroundColor: 'var(--color-bg)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
                 >
                     <div className="flex justify-between items-center max-w-full">
                         {[

@@ -22,7 +22,7 @@ const CapsureBudgetView = ({ onProceed }) => {
                         type="number"
                         value={budgetInput}
                         onChange={(e) => setBudgetInput(e.target.value)}
-                        className="w-full bg-transparent text-3xl font-bold tracking-tight text-white outline-none"
+                        className="w-full bg-transparent text-3xl font-bold tracking-tight text-white outline-none no-spinner"
                         placeholder="0"
                     />
                     <span className="text-white font-bold ml-2">원</span>
@@ -82,7 +82,7 @@ const CapsureBudgetView = ({ onProceed }) => {
             </div>
 
             {/* Sticky Bottom Button */}
-            <div className="fixed bottom-[72px] left-0 right-0 max-w-[560px] mx-auto pt-16 px-6 pb-8 z-40">
+            <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto pt-16 px-6 pb-8 z-40">
                 <button 
                     onClick={() => {
                         onProceed(Number(budgetInput) || 10000);

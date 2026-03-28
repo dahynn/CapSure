@@ -11,6 +11,7 @@
   --color-brand-blue:   #82D8FC; /* 하늘파랑 (포인트) */
   --color-brand-purple: #F2BEF7; /* 연보라 (강조) */
   --color-brand-yellow: #F6CD3C; /* 노랑 (CTA) */
+  --app-bottom-nav-height: 88px;
 }
 
 @layer base {
@@ -88,4 +89,24 @@
 
 .animate-spin-reverse-slow {
   animation: spin-ccw 8s linear infinite;
+}
+
+.app-main-safe-padding {
+  padding-bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 12px);
+}
+
+.app-fixed-cta {
+  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 8px);
+}
+
+/* Hide number input spinner arrows */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-spinner[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }

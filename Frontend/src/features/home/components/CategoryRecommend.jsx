@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const AiRecommendations = ({ recommendations }) => {
+const CategoryRecommend = ({ recommendations, onViewDetail }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
@@ -34,7 +34,7 @@ const AiRecommendations = ({ recommendations }) => {
                                     className="inline-flex items-center px-3 py-1.5 bg-[#1F2736] text-[10px] font-black tracking-wider rounded-lg shadow-sm border"
                                     style={{ color: rec.badgeColor, borderColor: `${rec.badgeColor}33` }}
                                 >
-                                    PREMIUM AI
+                                    CATEGORY RECOMMEND
                                 </span>
                             </div>
                             <h3 className="text-[20px] md:text-[22px] font-bold text-white leading-snug tracking-tight mb-2 whitespace-pre-line">
@@ -45,6 +45,7 @@ const AiRecommendations = ({ recommendations }) => {
                             </p>
                             <div className="flex justify-end mt-auto">
                                 <button 
+                                    onClick={() => onViewDetail?.(rec.productSourceId ?? rec.id)}
                                     className="px-5 py-2.5 text-[#020715] text-sm font-bold rounded-xl active:scale-95 transition-all"
                                     style={{ 
                                         backgroundColor: rec.btnColor,
@@ -62,4 +63,4 @@ const AiRecommendations = ({ recommendations }) => {
     );
 };
 
-export default AiRecommendations;
+export default CategoryRecommend;
