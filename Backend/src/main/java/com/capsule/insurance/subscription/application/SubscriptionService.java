@@ -204,6 +204,43 @@ public class SubscriptionService {
         BigDecimal quotedPremium = BigDecimal.valueOf(10000L + (long) request.insuredAge() * 100L);
         return new QuoteResponse(request.productCode(), quotedPremium, "Placeholder quote response");
     }
+
+    public MonthlyBillingResponse getMonthlyBilling(Long userId) {
+        Subscription subscription = requireUserSubscription(userId);
+        List<SubscriptionItem> currentItems = subscriptionMapper.findCurrentItemsBySubscriptionId(subscription.getSubscriptionId());
+        BigDecimal totalMonthlyBilling = sumMonthlyPrice(currentItems);
+
+        if (BigDecimal.ZERO.compareTo(totalMonthlyBilling) == 0 && subscription.getExpectedNextAmount() != null) {
+            totalMonthlyBilling = subscription.getExpectedNextAmount();
+        }
+
+        return new MonthlyBillingResponse(
+                subscription.getSubscriptionId(),
+                totalMonthlyBilling,
+                subscription.getNextBillingAt() != null ? DATE_FORMATTER.format(subscription.getNextBillingAt()) : null,
+                toMonthlyBillingItems(currentItems)
+        );
+    }
+
+    public ScheduleBillingResponse getScheduleBilling(Long userId) {
+        Subscription subscription = requireUserSubscription(userId);
+        List<SubscriptionItem> currentItems = subscriptionMapper.findCurrentItemsBySubscriptionId(subscription.getSubscriptionId());
+        List<SubscriptionItem> nextItems = subscriptionMapper.findNextItemsBySubscriptionId(subscription.getSubscriptionId());
+
+        BigDecimal expectedNextAmount = subscription.getExpectedNextAmount();
+        if (expectedNextAmount == null) {
+            expectedNextAmount = nextItems.isEmpty() ? sumMonthlyPrice(currentItems) : sumMonthlyPrice(nextItems);
+        }
+
+        return new ScheduleBillingResponse(
+                subscription.getSubscriptionId(),
+                subscription.getBillingAnchorDay(),
+                subscription.getNextBillingAt() != null ? DATE_FORMATTER.format(subscription.getNextBillingAt()) : null,
+                expectedNextAmount,
+                toScheduleBillingItems(currentItems),
+                toScheduleBillingItems(nextItems)
+        );
+    }
     // ... (rest of methods remain the same)
 
     public SubscriptionDetailResponse getSubscriptionDetail(Long userId, Long subscriptionId) {
@@ -411,6 +448,66 @@ public class SubscriptionService {
         }
 
         return totalAmount;
+    }
+    private Subscription requireUserSubscription(Long userId) {
+        Subscription subscription = subscriptionMapper.findSubscriptionAggregateByUserId(userId);
+        if (subscription == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "구독 정보를 찾을 수 없습니다.");
+        }
+        return subscription;
+    }
+
+    private BigDecimal sumMonthlyPrice(List<SubscriptionItem> items) {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return items.stream()
+                .map(SubscriptionItem::getMonthlyPriceSnapshot)
+                .filter(price -> price != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private List<MonthlyBillingResponse.MonthlyBillingItem> toMonthlyBillingItems(List<SubscriptionItem> items) {
+        if (items == null) {
+            return List.of();
+        }
+        return items.stream()
+                .map(item -> {
+                    CapsuleProduct product = insurerCatalogMapper.findCapsuleProductById(item.getCapsuleProductId());
+                    return new MonthlyBillingResponse.MonthlyBillingItem(
+                            item.getSubscriptionItemId(),
+                            item.getCapsuleProductId(),
+                            resolveProductName(product),
+                            item.getMonthlyPriceSnapshot(),
+                            item.getItemStatus() != null ? item.getItemStatus().name() : ""
+                    );
+                })
+                .toList();
+    }
+
+    private List<ScheduleBillingResponse.ScheduleBillingItem> toScheduleBillingItems(List<SubscriptionItem> items) {
+        if (items == null) {
+            return List.of();
+        }
+        return items.stream()
+                .map(item -> {
+                    CapsuleProduct product = insurerCatalogMapper.findCapsuleProductById(item.getCapsuleProductId());
+                    return new ScheduleBillingResponse.ScheduleBillingItem(
+                            item.getSubscriptionItemId(),
+                            item.getCapsuleProductId(),
+                            resolveProductName(product),
+                            item.getMonthlyPriceSnapshot(),
+                            item.getItemStatus() != null ? item.getItemStatus().name() : ""
+                    );
+                })
+                .toList();
+    }
+
+    private String resolveProductName(CapsuleProduct product) {
+        if (product == null || product.getProductName() == null || product.getProductName().isBlank()) {
+            return "상품 정보 없음";
+        }
+        return product.getProductName();
     }
 
     private List<SubscriptionItemDto> toItemDtos(List<SubscriptionItem> items) {
