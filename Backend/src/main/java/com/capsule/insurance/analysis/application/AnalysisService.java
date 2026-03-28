@@ -9,8 +9,8 @@ import com.capsule.insurance.auth.domain.UserAccount;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.insurer.domain.CapsuleProduct;
 import com.capsule.insurance.insurer.domain.CoverageCategory;
-import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
 import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
+import com.capsule.insurance.insurer.infra.projection.ProductSourceSummaryProjection;
 import com.capsule.insurance.mydata.domain.ContractCoverageStatus;
 import com.capsule.insurance.mydata.domain.MyDataContract;
 import com.capsule.insurance.mydata.domain.MyDataContractCoverage;
@@ -20,6 +20,7 @@ import com.capsule.insurance.subscription.domain.SubscriptionItem;
 import com.capsule.insurance.subscription.infra.SubscriptionMapper;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
@@ -27,13 +28,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class AnalysisService {
+
+    private static final Pattern DECIMAL_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
 
     private static final List<CoverageCategory> DIAGNOSIS_CATEGORIES = List.of(
             CoverageCategory.DEATH,
@@ -63,7 +67,7 @@ public class AnalysisService {
                     insured,
                     insured ? "가입됨" : "미가입",
                     List.copyOf(snapshot.coverageNamesByCategory().getOrDefault(category, Set.of())),
-                    insured ? null : pickRecommendedProduct(category, gender)
+                    insured ? null : pickRecommendedProduct(category, gender, userId)
             ));
         }
 
@@ -135,19 +139,48 @@ public class AnalysisService {
         return new CoverageSnapshot(coveredCategories, coverageNamesByCategory);
     }
 
-    private RecommendedProduct pickRecommendedProduct(CoverageCategory category, String gender) {
-        List<ProductSummaryResponse> candidates = insurerCatalogMapper.findProductSourcesByFilter(category.name(), null, gender);
+    private RecommendedProduct pickRecommendedProduct(CoverageCategory category, String gender, Long userId) {
+        List<ProductSourceSummaryProjection> candidates =
+                insurerCatalogMapper.findProductSourcesByFilter(category.name(), null, gender, userId);
         if (candidates == null || candidates.isEmpty()) {
             return null;
         }
 
-        ProductSummaryResponse selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+        ProductSourceSummaryProjection selected = candidates.stream()
+                .min(Comparator
+                        .comparing(
+                                (ProductSourceSummaryProjection candidate) -> parsePriceIndex(candidate.priceIndexText()),
+                                Comparator.nullsLast(BigDecimal::compareTo))
+                        .thenComparing(
+                                ProductSourceSummaryProjection::monthlyPrice,
+                                Comparator.nullsLast(BigDecimal::compareTo))
+                        .thenComparing(
+                                ProductSourceSummaryProjection::productSourceId,
+                                Comparator.nullsLast(Long::compareTo)))
+                .orElse(candidates.get(0));
         return new RecommendedProduct(
                 selected.productSourceId(),
                 selected.companyName(),
                 selected.productName(),
                 selected.monthlyPrice()
         );
+    }
+
+    private BigDecimal parsePriceIndex(String priceIndexText) {
+        if (priceIndexText == null || priceIndexText.isBlank()) {
+            return null;
+        }
+
+        Matcher matcher = DECIMAL_PATTERN.matcher(priceIndexText.replace(",", ""));
+        if (!matcher.find()) {
+            return null;
+        }
+
+        try {
+            return new BigDecimal(matcher.group());
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     private boolean isActiveContract(MyDataContract contract) {

@@ -1,57 +1,110 @@
 import React from 'react';
-import { Pill, AlertOctagon, Car, Timer } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Clock3 } from 'lucide-react';
 
-const ScheduleSummary = () => {
+const formatCurrency = (value) => {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('ko-KR').format(amount);
+};
+
+const getDaysLeft = (dateText) => {
+    if (!dateText) {
+        return null;
+    }
+
+    const today = new Date();
+    const targetDate = new Date(dateText);
+    today.setHours(0, 0, 0, 0);
+    targetDate.setHours(0, 0, 0, 0);
+    return Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const ItemRow = ({ item, tone = 'default' }) => {
+    const isNext = tone === 'next';
+
+    return (
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-[#10141D] px-4 py-4">
+            <div className="min-w-0">
+                <p className="truncate text-[14px] font-semibold text-white">{item.productName}</p>
+                <p className="mt-1 text-[12px] text-[#9D9DA4]">
+                    {formatCurrency(item.monthlyPrice)}원 · {item.itemStatus}
+                </p>
+            </div>
+            <div
+                className={`rounded-full px-3 py-1 text-[11px] font-bold ${
+                    isNext ? 'bg-[#1E2D24] text-[#8AE7A3]' : 'bg-[#1B2230] text-[#82D8FC]'
+                }`}
+            >
+                {isNext ? '다음 회차' : '현재'}
+            </div>
+        </div>
+    );
+};
+
+const ScheduleSummary = ({ data }) => {
+    const daysLeft = getDaysLeft(data?.nextBillingAt);
+
     return (
         <div className="mb-10">
-            <div className="flex justify-between items-center mb-6 px-1">
-                <h2 className="text-[20px] font-bold text-white tracking-tight">일정 요약</h2>
-                <button className="text-[13px] text-[#82D8FC] font-medium transition-opacity hover:opacity-80">
-                    전체보기
-                </button>
+            <div className="mb-6 flex items-center justify-between px-1">
+                <h2 className="text-[20px] font-bold tracking-tight text-white">결제 예정일 일정 요약</h2>
+                <div className="rounded-full border border-slate-800 bg-[#161B26] px-3 py-1 text-[12px] text-slate-300">
+                    기준일 {data?.nextBillingAt || '-'}
+                </div>
             </div>
 
-            <div className="space-y-4">
-                {/* Health Capsule */}
-                <div className="bg-[#10141D] rounded-3xl p-5 shadow-sm border border-slate-800 flex items-center justify-between group cursor-pointer hover:border-slate-700 transition-colors">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-[#1C212E] rounded-full flex items-center justify-center text-[#82D8FC] flex-shrink-0">
-                            <Pill className="w-[22px] h-[22px]" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h4 className="text-[15px] font-bold text-white tracking-tight mb-0.5">종합 건강 캡슐 A-12</h4>
-                            <p className="text-[12px] text-[#9D9DA4]">만기일: 2026.04.10</p>
-                        </div>
+            <div className="mb-5 rounded-3xl border border-slate-800 bg-[#10141D] p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <p className="text-[13px] text-[#9D9DA4]">다음 결제 예정 금액</p>
+                        <p className="mt-2 text-[26px] font-black tracking-tight text-white">
+                            {formatCurrency(data?.expectedNextAmount)}원
+                        </p>
+                        <p className="mt-2 text-[12px] text-slate-400">
+                            결제일 {data?.nextBillingAt || '정보 없음'} · 정기 결제일 {data?.billingAnchorDay || '-'}일
+                        </p>
                     </div>
-                    <span className="text-[13px] font-bold text-slate-300">D-24</span>
+                    <div className="flex items-center gap-2 rounded-2xl bg-[#1B2230] px-3 py-2 text-[#82D8FC]">
+                        <CalendarClock className="h-4 w-4" />
+                        <span className="text-[12px] font-bold">
+                            {daysLeft === null ? '-' : daysLeft >= 0 ? `D-${daysLeft}` : '지남'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-5">
+                <div>
+                    <div className="mb-3 flex items-center gap-2 px-1">
+                        <CheckCircle2 className="h-4 w-4 text-[#82D8FC]" />
+                        <h3 className="text-[14px] font-semibold text-slate-200">현재 적용 중</h3>
+                    </div>
+                    <div className="space-y-3">
+                        {(data?.currentItems || []).map((item) => (
+                            <ItemRow key={`current-${item.subscriptionItemId}`} item={item} />
+                        ))}
+                        {!data?.currentItems?.length ? (
+                            <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-4 text-[13px] text-slate-400">
+                                현재 적용 중인 상품이 없습니다.
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
 
-                {/* Fire Insurance */}
-                <div className="bg-[#10141D] rounded-3xl p-5 shadow-sm border border-slate-800 flex items-center justify-between group cursor-pointer hover:border-slate-700 transition-colors">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-[#2A1D2B] rounded-full flex items-center justify-center text-[#F2BEF7] flex-shrink-0">
-                            <AlertOctagon className="w-[22px] h-[22px]" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h4 className="text-[15px] font-bold text-white tracking-tight mb-0.5">주택 화재 안심 캡슐</h4>
-                            <p className="text-[12px] text-[#9D9DA4]">자동 갱신일: 2026.03.15</p>
-                        </div>
+                <div>
+                    <div className="mb-3 flex items-center gap-2 px-1">
+                        <Clock3 className="h-4 w-4 text-[#8AE7A3]" />
+                        <h3 className="text-[14px] font-semibold text-slate-200">다음 회차 예정</h3>
                     </div>
-                    <span className="text-[13px] font-bold text-[#82D8FC]">갱신예정</span>
-                </div>
-
-                {/* Daily Auto Insurance */}
-                <div className="bg-[#10141D] rounded-3xl p-5 shadow-sm border border-slate-800 flex items-center justify-between group cursor-pointer hover:border-slate-700 transition-colors">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-[#2B2516] rounded-full flex items-center justify-center text-[#F6CD3C] flex-shrink-0">
-                            <Car className="w-[22px] h-[22px]" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h4 className="text-[15px] font-bold text-white tracking-tight mb-0.5">단기 운전자 보호 (24h)</h4>
-                            <p className="text-[12px] text-[#9D9DA4]">종료일: 2026.03.02</p>
-                        </div>
+                    <div className="space-y-3">
+                        {(data?.nextItems || []).map((item) => (
+                            <ItemRow key={`next-${item.subscriptionItemId}`} item={item} tone="next" />
+                        ))}
+                        {!data?.nextItems?.length ? (
+                            <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-4 text-[13px] text-slate-400">
+                                예정된 변경 상품이 없습니다.
+                            </div>
+                        ) : null}
                     </div>
-                    <Timer className="w-5 h-5 text-[#F6CD3C]" />
                 </div>
             </div>
         </div>

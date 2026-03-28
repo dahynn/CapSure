@@ -28,6 +28,7 @@
             <arg column="coverage_category_code" javaType="java.lang.String"/>
             <arg column="coverage_code" javaType="java.lang.String"/>
             <arg column="monthly_price" javaType="java.math.BigDecimal"/>
+            <arg column="price_index_text" javaType="java.lang.String"/>
             <arg column="loaded_at" javaType="java.time.Instant"/>
             <arg column="updated_at" javaType="java.time.Instant"/>
         </constructor>
@@ -180,6 +181,11 @@
                 <when test="gender == 'F'.toString()">round(monthly_premium_female, 0)</when>
                 <otherwise>NULL</otherwise>
             </choose> AS monthly_price,
+            <choose>
+                <when test="gender == 'M'.toString()">price_index_male</when>
+                <when test="gender == 'F'.toString()">price_index_female</when>
+                <otherwise>NULL</otherwise>
+            </choose> AS price_index_text,
             loaded_at,
             updated_at
         FROM insurance.product_source ps
