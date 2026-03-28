@@ -18,7 +18,7 @@ const CATEGORY_LABEL_MAP = {
     ETC: '기타',
 };
 
-const BADGE_COLORS = ['#82D8FC', '#F6CD3C', '#F2BEF7', '#8EE7A7', '#FDBA74'];
+const RECOMMEND_TONES = ['blue', 'yellow', 'purple', 'gray'];
 const ALL_CATEGORY_CODES = ['DEATH', 'CANCER', 'BRAIN_HEART', 'ACTUAL_LOSS', 'SURGERY', 'ACCIDENT', 'LIABILITY', 'ETC'];
 
 const buildCoverageBadges = (activeCategories = []) => {
@@ -55,7 +55,7 @@ const HomePage = () => {
         getCategoryRecommendations()
             .then((recommendations) => {
                 const mapped = (recommendations ?? []).map((item, index) => {
-                    const badgeColor = BADGE_COLORS[index % BADGE_COLORS.length];
+                    const tone = RECOMMEND_TONES[index % RECOMMEND_TONES.length];
                     const categoryLabel = CATEGORY_LABEL_MAP[item.coverageCategoryCode] ?? item.coverageCategoryCode;
                     const monthlyPrice = Number(item.monthlyPrice ?? 0);
                     return {
@@ -63,8 +63,7 @@ const HomePage = () => {
                         productSourceId: item.productSourceId,
                         title: `${categoryLabel} 추천\n${item.productName}`,
                         desc: `${item.companyName} · 월 ${monthlyPrice.toLocaleString()}원 · 가입 ${item.subscriberCount}건`,
-                        badgeColor,
-                        btnColor: badgeColor,
+                        tone,
                         btnText: '자세히 보기',
                     };
                 });

@@ -101,6 +101,8 @@ public interface SubscriptionMapper {
 
     void deactivatePaymentMethods(@Param("userId") Long userId);
 
+    boolean existsUserById(@Param("userId") Long userId);
+
     void insertPaymentMethod(
             @Param("userId") Long userId,
             @Param("provider") String provider,

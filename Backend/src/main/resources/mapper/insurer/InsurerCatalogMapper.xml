@@ -69,8 +69,8 @@
             <arg column="product_name" javaType="java.lang.String"/>
             <arg column="coverage_category_code" javaType="java.lang.String"/>
             <arg column="monthly_price" javaType="java.math.BigDecimal"/>
-            <arg column="subscriber_count" javaType="long"/>
-            <arg column="category_rank" javaType="int"/>
+            <arg column="subscriber_count" javaType="java.lang.Long"/>
+            <arg column="category_rank" javaType="java.lang.Integer"/>
         </constructor>
     </resultMap>
 
@@ -176,14 +176,19 @@
             coverage_category_code::text as coverage_category_code,
             coverage_code,
             <choose>
-                <when test="gender == 'M'.toString()">monthly_premium_male</when>
-                <when test="gender == 'F'.toString()">monthly_premium_female</when>
+                <when test="gender == 'M'.toString()">round(monthly_premium_male, 0)</when>
+                <when test="gender == 'F'.toString()">round(monthly_premium_female, 0)</when>
                 <otherwise>NULL</otherwise>
             </choose> AS monthly_price,
             loaded_at,
             updated_at
         FROM insurance.product_source ps
         WHERE 1=1
+        AND EXISTS (
+            SELECT 1
+            FROM public.capsule_product cp
+            WHERE cp.capsule_product_id = ps.product_source_id
+        )
         <if test="category != null and category != ''">
             AND coverage_category_code = #{category}::insurance.coverage_category_code
         </if>
@@ -201,18 +206,6 @@
                 </if>
             </when>
         </choose>
-        AND NOT EXISTS (
-            SELECT 1
-            FROM public.subscription_item si
-            JOIN public.subscription s
-              ON s.subscription_id = si.subscription_id
-            WHERE s.user_id = #{userId}
-              AND s.subscription_status = 'ACTIVE'
-              AND si.plan_version = 'CURRENT'
-              AND si.item_status = 'ACTIVE'
-              AND si.capsule_product_id = ps.product_source_id
-              AND COALESCE(si.effective_end_at, TIMESTAMPTZ '9999-12-31 00:00:00+00') &gt; NOW()
-        )
         ORDER BY product_source_id ASC
     </select>
     <select id="findProductSourceDetail" resultMap="productSourceDetailProjectionResultMap">
@@ -233,8 +226,8 @@
             coverage_category_code::text as coverage_category_code,
             coverage_code,
             CASE 
-                WHEN #{gender} = 'M' THEN monthly_premium_male
-                WHEN #{gender} = 'F' THEN monthly_premium_female
+                WHEN #{gender} = 'M' THEN round(monthly_premium_male, 0)
+                WHEN #{gender} = 'F' THEN round(monthly_premium_female, 0)
                 ELSE 0.00
             END as monthly_price,
             product_summary,
@@ -257,8 +250,8 @@
                 ps.product_name,
                 ps.coverage_category_code::text as coverage_category_code,
                 case
-                    when #{gender} = 'M' then ps.monthly_premium_male
-                    when #{gender} = 'F' then ps.monthly_premium_female
+                    when #{gender} = 'M' then round(ps.monthly_premium_male, 0)
+                    when #{gender} = 'F' then round(ps.monthly_premium_female, 0)
                     else null
                 end as monthly_price,
                 count(si.subscription_item_id) as subscriber_count
@@ -275,17 +268,10 @@
             <foreach item="code" collection="categoryCodes" open="(" separator="," close=")">
                 #{code}
             </foreach>
-            and not exists (
+            and exists (
                 select 1
-                from public.subscription_item my_si
-                join public.subscription my_s
-                  on my_s.subscription_id = my_si.subscription_id
-                where my_s.user_id = #{userId}
-                  and my_s.subscription_status = 'ACTIVE'
-                  and my_si.plan_version = 'CURRENT'
-                  and my_si.item_status = 'ACTIVE'
-                  and my_si.capsule_product_id = ps.product_source_id
-                  and coalesce(my_si.effective_end_at, TIMESTAMPTZ '9999-12-31 00:00:00+00') &gt; now()
+                from public.capsule_product cp
+                where cp.capsule_product_id = ps.product_source_id
             )
             group by
                 ps.product_source_id,
@@ -293,8 +279,8 @@
                 ps.product_name,
                 ps.coverage_category_code,
                 case
-                    when #{gender} = 'M' then ps.monthly_premium_male
-                    when #{gender} = 'F' then ps.monthly_premium_female
+                    when #{gender} = 'M' then round(ps.monthly_premium_male, 0)
+                    when #{gender} = 'F' then round(ps.monthly_premium_female, 0)
                     else null
                 end
         ),

@@ -2,8 +2,10 @@ import React from 'react';
 import {
     ArrowLeft,
     ArrowRight,
+    Banknote,
     CalendarDays,
     CircleHelp,
+    CreditCard,
     Cross,
     HeartPulse,
     Info,
@@ -47,8 +49,22 @@ const formatDate = (date) => {
     return `${year}.${month}.${day}`;
 };
 
-const InsuranceInfoConfirm = ({ selectedProducts, capsuleName, onCapsuleNameChange, onNext, onPrev }) => {
+const toWholeWon = (value) => Math.round(Number(value ?? 0));
+const formatWon = (value) => `${toWholeWon(value).toLocaleString()}원`;
+
+const InsuranceInfoConfirm = ({
+    selectedProducts,
+    capsuleName,
+    onCapsuleNameChange,
+    paymentMethod,
+    paymentLoading = false,
+    paymentError = '',
+    onNext,
+    onPrev,
+    isSubmitting = false,
+}) => {
     const totalPremium = selectedProducts.reduce((sum, product) => sum + product.monthlyPrice, 0);
+    const canSubmit = capsuleName.trim() && paymentMethod && !paymentLoading && !isSubmitting;
     const today = React.useMemo(() => new Date(), []);
     const nextMonth = React.useMemo(() => {
         const next = new Date(today);
@@ -96,7 +112,7 @@ const InsuranceInfoConfirm = ({ selectedProducts, capsuleName, onCapsuleNameChan
                 <div className="mt-8 text-right">
                     <p className="text-[#9D9DA4] text-sm font-semibold">총 월 보험료</p>
                     <p className="mt-1 text-3xl leading-none font-black text-[#82D8FC] tracking-tight">
-                        {totalPremium.toLocaleString()}원
+                        {formatWon(totalPremium)}
                     </p>
                 </div>
 
@@ -106,6 +122,37 @@ const InsuranceInfoConfirm = ({ selectedProducts, capsuleName, onCapsuleNameChan
                         <span>{formatDate(today)} ~ {formatDate(nextMonth)}</span>
                     </div>
                 </div>
+            </section>
+
+            <section className="px-6 mt-8">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-bold text-white">결제 수단</h3>
+                </div>
+                <article className="rounded-3xl border border-slate-800 bg-[#0C1628] px-5 py-5">
+                    {paymentLoading ? (
+                        <p className="text-sm text-slate-400">등록된 결제수단을 불러오는 중...</p>
+                    ) : paymentMethod ? (
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-[#1C2434] flex items-center justify-center text-[#82D8FC]">
+                                {paymentMethod.methodType === 'BANK_ACCOUNT' ? (
+                                    <Banknote className="w-6 h-6" />
+                                ) : (
+                                    <CreditCard className="w-6 h-6" />
+                                )}
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-base font-bold text-white truncate">
+                                    {paymentMethod.provider} {paymentMethod.methodType === 'BANK_ACCOUNT' ? '계좌' : '카드'}
+                                </p>
+                                <p className="text-sm text-[#9D9DA4] mt-1">{paymentMethod.maskedNumber}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-slate-400">
+                            {paymentError || '등록된 결제수단이 없습니다. 마이페이지에서 먼저 등록해주세요.'}
+                        </p>
+                    )}
+                </article>
             </section>
 
             <section className="px-6 mt-8">
@@ -140,7 +187,7 @@ const InsuranceInfoConfirm = ({ selectedProducts, capsuleName, onCapsuleNameChan
                                                 <p className="text-xs text-[#9D9DA4] mt-1">{product.companyName}</p>
                                             </div>
                                             <p className="text-xl leading-tight font-black text-right">
-                                                {product.monthlyPrice.toLocaleString()}원
+                                                {formatWon(product.monthlyPrice)}
                                             </p>
                                         </div>
                                     </div>
@@ -164,16 +211,18 @@ const InsuranceInfoConfirm = ({ selectedProducts, capsuleName, onCapsuleNameChan
             <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto px-6 z-40">
                 <button
                     onClick={onNext}
-                    disabled={!capsuleName.trim()}
+                    disabled={!canSubmit}
                     className={`w-full rounded-2xl py-3.5 text-[15px] font-bold transition-all ${
-                        capsuleName.trim()
+                        canSubmit
                             ? 'bg-[#82D8FC] text-[#020715] border-2 border-[#D9F2FF] shadow-[0_0_0_2px_#1D5EC7] hover:opacity-95'
                             : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                     }`}
                 >
                     <span className="relative inline-flex items-center gap-2">
-                        <span className="absolute left-0 top-[1px] text-[#0b2746]/25 select-none">결제하고 구독 시작하기</span>
-                        <span className="relative">결제하고 구독 시작하기</span>
+                        <span className="absolute left-0 top-[1px] text-[#0b2746]/25 select-none">
+                            {isSubmitting ? '결제 처리 중...' : '이름 등록 및 결제하기'}
+                        </span>
+                        <span className="relative">{isSubmitting ? '결제 처리 중...' : '이름 등록 및 결제하기'}</span>
                         <ArrowRight className="w-5 h-5 relative" strokeWidth={3} />
                     </span>
                 </button>

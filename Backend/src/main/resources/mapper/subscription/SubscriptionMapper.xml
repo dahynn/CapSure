@@ -254,7 +254,7 @@
         ) values (
             #{userId},
             #{capsuleName},
-            #{subscriptionStatus},
+            #{subscriptionStatus}::public.subscription_status_enum,
             #{billingAnchorDay},
             #{currentCycleStartAt},
             #{currentCycleEndAt},
@@ -316,7 +316,7 @@
             scs.capsule_name,
             scs.created_at,
             scs.cycle_ended_at as next_billing_at,
-            scs.total_premium as expected_next_amount
+            round(scs.total_premium, 0) as expected_next_amount
         from subscription_capsule_snapshot scs
         where scs.user_id = #{userId}
         order by scs.created_at desc
@@ -347,7 +347,7 @@
             ps.product_name,
             ps.company_name,
             ps.coverage_category_code::text as coverage_category_code,
-            coalesce(si.monthly_price_snapshot, 0) as monthly_price,
+            round(coalesce(si.monthly_price_snapshot, 0), 0) as monthly_price,
             s.next_billing_at
         from subscription s
         join subscription_item si
@@ -491,7 +491,7 @@
             ps.product_source_id,
             ps.product_name,
             ps.company_name,
-            ps.coverage_category_code,
+            ps.coverage_category_code::text::public.coverage_category_code_enum,
             si.monthly_price_snapshot,
             now()
         from subscription_item si
@@ -508,6 +508,12 @@
             updated_at = now()
         where user_id = #{userId}
     </update>
+
+    <select id="existsUserById" resultType="boolean">
+        select count(*) &gt; 0
+        from usr_user
+        where user_id = #{userId}
+    </select>
 
     <insert id="insertPaymentMethod">
         insert into usr_payment_method (

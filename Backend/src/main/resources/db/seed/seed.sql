@@ -103,6 +103,66 @@ VALUES
         'FIXED_BENEFIT',
         'MULTI_PAY_ALLOWED',
         'SUPPRESS_IF_EXISTS'
+    ),
+    (
+        'DEATH_GENERAL',
+        'DEATH',
+        'Death Benefit',
+        'DEATH_GENERAL',
+        'General death coverage.',
+        '["death","life","benefit"]',
+        TRUE,
+        'FIXED_BENEFIT',
+        'CHECK_MANUALLY',
+        'ALLOW_TOPUP'
+    ),
+    (
+        'SURGERY_GENERAL',
+        'SURGERY',
+        'Surgery Benefit',
+        'SURGERY_GENERAL',
+        'General surgery coverage.',
+        '["surgery","operation","procedure"]',
+        TRUE,
+        'FIXED_BENEFIT',
+        'CHECK_MANUALLY',
+        'ALLOW_TOPUP'
+    ),
+    (
+        'BRAIN_HEART_GENERAL',
+        'BRAIN_HEART',
+        'Brain/Heart Benefit',
+        'BRAIN_HEART_GENERAL',
+        'Brain and heart major disease coverage.',
+        '["brain","heart","stroke","cardio"]',
+        TRUE,
+        'FIXED_BENEFIT',
+        'CHECK_MANUALLY',
+        'ALLOW_TOPUP'
+    ),
+    (
+        'ACTUAL_LOSS_GENERAL',
+        'ACTUAL_LOSS',
+        'Actual Loss Medical Benefit',
+        'ACTUAL_LOSS_GENERAL',
+        'Actual loss reimbursement coverage.',
+        '["actual loss","medical","reimbursement"]',
+        TRUE,
+        'INDEMNITY',
+        'MULTI_PAY_ALLOWED',
+        'ALLOW_TOPUP'
+    ),
+    (
+        'LIABILITY_GENERAL',
+        'LIABILITY',
+        'Liability Benefit',
+        'LIABILITY_GENERAL',
+        'Daily liability protection coverage.',
+        '["liability","daily","damage"]',
+        TRUE,
+        'INDEMNITY',
+        'CHECK_MANUALLY',
+        'ALLOW_TOPUP'
     )
 ON CONFLICT (coverage_code) DO UPDATE
 SET
@@ -133,45 +193,70 @@ WITH ranked_source AS (
             ORDER BY ps.sale_date DESC NULLS LAST, ps.product_source_id ASC
         ) AS rn
     FROM insurance.product_source ps
-    WHERE ps.coverage_category_code::text IN ('CANCER', 'ACCIDENT')
+    WHERE ps.coverage_category_code::text IN (
+        'CANCER',
+        'DEATH',
+        'SURGERY',
+        'BRAIN_HEART',
+        'ACTUAL_LOSS',
+        'ACCIDENT',
+        'LIABILITY'
+    )
 ),
 selected_source AS (
     SELECT
         rs.product_source_id AS capsule_product_id,
         CASE
             WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 1 THEN 'CAPSULE-CANCER-001'
+            WHEN rs.coverage_category_code = 'DEATH' AND rs.rn = 1 THEN 'CAPSULE-DEATH-001'
+            WHEN rs.coverage_category_code = 'SURGERY' AND rs.rn = 1 THEN 'CAPSULE-SURGERY-001'
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' AND rs.rn = 1 THEN 'CAPSULE-BRAINHEART-001'
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' AND rs.rn = 1 THEN 'CAPSULE-ACTUALLOSS-001'
             WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 1 THEN 'CAPSULE-ACCIDENT-001'
-            WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 2 THEN 'CAPSULE-CANCER-002'
-            WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 2 THEN 'CAPSULE-ACCIDENT-002'
+            WHEN rs.coverage_category_code = 'LIABILITY' AND rs.rn = 1 THEN 'CAPSULE-LIABILITY-001'
         END AS capsule_code,
         rs.product_name,
         rs.coverage_category_code,
         CASE
             WHEN rs.coverage_category_code = 'CANCER' THEN 'CANCER_DIAGNOSIS'
-            ELSE 'ACCIDENT_INJURY'
+            WHEN rs.coverage_category_code = 'DEATH' THEN 'DEATH_GENERAL'
+            WHEN rs.coverage_category_code = 'SURGERY' THEN 'SURGERY_GENERAL'
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' THEN 'BRAIN_HEART_GENERAL'
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' THEN 'ACTUAL_LOSS_GENERAL'
+            WHEN rs.coverage_category_code = 'ACCIDENT' THEN 'ACCIDENT_INJURY'
+            ELSE 'LIABILITY_GENERAL'
         END AS coverage_code,
         CASE
             WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 1 THEN 10000000
-            WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 2 THEN 20000000
+            WHEN rs.coverage_category_code = 'DEATH' AND rs.rn = 1 THEN 30000000
+            WHEN rs.coverage_category_code = 'SURGERY' AND rs.rn = 1 THEN 3000000
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' AND rs.rn = 1 THEN 20000000
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' AND rs.rn = 1 THEN 5000000
             WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 1 THEN 3000000
-            ELSE 5000000
+            ELSE 10000000
         END AS coverage_amount,
         COALESCE(rs.monthly_premium_male, 0) AS monthly_price_male,
         COALESCE(rs.monthly_premium_female, rs.monthly_premium_male, 0) AS monthly_price_female,
         CASE
             WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 1 THEN 'Starter cancer protection capsule.'
-            WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 2 THEN 'Extended cancer protection capsule.'
+            WHEN rs.coverage_category_code = 'DEATH' AND rs.rn = 1 THEN 'General death protection capsule.'
+            WHEN rs.coverage_category_code = 'SURGERY' AND rs.rn = 1 THEN 'General surgery protection capsule.'
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' AND rs.rn = 1 THEN 'Brain/heart focused protection capsule.'
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' AND rs.rn = 1 THEN 'Actual loss medical protection capsule.'
             WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 1 THEN 'Daily accident protection capsule.'
-            ELSE 'Accident protection for everyday mobility.'
+            ELSE 'Daily liability protection capsule.'
         END AS description,
         CASE
             WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 1 THEN 'https://example.com/terms/cancer-starter'
-            WHEN rs.coverage_category_code = 'CANCER' AND rs.rn = 2 THEN 'https://example.com/terms/cancer-plus'
+            WHEN rs.coverage_category_code = 'DEATH' AND rs.rn = 1 THEN 'https://example.com/terms/death-basic'
+            WHEN rs.coverage_category_code = 'SURGERY' AND rs.rn = 1 THEN 'https://example.com/terms/surgery-basic'
+            WHEN rs.coverage_category_code = 'BRAIN_HEART' AND rs.rn = 1 THEN 'https://example.com/terms/brain-heart-basic'
+            WHEN rs.coverage_category_code = 'ACTUAL_LOSS' AND rs.rn = 1 THEN 'https://example.com/terms/actual-loss-basic'
             WHEN rs.coverage_category_code = 'ACCIDENT' AND rs.rn = 1 THEN 'https://example.com/terms/accident-daily'
-            ELSE 'https://example.com/terms/accident-driver'
+            ELSE 'https://example.com/terms/liability-basic'
         END AS terms_uri
     FROM ranked_source rs
-    WHERE rs.rn IN (1, 2)
+    WHERE rs.rn = 1
 )
 INSERT INTO public.capsule_product (
     capsule_product_id,
@@ -339,7 +424,8 @@ JOIN public.usr_user u
 JOIN public.capsule_product cp
     ON cp.capsule_code IN (
         'CAPSULE-CANCER-001',
-        'CAPSULE-CANCER-002'
+        'CAPSULE-BRAINHEART-001',
+        'CAPSULE-ACTUALLOSS-001'
     )
 WHERE u.email = 'demo@example.com'
   AND s.capsule_name = '데모 건강 캡슐'
@@ -380,7 +466,8 @@ JOIN public.usr_user u
 JOIN public.capsule_product cp
     ON cp.capsule_code IN (
         'CAPSULE-ACCIDENT-001',
-        'CAPSULE-ACCIDENT-002'
+        'CAPSULE-LIABILITY-001',
+        'CAPSULE-DEATH-001'
     )
 WHERE u.email = 'demo@example.com'
   AND s.capsule_name = '데모 상해 캡슐'
@@ -421,7 +508,8 @@ JOIN public.usr_user u
 JOIN public.capsule_product cp
     ON cp.capsule_code IN (
         'CAPSULE-CANCER-001',
-        'CAPSULE-ACCIDENT-001'
+        'CAPSULE-SURGERY-001',
+        'CAPSULE-LIABILITY-001'
     )
 WHERE u.email = 'demo@example.com'
   AND s.capsule_name = '데모 혼합 캡슐'

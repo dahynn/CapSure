@@ -14,6 +14,7 @@ import com.capsule.insurance.subscription.dto.NextItemsResponse.SubscriptionItem
 import com.capsule.insurance.subscription.infra.SubscriptionMapper;
 import com.capsule.insurance.subscription.infra.projection.DueSubscriptionBillingProjection;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -72,14 +73,24 @@ public class SubscriptionService {
         Long subscriptionId = subscription.getSubscriptionId();
 
         BigDecimal totalExpectedAmount = BigDecimal.ZERO;
+        int insertedItemCount = 0;
+        int invalidSelectionCount = 0;
 
         // 2. 선택한 상품들을 구독 아이템(CURRENT)으로 추가
         for (Long productSourceId : productSourceIds) {
-            ProductSourceDetailProjection detail = insurerCatalogMapper.findProductSourceDetail(productSourceId, "M");
-            if (detail == null)
+            CapsuleProduct capsuleProduct = insurerCatalogMapper.findCapsuleProductById(productSourceId);
+            if (capsuleProduct == null) {
+                invalidSelectionCount++;
                 continue;
+            }
 
-            BigDecimal monthlyPrice = detail.monthlyPrice() != null ? detail.monthlyPrice() : BigDecimal.ZERO;
+            ProductSourceDetailProjection detail = insurerCatalogMapper.findProductSourceDetail(productSourceId, "M");
+            if (detail == null) {
+                invalidSelectionCount++;
+                continue;
+            }
+
+            BigDecimal monthlyPrice = normalizeMoney(detail.monthlyPrice());
             totalExpectedAmount = totalExpectedAmount.add(monthlyPrice);
 
             subscriptionMapper.insertInitialSubscriptionItem(
@@ -88,15 +99,24 @@ public class SubscriptionService {
                     monthlyPrice,
                     subscription.getCurrentCycleStartAt(),
                     subscription.getCurrentCycleEndAt());
+            insertedItemCount++;
+        }
+
+        if (insertedItemCount == 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "결제 가능한 캡슐 상품이 없습니다. 캡슐 상품을 다시 선택해 주세요.");
+        }
+
+        if (invalidSelectionCount > 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "선택한 상품 중 결제 불가 항목이 포함되어 있습니다. 다시 선택해 주세요.");
         }
 
         // 3. 총 보험료 합산치 업데이트
-        subscriptionMapper.updateSubscriptionExpectedAmount(subscriptionId, totalExpectedAmount);
+        subscriptionMapper.updateSubscriptionExpectedAmount(subscriptionId, normalizeMoney(totalExpectedAmount));
         snapshotCapsule(
                 subscriptionId,
                 userId,
                 resolveCapsuleName(request.capsuleName()),
-                totalExpectedAmount,
+                normalizeMoney(totalExpectedAmount),
                 subscription.getCurrentCycleStartAt(),
                 subscription.getCurrentCycleEndAt());
 
@@ -135,10 +155,7 @@ public class SubscriptionService {
                 subscriptionMapper.deleteNextItemsBySubscriptionId(due.subscriptionId());
             }
 
-            BigDecimal expectedAmount = subscriptionMapper.sumCurrentItemsMonthlyPrice(due.subscriptionId());
-            if (expectedAmount == null) {
-                expectedAmount = BigDecimal.ZERO;
-            }
+            BigDecimal expectedAmount = normalizeMoney(subscriptionMapper.sumCurrentItemsMonthlyPrice(due.subscriptionId()));
 
             subscriptionMapper.updateSubscriptionCycle(
                     due.subscriptionId(),
@@ -162,6 +179,9 @@ public class SubscriptionService {
 
     @Transactional
     public void registerPaymentMethod(Long userId, RegisterPaymentMethodRequest request) {
+        if (!subscriptionMapper.existsUserById(userId)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.");
+        }
         subscriptionMapper.deactivatePaymentMethods(userId);
         subscriptionMapper.insertPaymentMethod(
                 userId,
@@ -220,12 +240,12 @@ public class SubscriptionService {
 
         return new SubscriptionDetailResponse(
                 subscription.getSubscriptionId(),
-                resolveCapsuleName(subscription.getCapsuleName()),
-                subscription.getSubscriptionStatus() != null ? subscription.getSubscriptionStatus().name() : "활성화",
-                dateRange,
-                subscription.getExpectedNextAmount() != null ? subscription.getExpectedNextAmount() : BigDecimal.ZERO,
-                productDtos,
-                coverageDtos);
+                        resolveCapsuleName(subscription.getCapsuleName()),
+                        subscription.getSubscriptionStatus() != null ? subscription.getSubscriptionStatus().name() : "활성화",
+                        dateRange,
+                        normalizeMoney(subscription.getExpectedNextAmount()),
+                        productDtos,
+                        coverageDtos);
     }
 
     /* ── 익월 예약 보험 조회 ── */
@@ -398,7 +418,7 @@ public class SubscriptionService {
                             item.getCapsuleProductId(),
                             p != null ? p.getProductName() : "알 수 없음",
                             "캡슐손해보험",
-                            item.getMonthlyPriceSnapshot() != null ? item.getMonthlyPriceSnapshot().intValue() : 0,
+                            normalizeMoney(item.getMonthlyPriceSnapshot()).intValue(),
                             item.getItemStatus() != null ? item.getItemStatus().name() : "");
                 })
                 .collect(Collectors.toList());
@@ -423,11 +443,18 @@ public class SubscriptionService {
                 .subscriptionId(subscriptionId)
                 .userId(userId)
                 .capsuleName(capsuleName)
-                .totalPremium(totalPremium != null ? totalPremium : BigDecimal.ZERO)
+                .totalPremium(normalizeMoney(totalPremium))
                 .cycleStartedAt(cycleStartedAt)
                 .cycleEndedAt(cycleEndedAt)
                 .build();
         subscriptionMapper.insertCapsuleSnapshot(snapshot);
         subscriptionMapper.insertCapsuleSnapshotItemsFromCurrent(snapshot.getCapsuleSnapshotId(), subscriptionId);
+    }
+
+    private BigDecimal normalizeMoney(BigDecimal value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
+        return value.setScale(0, RoundingMode.HALF_UP);
     }
 }

@@ -121,14 +121,25 @@ public class InsurerService {
 
     public List<CategoryRecommendResponse> getCategoryRecommendations(Long userId) {
         String gender = resolveGender(userId);
-        List<String> onboardingCategories = userAccountMapper.findOnboardingCategoriesByUserId(userId);
-        List<String> categoryCodes = (onboardingCategories == null || onboardingCategories.isEmpty())
-                ? List.of("CANCER", "DEATH", "SURGERY")
-                : onboardingCategories;
+        List<String> categoryCodes = List.of("CANCER", "DEATH", "SURGERY");
+        try {
+            List<String> onboardingCategories = userAccountMapper.findOnboardingCategoriesByUserId(userId);
+            if (onboardingCategories != null && !onboardingCategories.isEmpty()) {
+                categoryCodes = onboardingCategories;
+            }
+        } catch (Exception exception) {
+            log.warn("Failed to load onboarding categories. default categories will be used. userId={}", userId, exception);
+        }
 
-        List<PopularProductProjection> candidates =
-                insurerCatalogMapper.findPopularProductsByCategories(categoryCodes, gender, userId);
-        return mixCategoryRecommendations(candidates, categoryCodes, 5);
+        try {
+            List<PopularProductProjection> candidates =
+                    insurerCatalogMapper.findPopularProductsByCategories(categoryCodes, gender, userId);
+            return mixCategoryRecommendations(candidates, categoryCodes, 5);
+        } catch (Exception exception) {
+            log.warn("Category recommendations query failed. fallback will be used. userId={}, categories={}",
+                    userId, categoryCodes, exception);
+            return buildFallbackCategoryRecommendations(categoryCodes, gender, userId, 5);
+        }
     }
 
     private String resolveGender(Long userId) {
@@ -163,6 +174,54 @@ public class InsurerService {
                 projection.loadedAt(),
                 projection.updatedAt()
         );
+    }
+
+    private List<CategoryRecommendResponse> buildFallbackCategoryRecommendations(
+            List<String> categoryCodes,
+            String gender,
+            Long userId,
+            int maxItems
+    ) {
+        if (categoryCodes == null || categoryCodes.isEmpty()) {
+            return List.of();
+        }
+
+        List<CategoryRecommendResponse> results = new ArrayList<>();
+        for (String categoryCode : categoryCodes) {
+            List<ProductSourceSummaryProjection> products;
+            try {
+                products = insurerCatalogMapper.findProductSourcesByFilter(
+                        categoryCode,
+                        null,
+                        gender,
+                        userId);
+            } catch (Exception exception) {
+                log.warn("Fallback recommendation query failed for category={}", categoryCode, exception);
+                continue;
+            }
+
+            if (products == null || products.isEmpty()) {
+                continue;
+            }
+
+            for (ProductSourceSummaryProjection product : products) {
+                if (results.size() >= maxItems) {
+                    break;
+                }
+                results.add(new CategoryRecommendResponse(
+                        product.productSourceId(),
+                        product.companyName(),
+                        product.productName(),
+                        product.coverageCategoryCode(),
+                        product.monthlyPrice(),
+                        0L));
+            }
+
+            if (results.size() >= maxItems) {
+                break;
+            }
+        }
+        return results;
     }
 
     private List<CategoryRecommendResponse> mixCategoryRecommendations(
