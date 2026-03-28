@@ -51,7 +51,7 @@ const buildColorBalancedRandomOrder = (categories) => {
 const CategorySelectionStep = ({ onComplete }) => {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [displayCategories] = useState(() => buildColorBalancedRandomOrder(CATEGORIES));
-    const MIN_SELECTION = 1;
+    const MIN_SELECTION = 3;
 
     const toggleCategory = (categoryId) => {
         setSelectedCategories(prev => {

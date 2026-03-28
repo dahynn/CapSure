@@ -17,6 +17,7 @@ const ONBOARDING_CATEGORY_CODE_BY_ID = {
     surgery: 'SURGERY',
     injury: 'ACCIDENT',
     liability: 'LIABILITY',
+    etc: 'ETC',
 };
 
 const OnboardingPage = () => {
@@ -49,11 +50,10 @@ const OnboardingPage = () => {
 
         try {
             await authApi.saveOnboardingCategories(categoryCodes);
-        } catch (error) {
-            console.error('온보딩 카테고리 저장 실패', error);
-        } finally {
             localStorage.setItem('onboardingDone', 'true');
             navigate('/home', { replace: true });
+        } catch (error) {
+            console.error('온보딩 카테고리 저장 실패', error);
         }
     };
 

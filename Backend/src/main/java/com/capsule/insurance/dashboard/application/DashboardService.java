@@ -6,7 +6,7 @@ import com.capsule.insurance.dashboard.dto.HomeDashboardResponse;
 import com.capsule.insurance.subscription.infra.SubscriptionMapper;
 import com.capsule.insurance.subscription.infra.projection.RecentSubscriptionHomeProjection;
 import com.capsule.insurance.subscription.infra.projection.RenewalSoonInsuranceProjection;
-import com.capsule.insurance.subscription.infra.projection.SubscriptionCategoryCodeProjection;
+import com.capsule.insurance.subscription.infra.projection.SnapshotCategoryCodeProjection;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -40,15 +40,15 @@ public class DashboardService {
     public HomeDashboardResponse getHomeDashboard(Long userId) {
         List<RecentSubscriptionHomeProjection> recentSubscriptions =
                 subscriptionMapper.findRecentSubscriptionsForHome(userId);
-        List<Long> subscriptionIds = recentSubscriptions.stream()
-                .map(RecentSubscriptionHomeProjection::subscriptionId)
+        List<Long> capsuleSnapshotIds = recentSubscriptions.stream()
+                .map(RecentSubscriptionHomeProjection::capsuleSnapshotId)
                 .toList();
 
-        Map<Long, List<String>> categoriesBySubscriptionId = subscriptionIds.isEmpty()
+        Map<Long, List<String>> categoriesBySnapshotId = capsuleSnapshotIds.isEmpty()
                 ? Map.of()
-                : subscriptionMapper.findCategoryCodesBySubscriptionIds(subscriptionIds).stream()
+                : subscriptionMapper.findCategoryCodesBySnapshotIds(capsuleSnapshotIds).stream()
                         .collect(Collectors.groupingBy(
-                                SubscriptionCategoryCodeProjection::subscriptionId,
+                                SnapshotCategoryCodeProjection::capsuleSnapshotId,
                                 Collectors.mapping(
                                         projection -> toCategoryLabel(projection.coverageCategoryCode()),
                                         Collectors.toList())));
@@ -61,7 +61,7 @@ public class DashboardService {
                         formatDate(subscription.createdAt()),
                         formatDate(subscription.nextBillingAt()),
                         subscription.expectedNextAmount(),
-                        categoriesBySubscriptionId.getOrDefault(subscription.subscriptionId(), List.of())))
+                        categoriesBySnapshotId.getOrDefault(subscription.capsuleSnapshotId(), List.of())))
                 .toList();
 
         List<HomeDashboardResponse.ActiveInsuranceCard> activeInsurances =

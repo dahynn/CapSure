@@ -1,5 +1,8 @@
 package com.capsule.insurance.subscription.application;
 
+import com.capsule.insurance.auth.domain.Gender;
+import com.capsule.insurance.auth.domain.UserAccount;
+import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.insurer.domain.CapsuleProduct;
@@ -41,6 +44,7 @@ public class SubscriptionService {
 
     private final SubscriptionMapper subscriptionMapper;
     private final InsurerCatalogMapper insurerCatalogMapper;
+    private final UserAccountMapper userAccountMapper;
 
     /**
      * 최초 캡슐 구독 생성 (생성일 기준 1개월 보장)
@@ -51,6 +55,7 @@ public class SubscriptionService {
         if (productSourceIds == null || productSourceIds.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "최소 1개 이상의 보험 상품을 선택해 주세요.");
         }
+        String gender = resolveGender(userId);
 
         Instant now = Instant.now();
         LocalDate today = LocalDate.now();
@@ -84,7 +89,7 @@ public class SubscriptionService {
                 continue;
             }
 
-            ProductSourceDetailProjection detail = insurerCatalogMapper.findProductSourceDetail(productSourceId, "M");
+            ProductSourceDetailProjection detail = insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
             if (detail == null) {
                 invalidSelectionCount++;
                 continue;
@@ -206,6 +211,7 @@ public class SubscriptionService {
         if (subscription == null || !subscription.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 캡슐 정보를 찾을 수 없습니다.");
         }
+        String gender = resolveGender(userId);
 
         List<SubscriptionDetailResponse.ProductDto> productDtos = new ArrayList<>();
         List<SubscriptionDetailResponse.CoverageDto> coverageDtos = new ArrayList<>();
@@ -214,7 +220,7 @@ public class SubscriptionService {
             for (SubscriptionItem item : subscription.getCurrentItems()) {
                 ProductSourceDetailProjection productSource = insurerCatalogMapper.findProductSourceDetail(
                         item.getCapsuleProductId(),
-                        "M");
+                        gender);
                 if (productSource != null) {
                     productDtos.add(new SubscriptionDetailResponse.ProductDto(
                             productSource.productSourceId(),
@@ -449,6 +455,18 @@ public class SubscriptionService {
                 .build();
         subscriptionMapper.insertCapsuleSnapshot(snapshot);
         subscriptionMapper.insertCapsuleSnapshotItemsFromCurrent(snapshot.getCapsuleSnapshotId(), subscriptionId);
+    }
+
+    private String resolveGender(Long userId) {
+        try {
+            UserAccount user = userAccountMapper.findByUserId(userId);
+            if (user != null && user.getGender() != null && user.getGender() != Gender.UNKNOWN) {
+                return user.getGender().name();
+            }
+        } catch (Exception ignored) {
+            // fallback
+        }
+        return "M";
     }
 
     private BigDecimal normalizeMoney(BigDecimal value) {

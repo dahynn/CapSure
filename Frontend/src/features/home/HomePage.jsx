@@ -26,7 +26,8 @@ const buildCoverageBadges = (activeCategories = []) => {
 
     return ALL_CATEGORY_CODES.map((code) => {
         const label = CATEGORY_LABEL_MAP[code];
-        const isActive = activeSet.has(code) || activeSet.has(label);
+        const isLiabilityAlias = code === 'LIABILITY' && activeSet.has('배상');
+        const isActive = activeSet.has(code) || activeSet.has(label) || isLiabilityAlias;
         return { name: label, isActive };
     });
 };

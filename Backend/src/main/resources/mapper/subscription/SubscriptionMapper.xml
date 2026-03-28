@@ -64,9 +64,9 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="subscriptionCategoryCodeResultMap" type="com.capsule.insurance.subscription.infra.projection.SubscriptionCategoryCodeProjection">
+    <resultMap id="snapshotCategoryCodeResultMap" type="com.capsule.insurance.subscription.infra.projection.SnapshotCategoryCodeProjection">
         <constructor>
-            <idArg column="subscription_id" javaType="java.lang.Long"/>
+            <idArg column="capsule_snapshot_id" javaType="java.lang.Long"/>
             <arg column="coverage_category_code" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
@@ -323,20 +323,14 @@
         limit 2
     </select>
 
-    <select id="findCategoryCodesBySubscriptionIds" resultMap="subscriptionCategoryCodeResultMap">
+    <select id="findCategoryCodesBySnapshotIds" resultMap="snapshotCategoryCodeResultMap">
         select distinct
-            s.subscription_id,
-            ps.coverage_category_code::text as coverage_category_code
-        from subscription s
-        join subscription_item si
-          on si.subscription_id = s.subscription_id
-         and si.plan_version = 'CURRENT'
-         and si.item_status = 'ACTIVE'
-        join insurance.product_source ps
-          on ps.product_source_id = si.capsule_product_id
-        where s.subscription_id in
-        <foreach collection="subscriptionIds" item="subscriptionId" open="(" separator="," close=")">
-            #{subscriptionId}
+            scsi.capsule_snapshot_id,
+            scsi.coverage_category_code::text as coverage_category_code
+        from subscription_capsule_snapshot_item scsi
+        where scsi.capsule_snapshot_id in
+        <foreach collection="capsuleSnapshotIds" item="capsuleSnapshotId" open="(" separator="," close=")">
+            #{capsuleSnapshotId}
         </foreach>
     </select>
 

@@ -8,7 +8,7 @@ import com.capsule.insurance.subscription.dto.CurrentPaymentMethodResponse;
 import com.capsule.insurance.subscription.infra.projection.DueSubscriptionBillingProjection;
 import com.capsule.insurance.subscription.infra.projection.RecentSubscriptionHomeProjection;
 import com.capsule.insurance.subscription.infra.projection.RenewalSoonInsuranceProjection;
-import com.capsule.insurance.subscription.infra.projection.SubscriptionCategoryCodeProjection;
+import com.capsule.insurance.subscription.infra.projection.SnapshotCategoryCodeProjection;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -54,8 +54,8 @@ public interface SubscriptionMapper {
 
     List<RecentSubscriptionHomeProjection> findRecentSubscriptionsForHome(@Param("userId") Long userId);
 
-    List<SubscriptionCategoryCodeProjection> findCategoryCodesBySubscriptionIds(
-            @Param("subscriptionIds") List<Long> subscriptionIds);
+    List<SnapshotCategoryCodeProjection> findCategoryCodesBySnapshotIds(
+            @Param("capsuleSnapshotIds") List<Long> capsuleSnapshotIds);
 
     List<RenewalSoonInsuranceProjection> findRenewalSoonInsurancesForHome(@Param("userId") Long userId);
 
