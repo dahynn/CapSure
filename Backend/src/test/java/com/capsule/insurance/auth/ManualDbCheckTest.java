@@ -24,6 +24,7 @@ public class ManualDbCheckTest {
                         BigDecimal.valueOf(1000000),
                         "M",
                         1L,
+                        "price_desc",
                         20,
                         0
                 );

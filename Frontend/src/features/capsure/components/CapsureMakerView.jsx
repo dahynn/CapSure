@@ -4,12 +4,13 @@ import { ChevronLeft } from 'lucide-react';
 import CapsureProgress from './maker/CapsureProgress';
 import ProductList from './maker/ProductList';
 import { httpClient } from '@/common/api/httpClient';
-import { getProductSourceId, normalizeProductSource } from '../utils/productSource';
+import { normalizeProductSource } from '../utils/productSource';
 import { CAPSURE_CATEGORY_CODE_BY_LABEL, CAPSURE_CATEGORY_OPTIONS } from '../constants/categories';
 import AppButton from '@/common/components/ui/button/AppButton';
 import PageTransitionLoading from '@/common/components/ui/loading/PageTransitionLoading';
 
 const DEFAULT_PAGE_SIZE = 12;
+const MAKER_PRODUCT_CACHE_KEY = 'capsure-maker-product-cache-v1';
 
 const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveItem, onConfirm, onViewDetail }) => {
     const navigate = useNavigate();
@@ -27,9 +28,34 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     const [totalElements, setTotalElements] = useState(0);
     const [hasNext, setHasNext] = useState(false);
     const [hasPrevious, setHasPrevious] = useState(false);
-    const cacheRef = React.useRef(new Map());
+    const cacheRef = React.useRef((() => {
+        try {
+            const raw = sessionStorage.getItem(MAKER_PRODUCT_CACHE_KEY);
+            if (!raw) {
+                return new Map();
+            }
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return new Map();
+            }
+            return new Map(parsed);
+        } catch {
+            return new Map();
+        }
+    })());
     const abortControllerRef = React.useRef(null);
     const requestIdRef = React.useRef(0);
+
+    const persistCache = React.useCallback(() => {
+        try {
+            sessionStorage.setItem(
+                MAKER_PRODUCT_CACHE_KEY,
+                JSON.stringify(Array.from(cacheRef.current.entries()))
+            );
+        } catch {
+            // ignore storage errors
+        }
+    }, []);
 
     const getActiveCategoryCode = () => {
         const filteredCat = activeCategories.find(c => c !== '전체');
@@ -41,6 +67,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
         if (totalBudget) params.append('budget', totalBudget);
         params.append('page', String(page));
         params.append('size', String(size));
+        params.append('sortBy', sortBy === 'price' ? 'price_asc' : 'price_desc');
 
         const categoryCode = getActiveCategoryCode();
         if (categoryCode) {
@@ -63,10 +90,19 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     const fetchProducts = async () => {
         const queryString = buildQueryString();
         const cacheKey = queryString;
-        const cached = cacheRef.current.get(cacheKey);
+        const cachedEntry = cacheRef.current.get(cacheKey);
+        const cached = cachedEntry?.payload || cachedEntry;
+        const isFreshCache = Boolean(
+            cachedEntry?.cachedAt && (Date.now() - cachedEntry.cachedAt < 45_000)
+        );
 
         if (cached) {
             applyPayload(cached);
+        }
+
+        if (cached && isFreshCache) {
+            setIsFetchingProducts(false);
+            return;
         }
 
         if (abortControllerRef.current) {
@@ -76,7 +112,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
         abortControllerRef.current = controller;
         const requestId = ++requestIdRef.current;
 
-        setIsFetchingProducts(true);
+        setIsFetchingProducts(!cached);
 
         try {
             const response = await httpClient.get(`/insurers/products?${queryString}`, {
@@ -86,7 +122,8 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
 
             if (data.success) {
                 const payload = data.data || {};
-                cacheRef.current.set(cacheKey, payload);
+                cacheRef.current.set(cacheKey, { payload, cachedAt: Date.now() });
+                persistCache();
 
                 if (requestId !== requestIdRef.current) {
                     return;
@@ -116,7 +153,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
 
     React.useEffect(() => {
         fetchProducts();
-    }, [activeCategories, totalBudget, page, size]);
+    }, [activeCategories, totalBudget, page, size, sortBy]);
 
     React.useEffect(() => {
         return () => {
@@ -168,16 +205,10 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     const remainingBudget = totalBudget - currentAmount;
     const progressPercent = Math.min((currentAmount / totalBudget) * 100, 100);
 
-    const filteredProducts = [...products].sort((a, b) => {
-        if (sortBy === 'price') {
-            return a.monthlyPrice - b.monthlyPrice;
-        }
-        if (sortBy === 'popular') {
-            // stable fallback for popular
-            return getProductSourceId(b) - getProductSourceId(a);
-        }
-        return 0;
-    });
+    const handleSortChange = (nextSortBy) => {
+        setPage(0);
+        setSortBy(nextSortBy);
+    };
 
     if (isPreviewLoading) {
         return (
@@ -219,8 +250,8 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
                     onRemoveItem={onRemoveItem}
                     onAddItem={onAddItem}
                     sortBy={sortBy}
-                    setSortBy={setSortBy}
-                    filteredProducts={filteredProducts}
+                    setSortBy={handleSortChange}
+                    filteredProducts={products}
                     isFetchingProducts={isFetchingProducts}
                     onViewDetail={onViewDetail}
                     page={page}

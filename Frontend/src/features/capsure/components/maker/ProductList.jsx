@@ -22,6 +22,40 @@ const ProductList = ({
     onPrevPage,
     onNextPage
 }) => {
+    const renamedTopDuplicates = React.useMemo(() => {
+        const isTargetSort = sortBy === 'popular' || sortBy === 'price';
+
+        if (!isTargetSort) {
+            return new Map();
+        }
+
+        const topTen = (filteredProducts || []).slice(0, 10);
+        const countsByName = topTen.reduce((acc, product) => {
+            const rawName = product.productName || '';
+            acc.set(rawName, (acc.get(rawName) || 0) + 1);
+            return acc;
+        }, new Map());
+        const seenByName = new Map();
+        const renamed = new Map();
+
+        topTen.forEach((product) => {
+            const productId = getProductSourceId(product);
+            const rawName = product.productName || '';
+            const seenCount = (seenByName.get(rawName) || 0) + 1;
+            seenByName.set(rawName, seenCount);
+
+            if ((countsByName.get(rawName) || 0) >= 2) {
+                if (seenCount === 1) {
+                    renamed.set(productId, rawName);
+                } else {
+                    renamed.set(productId, `${rawName} · 플랜 ${seenCount}`);
+                }
+            }
+        });
+
+        return renamed;
+    }, [activeCategories, sortBy, filteredProducts]);
+
     return (
         <>
             {/* Category Filters */}
@@ -97,7 +131,7 @@ const ProductList = ({
 
             {/* Product List */}
             <div className="px-6 flex flex-col gap-4 pb-8">
-                {isFetchingProducts ? (
+                {isFetchingProducts && (!filteredProducts || filteredProducts.length === 0) ? (
                     Array.from({ length: 3 }).map((_, idx) => (
                         <div
                             key={`product-skeleton-${idx}`}
@@ -122,7 +156,7 @@ const ProductList = ({
                 ) : (
                     filteredProducts?.map(product => {
                         const productId = getProductSourceId(product);
-                        const productName = product.productName;
+                        const productName = renamedTopDuplicates.get(productId) || product.productName;
                         const productPrice = Math.floor(product.monthlyPrice);
                         const productCategoryLabel = product.categoryLabel;
                         const isSelected = selectedProducts.some(p => getProductSourceId(p) === productId);
