@@ -2,7 +2,7 @@ package com.capsule.insurance.subscription.dto;
 
 public record ReservedItemResponse(
         Long subscriptionItemId,
-        Long capsuleProductId,
+        Long productSourceId,
         String productName,
         String companyName,
         Integer monthlyPrice,

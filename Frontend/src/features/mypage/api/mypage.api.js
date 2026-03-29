@@ -104,8 +104,8 @@ export const getNextItems = async (subscriptionId) => {
 /**
  * 익월 보험 예약 (추가)
  */
-export const reserveNextItem = async (subscriptionId, capsuleProductId) => {
-    const response = await httpClient.post(`/subscriptions/${subscriptionId}/next-items`, { capsuleProductId });
+export const reserveNextItem = async (subscriptionId, productSourceId) => {
+    const response = await httpClient.post(`/subscriptions/${subscriptionId}/next-items`, { productSourceId });
     return response.data.data;
 };
 

@@ -32,7 +32,7 @@
     <resultMap id="subscriptionItemResultMap" type="com.capsule.insurance.subscription.domain.SubscriptionItem">
         <id property="subscriptionItemId" column="subscription_item_id"/>
         <result property="subscriptionId" column="subscription_id"/>
-        <result property="capsuleProductId" column="capsule_product_id"/>
+        <result property="productSourceId" column="product_source_id"/>
         <result property="planVersion" column="plan_version"/>
         <result property="itemStatus" column="item_status"/>
         <result property="coverageAmountSnapshot" column="coverage_amount_snapshot"/>
@@ -130,7 +130,7 @@
         select
             subscription_item_id,
             subscription_id,
-            capsule_product_id,
+            product_source_id,
             plan_version,
             item_status,
             coverage_amount_snapshot,
@@ -150,7 +150,7 @@
         select
             subscription_item_id,
             subscription_id,
-            capsule_product_id,
+            product_source_id,
             plan_version,
             item_status,
             coverage_amount_snapshot,
@@ -191,7 +191,7 @@
         select
             subscription_item_id,
             subscription_id,
-            capsule_product_id,
+            product_source_id,
             plan_version,
             item_status,
             coverage_amount_snapshot,
@@ -211,7 +211,7 @@
         select count(*) > 0
         from subscription_item
         where subscription_id = #{subscriptionId}
-          and capsule_product_id = #{capsuleProductId}
+          and product_source_id = #{productSourceId}
           and plan_version in ('CURRENT', 'NEXT')
           and item_status not in ('CANCELLED')
     </select>
@@ -220,7 +220,7 @@
     <insert id="insertNextItem">
         insert into subscription_item (
             subscription_id,
-            capsule_product_id,
+            product_source_id,
             plan_version,
             item_status,
             coverage_amount_snapshot,
@@ -230,18 +230,17 @@
         )
         select
             s.subscription_id,
-            cp.capsule_product_id,
+            ps.product_source_id,
             'NEXT',
             'RESERVED_ADD',
-            cp.coverage_amount,
-            case when u.gender = 'F' then cp.monthly_price_female else cp.monthly_price_male end,
+            99999999, -- TODO: 실제 보장 금액 스냅샷 로직 필요
+            case when u.gender = 'F' then ps.monthly_premium_female else ps.monthly_premium_male end,
             now(),
             now()
         from subscription s
         join usr_user u on u.user_id = s.user_id
-        cross join capsule_product cp
+        join insurance.product_source ps on ps.product_source_id = #{productSourceId}
         where s.subscription_id = #{subscriptionId}
-          and cp.capsule_product_id = #{capsuleProductId}
     </insert>
 
     <!-- ── 신규: NEXT 아이템 삭제 ── -->
@@ -299,7 +298,7 @@
     <insert id="insertInitialSubscriptionItem">
         insert into subscription_item (
             subscription_id,
-            capsule_product_id,
+            product_source_id,
             plan_version,
             item_status,
             coverage_amount_snapshot,
@@ -321,7 +320,7 @@
             now(),
             now()
         from insurance.product_source
-        where product_source_id = #{capsuleProductId}
+        where product_source_id = #{productSourceId}
     </insert>
 
     <!-- ── 신규: 구독 updated_at 갱신 ── -->
@@ -372,7 +371,7 @@
          and si.plan_version = 'CURRENT'
          and si.item_status = 'ACTIVE'
         join insurance.product_source ps
-          on ps.product_source_id = si.capsule_product_id
+          on ps.product_source_id = si.product_source_id
         where s.user_id = #{userId}
           and s.subscription_status = 'ACTIVE'
         order by s.next_billing_at asc, si.subscription_item_id asc
@@ -513,7 +512,7 @@
             now()
         from subscription_item si
         join insurance.product_source ps
-          on ps.product_source_id = si.capsule_product_id
+          on ps.product_source_id = si.product_source_id
         where si.subscription_id = #{subscriptionId}
           and si.plan_version = 'CURRENT'
           and si.item_status = 'ACTIVE'

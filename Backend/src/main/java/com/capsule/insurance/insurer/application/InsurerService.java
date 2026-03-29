@@ -171,6 +171,7 @@ public class InsurerService {
                 projection.coverageCategoryCode(),
                 projection.coverageCode(),
                 projection.monthlyPrice(),
+                projection.termsUri(),
                 projection.loadedAt(),
                 projection.updatedAt()
         );

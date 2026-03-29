@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.capsule.insurance.common.exception.BusinessException;
-import com.capsule.insurance.insurer.domain.CapsuleProduct;
 import com.capsule.insurance.insurer.domain.CoverageCategory;
 import com.capsule.insurance.insurer.domain.InsurerSector;
 import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
@@ -44,7 +43,7 @@ class SubscriptionServiceTest {
         Long subId = 1L;
 
         SubscriptionItem item1 = SubscriptionItem.builder()
-                .capsuleProductId(101L)
+                .productSourceId(101L)
                 .build();
         
         Subscription subscription = Subscription.builder()
@@ -131,24 +130,30 @@ class SubscriptionServiceTest {
 
         SubscriptionItem currentItem = SubscriptionItem.builder()
                 .subscriptionItemId(10L)
-                .capsuleProductId(101L)
+                .productSourceId(101L)
                 .monthlyPriceSnapshot(BigDecimal.valueOf(10000))
                 .build();
 
         SubscriptionItem nextItem = SubscriptionItem.builder()
                 .subscriptionItemId(20L)
-                .capsuleProductId(202L)
+                .productSourceId(202L)
                 .monthlyPriceSnapshot(BigDecimal.valueOf(5000))
                 .build();
 
-        CapsuleProduct cp1 = CapsuleProduct.builder().capsuleProductId(101L).productName("ProductA").build();
-        CapsuleProduct cp2 = CapsuleProduct.builder().capsuleProductId(202L).productName("ProductB").build();
+        ProductSourceDetailProjection cp1 = new ProductSourceDetailProjection(
+                101L, "A보험", "ProductA", InsurerSector.NONLIFE, null, null, null, null, null, null, null, null, null,
+                CoverageCategory.CANCER.name(), "CANCER_DIAGNOSIS", BigDecimal.valueOf(10000), null, null, null, null, null, null, null, null
+        );
+        ProductSourceDetailProjection cp2 = new ProductSourceDetailProjection(
+                202L, "B보험", "ProductB", InsurerSector.NONLIFE, null, null, null, null, null, null, null, null, null,
+                CoverageCategory.ACCIDENT.name(), "ACCIDENT_INJURY", BigDecimal.valueOf(5000), null, null, null, null, null, null, null, null
+        );
 
         when(subscriptionMapper.findSubscriptionById(subId)).thenReturn(sub);
         when(subscriptionMapper.findCurrentItemsBySubscriptionId(subId)).thenReturn(List.of(currentItem));
         when(subscriptionMapper.findNextItemsBySubscriptionId(subId)).thenReturn(List.of(nextItem));
-        when(insurerCatalogMapper.findCapsuleProductById(101L)).thenReturn(cp1);
-        when(insurerCatalogMapper.findCapsuleProductById(202L)).thenReturn(cp2);
+        when(insurerCatalogMapper.findProductSourceDetail(101L, "M")).thenReturn(cp1);
+        when(insurerCatalogMapper.findProductSourceDetail(202L, "M")).thenReturn(cp2);
 
         var result = subscriptionService.getNextItems(userId, subId);
 
@@ -187,21 +192,20 @@ class SubscriptionServiceTest {
         Long cpId = 202L;
 
         Subscription sub = Subscription.builder().subscriptionId(subId).userId(userId).build();
-        CapsuleProduct cp = CapsuleProduct.builder()
-                .capsuleProductId(cpId)
-                .productName("ProductB")
-                .monthlyPriceMale(BigDecimal.valueOf(5000))
-                .build();
-        SubscriptionItem nextItem = SubscriptionItem.builder().subscriptionItemId(99L).capsuleProductId(cpId).build();
+        ProductSourceDetailProjection cp = new ProductSourceDetailProjection(
+                cpId, "B보험", "ProductB", InsurerSector.NONLIFE, null, null, null, null, null, null, null, null, null,
+                CoverageCategory.ACCIDENT.name(), "ACCIDENT_INJURY", BigDecimal.valueOf(5000), null, null, null, null, null, null, null, null
+        );
+        SubscriptionItem nextItem = SubscriptionItem.builder().subscriptionItemId(99L).productSourceId(cpId).build();
 
         when(subscriptionMapper.findSubscriptionById(subId)).thenReturn(sub);
-        when(insurerCatalogMapper.findCapsuleProductById(cpId)).thenReturn(cp);
+        when(insurerCatalogMapper.findProductSourceDetail(cpId, "M")).thenReturn(cp);
         when(subscriptionMapper.existsProductInCurrentOrNext(subId, cpId)).thenReturn(false);
         when(subscriptionMapper.findNextItemsBySubscriptionId(subId)).thenReturn(List.of(nextItem));
 
         var result = subscriptionService.reserveNextItem(userId, subId, cpId);
 
-        assertThat(result.capsuleProductId()).isEqualTo(cpId);
+        assertThat(result.productSourceId()).isEqualTo(cpId);
         assertThat(result.productName()).isEqualTo("ProductB");
         assertThat(result.monthlyPrice()).isEqualTo(5000);
     }
@@ -214,10 +218,13 @@ class SubscriptionServiceTest {
         Long cpId = 202L;
 
         Subscription sub = Subscription.builder().subscriptionId(subId).userId(userId).build();
-        CapsuleProduct cp = CapsuleProduct.builder().capsuleProductId(cpId).build();
+        ProductSourceDetailProjection cp = new ProductSourceDetailProjection(
+                cpId, "B보험", "ProductB", InsurerSector.NONLIFE, null, null, null, null, null, null, null, null, null,
+                CoverageCategory.ACCIDENT.name(), "ACCIDENT_INJURY", BigDecimal.valueOf(5000), null, null, null, null, null, null, null, null
+        );
 
         when(subscriptionMapper.findSubscriptionById(subId)).thenReturn(sub);
-        when(insurerCatalogMapper.findCapsuleProductById(cpId)).thenReturn(cp);
+        when(insurerCatalogMapper.findProductSourceDetail(cpId, "M")).thenReturn(cp);
         when(subscriptionMapper.existsProductInCurrentOrNext(subId, cpId)).thenReturn(true);
 
         assertThatThrownBy(() -> subscriptionService.reserveNextItem(userId, subId, cpId))

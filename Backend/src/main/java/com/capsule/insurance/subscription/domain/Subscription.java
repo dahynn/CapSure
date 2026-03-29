@@ -38,23 +38,23 @@ public class Subscription {
     @Builder.Default
     private List<SubscriptionItem> nextItems = new ArrayList<>();
 
-    public boolean containsCapsuleProduct(Long capsuleProductId) {
-        if (capsuleProductId == null) {
+    public boolean containsProductSource(Long productSourceId) {
+        if (productSourceId == null) {
             return false;
         }
-        return containsCapsuleProduct(currentItems, capsuleProductId)
-                || containsCapsuleProduct(nextItems, capsuleProductId);
+        return containsProductSource(currentItems, productSourceId)
+                || containsProductSource(nextItems, productSourceId);
     }
 
     public boolean hasReservedChanges() {
         return nextItems != null && !nextItems.isEmpty();
     }
 
-    private static boolean containsCapsuleProduct(List<SubscriptionItem> items, Long capsuleProductId) {
+    private static boolean containsProductSource(List<SubscriptionItem> items, Long productSourceId) {
         if (items == null) {
             return false;
         }
         return items.stream()
-                .anyMatch(item -> capsuleProductId.equals(item.getCapsuleProductId()));
+                .anyMatch(item -> productSourceId.equals(item.getProductSourceId()));
     }
 }

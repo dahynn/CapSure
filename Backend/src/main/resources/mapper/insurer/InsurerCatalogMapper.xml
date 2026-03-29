@@ -29,6 +29,7 @@
             <arg column="coverage_code" javaType="java.lang.String"/>
             <arg column="monthly_price" javaType="java.math.BigDecimal"/>
             <arg column="price_index_text" javaType="java.lang.String"/>
+            <arg column="terms_uri" javaType="java.lang.String"/>
             <arg column="loaded_at" javaType="java.time.Instant"/>
             <arg column="updated_at" javaType="java.time.Instant"/>
         </constructor>
@@ -76,7 +77,7 @@
     </resultMap>
 
     <resultMap id="capsuleProductResultMap" type="com.capsule.insurance.insurer.domain.CapsuleProduct">
-        <id property="capsuleProductId" column="capsule_product_id"/>
+        <id property="productSourceId" column="product_source_id"/>
         <result property="productName" column="product_name"/>
         <result property="companyName" column="company_name"/>
         <result property="coverageCategory" column="coverage_category_code"/>
@@ -115,7 +116,7 @@
     <!-- TODO: 이 파트에서 HIDDEN/DISCONTINUED 상품을 어떤 조회에서 노출할지라는 논의점이 있는데, 우선 AVAILABLE 상품만 목록 조회하도록 구현했음. -->
     <select id="findAvailableCapsuleProducts" resultMap="capsuleProductResultMap">
         select
-            cp.capsule_product_id,
+            cp.capsule_product_id as product_source_id,
             cp.capsule_code,
             cp.product_name,
             ps.company_name,
@@ -143,7 +144,7 @@
 
     <select id="findCapsuleProductById" resultMap="capsuleProductResultMap">
         select
-            cp.capsule_product_id,
+            cp.capsule_product_id as product_source_id,
             cp.capsule_code,
             cp.product_name,
             ps.company_name,
@@ -165,54 +166,126 @@
         from capsule_product cp
         left join insurance.product_source ps
           on ps.product_source_id = cp.capsule_product_id
-        where cp.capsule_product_id = #{capsuleProductId}
+        where cp.capsule_product_id = #{productSourceId}
     </select>
+
+    <insert id="upsertCapsuleProductFromProductSource">
+        INSERT INTO public.capsule_product (
+            capsule_product_id,
+            capsule_code,
+            product_name,
+            coverage_category_code,
+            coverage_code,
+            coverage_amount,
+            coverage_unit,
+            monthly_price_male,
+            monthly_price_female,
+            min_retention_days,
+            sale_status,
+            is_duplicate_check_target,
+            terms_uri,
+            terms_version,
+            description
+        )
+        SELECT
+            ps.product_source_id,
+            'AUTO-PS-' || ps.product_source_id::text,
+            ps.product_name,
+            ps.coverage_category_code::text::coverage_category_code_enum,
+            CASE
+                WHEN rc.coverage_code IS NOT NULL THEN ps.coverage_code
+                WHEN ps.coverage_category_code::text = 'CANCER' THEN 'CANCER_DIAGNOSIS'
+                WHEN ps.coverage_category_code::text = 'DEATH' THEN 'DEATH_GENERAL'
+                WHEN ps.coverage_category_code::text = 'SURGERY' THEN 'SURGERY_GENERAL'
+                WHEN ps.coverage_category_code::text = 'BRAIN_HEART' THEN 'BRAIN_HEART_GENERAL'
+                WHEN ps.coverage_category_code::text = 'ACTUAL_LOSS' THEN 'ACTUAL_LOSS_GENERAL'
+                WHEN ps.coverage_category_code::text = 'ACCIDENT' THEN 'ACCIDENT_INJURY'
+                ELSE 'LIABILITY_GENERAL'
+            END AS coverage_code,
+            1000000::numeric(18,2),
+            'KRW',
+            COALESCE(ps.monthly_premium_male, 0),
+            COALESCE(ps.monthly_premium_female, ps.monthly_premium_male, 0),
+            30,
+            'AVAILABLE',
+            TRUE,
+            CASE
+                WHEN ps.product_name = '무배당 삼성화재 펫보험 의기냥냥(2601.2)' THEN '/terms/samsung-fire-pet/index.html'
+                ELSE NULL
+            END AS terms_uri,
+            'auto-v1',
+            'Auto-synced from insurance.product_source for subscription flow.'
+        FROM insurance.product_source ps
+        LEFT JOIN public.ref_coverage rc
+          ON rc.coverage_code = ps.coverage_code
+        WHERE ps.product_source_id = #{productSourceId}
+        ON CONFLICT (capsule_product_id) DO NOTHING
+    </insert>
 
     <select id="findProductSourcesByFilter" resultMap="productSourceSummaryProjectionResultMap">
         SELECT
-            product_source_id,
-            company_name,
-            product_name,
-            insurer_sector::text as insurer_sector,
-            coverage_category_code::text as coverage_category_code,
-            coverage_code,
+            ps.product_source_id,
+            ps.company_name,
+            ps.product_name,
+            ps.insurer_sector::text as insurer_sector,
+            ps.coverage_category_code::text as coverage_category_code,
+            ps.coverage_code,
             <choose>
-                <when test="gender == 'M'.toString()">round(monthly_premium_male, 0)</when>
-                <when test="gender == 'F'.toString()">round(monthly_premium_female, 0)</when>
+                <when test="gender == 'M'.toString()">round(ps.monthly_premium_male, 0)</when>
+                <when test="gender == 'F'.toString()">round(ps.monthly_premium_female, 0)</when>
                 <otherwise>NULL</otherwise>
             </choose> AS monthly_price,
             <choose>
-                <when test="gender == 'M'.toString()">price_index_male</when>
-                <when test="gender == 'F'.toString()">price_index_female</when>
+                <when test="gender == 'M'.toString()">ps.price_index_male</when>
+                <when test="gender == 'F'.toString()">ps.price_index_female</when>
                 <otherwise>NULL</otherwise>
             </choose> AS price_index_text,
-            loaded_at,
-            updated_at
+            COALESCE(
+                cp.terms_uri,
+                CASE
+                    WHEN ps.product_name = '무배당 삼성화재 펫보험 의기냥냥(2601.2)' THEN '/terms/samsung-fire-pet/index.html'
+                    ELSE NULL
+                END
+            ) AS terms_uri,
+            ps.loaded_at,
+            ps.updated_at
         FROM insurance.product_source ps
+        LEFT JOIN public.capsule_product cp
+          ON cp.capsule_product_id = ps.product_source_id
+         AND cp.sale_status = 'AVAILABLE'
         WHERE 1=1
-        AND EXISTS (
-            SELECT 1
-            FROM public.capsule_product cp
-            WHERE cp.capsule_product_id = ps.product_source_id
-        )
+        <if test="userId != null">
+            AND NOT EXISTS (
+                SELECT 1
+                FROM public.subscription_item si
+                JOIN public.subscription s
+                  ON s.subscription_id = si.subscription_id
+                WHERE s.user_id = #{userId}
+                  AND s.subscription_status = 'ACTIVE'
+                  AND si.plan_version = 'CURRENT'
+                  AND si.item_status = 'ACTIVE'
+                  AND si.product_source_id = ps.product_source_id
+                  AND coalesce(si.effective_end_at, TIMESTAMPTZ '9999-12-31 00:00:00+00') &gt; now()
+            )
+        </if>
         <if test="category != null and category != ''">
-            AND coverage_category_code = #{category}::insurance.coverage_category_code
+            AND ps.coverage_category_code = #{category}::insurance.coverage_category_code
         </if>
         <choose>
             <when test="gender == 'M'.toString()">
-                AND (monthly_premium_male IS NOT NULL AND monthly_premium_male > 0)
+                AND (ps.monthly_premium_male IS NOT NULL AND ps.monthly_premium_male > 0)
                 <if test="maxPrice != null">
-                    AND monthly_premium_male &lt;= #{maxPrice}
+                    AND ps.monthly_premium_male &lt;= #{maxPrice}
                 </if>
             </when>
             <when test="gender == 'F'.toString()">
-                AND (monthly_premium_female IS NOT NULL AND monthly_premium_female > 0)
+                AND (ps.monthly_premium_female IS NOT NULL AND ps.monthly_premium_female > 0)
                 <if test="maxPrice != null">
-                    AND monthly_premium_female &lt;= #{maxPrice}
+                    AND ps.monthly_premium_female &lt;= #{maxPrice}
                 </if>
             </when>
         </choose>
-        ORDER BY product_source_id ASC
+        ORDER BY ps.product_source_id ASC
     </select>
     <select id="findProductSourceDetail" resultMap="productSourceDetailProjectionResultMap">
         SELECT
@@ -263,7 +336,7 @@
                 count(si.subscription_item_id) as subscriber_count
             from insurance.product_source ps
             left join public.subscription_item si
-              on si.capsule_product_id = ps.product_source_id
+              on si.product_source_id = ps.product_source_id
              and si.plan_version = 'CURRENT'
              and si.item_status = 'ACTIVE'
              and coalesce(si.effective_end_at, TIMESTAMPTZ '9999-12-31 00:00:00+00') &gt; now()

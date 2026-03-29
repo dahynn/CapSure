@@ -17,7 +17,7 @@ public class SubscriptionItem {
 
     private Long subscriptionItemId;
     private Long subscriptionId;
-    private Long capsuleProductId;
+    private Long productSourceId;
     private PlanVersion planVersion;
     private SubscriptionItemStatus itemStatus;
     private BigDecimal coverageAmountSnapshot;

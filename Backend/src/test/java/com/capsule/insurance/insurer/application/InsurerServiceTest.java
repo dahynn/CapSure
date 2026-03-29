@@ -72,6 +72,8 @@ class InsurerServiceTest {
                 "COV001",
                 BigDecimal.valueOf(15000),
                 null,
+                "/terms/mock-product.pdf",
+                null,
                 null
         );
 
@@ -89,6 +91,7 @@ class InsurerServiceTest {
         assertThat(results).hasSize(1);
         assertThat(results.get(0).productName()).isEqualTo("Mock Product");
         assertThat(results.get(0).monthlyPrice()).isEqualTo(BigDecimal.valueOf(15000));
+        assertThat(results.get(0).termsUri()).isEqualTo("/terms/mock-product.pdf");
     }
 
     @Test
@@ -110,6 +113,8 @@ class InsurerServiceTest {
                 "COV002",
                 BigDecimal.valueOf(12000),
                 null,
+                "/terms/female-product.pdf",
+                null,
                 null
         );
 
@@ -125,6 +130,7 @@ class InsurerServiceTest {
         assertThat(results).hasSize(1);
         assertThat(results.get(0).productName()).isEqualTo("Female Product");
         assertThat(results.get(0).monthlyPrice()).isEqualTo(BigDecimal.valueOf(12000));
+        assertThat(results.get(0).termsUri()).isEqualTo("/terms/female-product.pdf");
     }
 
     @Test

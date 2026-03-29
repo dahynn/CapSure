@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class CapsuleProduct {
 
-    private Long capsuleProductId;
+    private Long productSourceId;
     private String productName;
     private String companyName;
     private CoverageCategory coverageCategory;

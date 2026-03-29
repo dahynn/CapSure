@@ -5,7 +5,6 @@ import com.capsule.insurance.auth.domain.UserAccount;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
-import com.capsule.insurance.insurer.domain.CapsuleProduct;
 import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
 import com.capsule.insurance.insurer.infra.projection.ProductSourceDetailProjection;
 import com.capsule.insurance.subscription.domain.Subscription;
@@ -85,12 +84,6 @@ public class SubscriptionService {
 
         // 2. 선택한 상품들을 구독 아이템(CURRENT)으로 추가
         for (Long productSourceId : productSourceIds) {
-            CapsuleProduct capsuleProduct = insurerCatalogMapper.findCapsuleProductById(productSourceId);
-            if (capsuleProduct == null) {
-                invalidSelectionCount++;
-                continue;
-            }
-
             ProductSourceDetailProjection detail = insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
             if (detail == null) {
                 invalidSelectionCount++;
@@ -296,7 +289,7 @@ public class SubscriptionService {
         if (subscription.getCurrentItems() != null) {
             for (SubscriptionItem item : subscription.getCurrentItems()) {
                 ProductSourceDetailProjection productSource = insurerCatalogMapper.findProductSourceDetail(
-                        item.getCapsuleProductId(),
+                        item.getProductSourceId(),
                         gender);
                 if (productSource != null) {
                     productDtos.add(new SubscriptionDetailResponse.ProductDto(
@@ -350,22 +343,23 @@ public class SubscriptionService {
     }
 
     /* ── 익월 보험 예약 추가 ── */
-    public ReservedItemResponse reserveNextItem(Long userId, Long subscriptionId, Long capsuleProductId) {
+    public ReservedItemResponse reserveNextItem(Long userId, Long subscriptionId, Long productSourceId) {
         Subscription subscription = subscriptionMapper.findSubscriptionById(subscriptionId);
         if (subscription == null || !subscription.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 구독 정보를 찾을 수 없습니다.");
         }
 
-        CapsuleProduct product = insurerCatalogMapper.findCapsuleProductById(capsuleProductId);
+        String gender = resolveGender(userId);
+        ProductSourceDetailProjection product = insurerCatalogMapper.findProductSourceDetail(productSourceId, gender);
         if (product == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 캡슐 상품을 찾을 수 없습니다.");
         }
 
-        if (subscriptionMapper.existsProductInCurrentOrNext(subscriptionId, capsuleProductId)) {
+        if (subscriptionMapper.existsProductInCurrentOrNext(subscriptionId, productSourceId)) {
             throw new BusinessException(ErrorCode.DUPLICATED_RESOURCE, "이미 예약된 상품입니다.");
         }
 
-        subscriptionMapper.insertNextItem(subscriptionId, capsuleProductId);
+        subscriptionMapper.insertNextItem(subscriptionId, productSourceId);
         subscriptionMapper.updateSubscriptionUpdatedAt(subscriptionId);
 
         // 방금 삽입된 아이템 조회 (최신순)
@@ -374,10 +368,10 @@ public class SubscriptionService {
 
         return new ReservedItemResponse(
                 inserted != null ? inserted.getSubscriptionItemId() : null,
-                product.getCapsuleProductId(),
-                product.getProductName(),
-                "캡슐손해보험",
-                product.getMonthlyPriceMale() != null ? product.getMonthlyPriceMale().intValue() : 0,
+                product.productSourceId(),
+                product.productName(),
+                product.companyName(),
+                normalizeMoney(product.monthlyPrice()).intValue(),
                 SubscriptionItemStatus.RESERVED_ADD.name());
     }
 
@@ -537,12 +531,11 @@ public class SubscriptionService {
 
     private List<String> resolveCapsuleCategories(Subscription subscription) {
         return safeItems(subscription.getCurrentItems()).stream()
-                .map(SubscriptionItem::getCapsuleProductId)
-                .map(insurerCatalogMapper::findCapsuleProductById)
+                .map(SubscriptionItem::getProductSourceId)
+                .map(this::findProductSourceDetailForRead)
                 .filter(Objects::nonNull)
-                .map(CapsuleProduct::getCoverageCategory)
-                .filter(Objects::nonNull)
-                .map(Enum::name)
+                .map(ProductSourceDetailProjection::coverageCategoryCode)
+                .filter(code -> code != null && !code.isBlank())
                 .map(this::toCategoryLabel)
                 .collect(Collectors.collectingAndThen(
                         Collectors.toCollection(LinkedHashSet::new),
@@ -576,12 +569,12 @@ public class SubscriptionService {
             Subscription subscription,
             SubscriptionItem item
     ) {
-        CapsuleProduct product = insurerCatalogMapper.findCapsuleProductById(item.getCapsuleProductId());
+        ProductSourceDetailProjection product = findProductSourceDetailForRead(item.getProductSourceId());
         return new MonthlyBillingResponse.MonthlyBillingItem(
                 subscription.getSubscriptionId(),
                 resolveCapsuleName(subscription.getCapsuleName()),
                 item.getSubscriptionItemId(),
-                item.getCapsuleProductId(),
+                item.getProductSourceId(),
                 resolveProductName(product),
                 normalizeMoney(item.getMonthlyPriceSnapshot()),
                 item.getItemStatus() != null ? item.getItemStatus().name() : ""
@@ -609,12 +602,12 @@ public class SubscriptionService {
             Subscription subscription,
             SubscriptionItem item
     ) {
-        CapsuleProduct product = insurerCatalogMapper.findCapsuleProductById(item.getCapsuleProductId());
+        ProductSourceDetailProjection product = findProductSourceDetailForRead(item.getProductSourceId());
         return new ScheduleBillingResponse.ScheduleBillingItem(
                 subscription.getSubscriptionId(),
                 resolveCapsuleName(subscription.getCapsuleName()),
                 item.getSubscriptionItemId(),
-                item.getCapsuleProductId(),
+                item.getProductSourceId(),
                 resolveProductName(product),
                 normalizeMoney(item.getMonthlyPriceSnapshot()),
                 item.getItemStatus() != null ? item.getItemStatus().name() : ""
@@ -642,11 +635,11 @@ public class SubscriptionService {
                 .toList();
     }
 
-    private String resolveProductName(CapsuleProduct product) {
-        if (product == null || product.getProductName() == null || product.getProductName().isBlank()) {
+    private String resolveProductName(ProductSourceDetailProjection product) {
+        if (product == null || product.productName() == null || product.productName().isBlank()) {
             return "상품 정보 없음";
         }
-        return product.getProductName();
+        return product.productName();
     }
 
     private List<SubscriptionItemDto> toItemDtos(List<SubscriptionItem> items) {
@@ -654,16 +647,23 @@ public class SubscriptionService {
             return List.of();
         return items.stream()
                 .map(item -> {
-                    CapsuleProduct p = insurerCatalogMapper.findCapsuleProductById(item.getCapsuleProductId());
+                    ProductSourceDetailProjection p = findProductSourceDetailForRead(item.getProductSourceId());
                     return new SubscriptionItemDto(
                             item.getSubscriptionItemId(),
-                            item.getCapsuleProductId(),
-                            p != null ? p.getProductName() : "알 수 없음",
-                            "캡슐손해보험",
+                            item.getProductSourceId(),
+                            p != null ? p.productName() : "알 수 없음",
+                            p != null ? p.companyName() : "알 수 없음",
                             normalizeMoney(item.getMonthlyPriceSnapshot()).intValue(),
                             item.getItemStatus() != null ? item.getItemStatus().name() : "");
                 })
                 .collect(Collectors.toList());
+    }
+
+    private ProductSourceDetailProjection findProductSourceDetailForRead(Long productSourceId) {
+        if (productSourceId == null) {
+            return null;
+        }
+        return insurerCatalogMapper.findProductSourceDetail(productSourceId, "M");
     }
 
     private String resolveCapsuleName(String capsuleName) {

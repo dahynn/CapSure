@@ -16,7 +16,9 @@ public interface InsurerCatalogMapper {
 
     List<CapsuleProduct> findAvailableCapsuleProducts();
 
-    CapsuleProduct findCapsuleProductById(@Param("capsuleProductId") Long capsuleProductId);
+    CapsuleProduct findCapsuleProductById(@Param("productSourceId") Long productSourceId);
+
+    void upsertCapsuleProductFromProductSource(@Param("productSourceId") Long productSourceId);
 
     List<ProductSourceSummaryProjection> findProductSourcesByFilter(
             @Param("category") String category,

@@ -443,7 +443,7 @@ WHERE u.email = 'demo@example.com'
 
 INSERT INTO public.subscription_item (
     subscription_id,
-    capsule_product_id,
+    product_source_id,
     plan_version,
     item_status,
     coverage_amount_snapshot,
@@ -473,7 +473,7 @@ JOIN public.capsule_product cp
     )
 WHERE u.email = 'demo@example.com'
   AND s.capsule_name = '봄 준비 캡슐'
-ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
+ON CONFLICT (subscription_id, product_source_id, plan_version) DO UPDATE
 SET
     item_status = EXCLUDED.item_status,
     coverage_amount_snapshot = EXCLUDED.coverage_amount_snapshot,
@@ -485,7 +485,7 @@ SET
 
 INSERT INTO public.subscription_item (
     subscription_id,
-    capsule_product_id,
+    product_source_id,
     plan_version,
     item_status,
     coverage_amount_snapshot,
@@ -515,7 +515,7 @@ JOIN public.capsule_product cp
     )
 WHERE u.email = 'demo@example.com'
   AND s.capsule_name = '골프 케어 캡슐'
-ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
+ON CONFLICT (subscription_id, product_source_id, plan_version) DO UPDATE
 SET
     item_status = EXCLUDED.item_status,
     coverage_amount_snapshot = EXCLUDED.coverage_amount_snapshot,
@@ -527,7 +527,7 @@ SET
 
 INSERT INTO public.subscription_item (
     subscription_id,
-    capsule_product_id,
+    product_source_id,
     plan_version,
     item_status,
     coverage_amount_snapshot,
@@ -557,7 +557,7 @@ JOIN public.capsule_product cp
     )
 WHERE u.email = 'demo@example.com'
   AND s.capsule_name = '출퇴근 안심 캡슐'
-ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
+ON CONFLICT (subscription_id, product_source_id, plan_version) DO UPDATE
 SET
     item_status = EXCLUDED.item_status,
     coverage_amount_snapshot = EXCLUDED.coverage_amount_snapshot,
@@ -569,7 +569,7 @@ SET
 
 INSERT INTO public.subscription_item (
     subscription_id,
-    capsule_product_id,
+    product_source_id,
     plan_version,
     item_status,
     coverage_amount_snapshot,
@@ -599,7 +599,7 @@ JOIN public.capsule_product cp
     )
 WHERE u.email = 'demo@example.com'
   AND s.capsule_name = '주말 드라이브 캡슐'
-ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
+ON CONFLICT (subscription_id, product_source_id, plan_version) DO UPDATE
 SET
     item_status = EXCLUDED.item_status,
     coverage_amount_snapshot = EXCLUDED.coverage_amount_snapshot,
@@ -690,7 +690,7 @@ JOIN public.subscription_item si
    AND si.plan_version = 'CURRENT'
    AND si.item_status = 'ACTIVE'
 JOIN insurance.product_source ps
-    ON ps.product_source_id = si.capsule_product_id
+    ON ps.product_source_id = si.product_source_id
 WHERE NOT EXISTS (
     SELECT 1
     FROM public.subscription_capsule_snapshot_item scsi

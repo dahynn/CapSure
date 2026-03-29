@@ -121,7 +121,7 @@ public class SubscriptionController {
             @Valid @RequestBody ReserveNextItemRequest request
     ) {
         Long userId = resolveUserId(userDetails);
-        return ApiResponse.success(subscriptionService.reserveNextItem(userId, subscriptionId, request.capsuleProductId()));
+        return ApiResponse.success(subscriptionService.reserveNextItem(userId, subscriptionId, request.productSourceId()));
     }
 
     @DeleteMapping("/{subscriptionId}/next-items/{subscriptionItemId}")
