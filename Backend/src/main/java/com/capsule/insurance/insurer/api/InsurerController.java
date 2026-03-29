@@ -1,6 +1,8 @@
 // #Demo Setting
 package com.capsule.insurance.insurer.api;
 
+import com.capsule.insurance.common.exception.BusinessException;
+import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.common.response.ApiResponse;
 import com.capsule.insurance.insurer.application.FixedTermsPdfSummaryService;
 import com.capsule.insurance.insurer.application.InsurerService;
@@ -41,12 +43,13 @@ public class InsurerController {
     public ApiResponse<ProductSummaryPageResponse> getProducts(
             @org.springframework.web.bind.annotation.RequestParam(required = false) String category,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Integer budget,
+            @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "popular") String sortBy,
             @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "0") Integer page,
             @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "12") Integer size,
             org.springframework.security.core.Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        return ApiResponse.success(insurerService.getProducts(category, budget, page, size, userId));
+        return ApiResponse.success(insurerService.getProducts(category, budget, sortBy, page, size, userId));
     }
 
     @GetMapping("/products/{id}")
@@ -68,12 +71,12 @@ public class InsurerController {
 
     private Long getUserId(org.springframework.security.core.Authentication authentication) {
         if (authentication == null || "anonymousUser".equals(authentication.getName())) {
-            return 1L; // 테스트를 위한 기본 유저 ID
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
         try {
             return Long.parseLong(authentication.getName());
         } catch (NumberFormatException e) {
-            return 1L; // 파싱 실패 시 기본 유저 ID
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "유효한 사용자 정보가 아닙니다.");
         }
     }
 

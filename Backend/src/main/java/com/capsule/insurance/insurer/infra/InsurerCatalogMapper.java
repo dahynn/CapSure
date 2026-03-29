@@ -32,6 +32,7 @@ public interface InsurerCatalogMapper {
             @Param("maxPrice") java.math.BigDecimal maxPrice,
             @Param("gender") String gender,
             @Param("userId") Long userId,
+            @Param("sortBy") String sortBy,
             @Param("limit") int limit,
             @Param("offset") int offset
     );

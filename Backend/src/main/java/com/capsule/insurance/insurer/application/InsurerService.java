@@ -42,6 +42,8 @@ public class InsurerService {
     private static final Pattern NUMBER_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
     private static final int DEFAULT_PRODUCTS_PAGE_SIZE = 12;
     private static final int MAX_PRODUCTS_PAGE_SIZE = 30;
+    private static final String SORT_PRICE_DESC = "price_desc";
+    private static final String SORT_PRICE_ASC = "price_asc";
 
     private final ProductSourceMapper productSourceMapper;
     private final InsurerCatalogMapper insurerCatalogMapper;
@@ -64,9 +66,10 @@ public class InsurerService {
         this.openAiApiKey = openAiApiKey;
     }
 
-    public ProductSummaryPageResponse getProducts(String category, Integer budget, Integer page, Integer size, Long userId) {
+    public ProductSummaryPageResponse getProducts(String category, Integer budget, String sortBy, Integer page, Integer size, Long userId) {
         String gender = resolveGender(userId);
         BigDecimal maxPrice = (budget != null) ? BigDecimal.valueOf(budget) : null;
+        String normalizedSortBy = normalizeSortBy(sortBy);
         int safePage = page == null || page < 0 ? 0 : page;
         int safeSize = size == null || size <= 0 ? DEFAULT_PRODUCTS_PAGE_SIZE : Math.min(size, MAX_PRODUCTS_PAGE_SIZE);
         int offset = safePage * safeSize;
@@ -75,7 +78,7 @@ public class InsurerService {
         int totalPages = totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / safeSize);
 
         List<ProductSummaryResponse> items = insurerCatalogMapper
-                .findProductSourcesByFilterPaged(category, maxPrice, gender, userId, safeSize, offset)
+                .findProductSourcesByFilterPaged(category, maxPrice, gender, userId, normalizedSortBy, safeSize, offset)
                 .stream()
                 .map(this::toProductSummaryResponse)
                 .toList();
@@ -89,6 +92,18 @@ public class InsurerService {
                 safePage + 1 < totalPages,
                 safePage > 0
         );
+    }
+
+    private String normalizeSortBy(String sortBy) {
+        if (!StringUtils.hasText(sortBy)) {
+            return SORT_PRICE_DESC;
+        }
+
+        return switch (sortBy.toLowerCase(Locale.ROOT)) {
+            case "price", SORT_PRICE_ASC -> SORT_PRICE_ASC;
+            case "popular", SORT_PRICE_DESC -> SORT_PRICE_DESC;
+            default -> SORT_PRICE_DESC;
+        };
     }
 
     public ProductDetailResponse getProductDetail(Long productSourceId, Long userId) {

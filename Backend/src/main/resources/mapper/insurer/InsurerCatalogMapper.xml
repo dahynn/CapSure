@@ -231,15 +231,15 @@
         <if test="userId != null">
             AND NOT EXISTS (
                 SELECT 1
-                FROM public.subscription_item si
-                JOIN public.subscription s
-                  ON s.subscription_id = si.subscription_id
-                WHERE s.user_id = #{userId}
-                  AND s.subscription_status = 'ACTIVE'
-                  AND si.plan_version = 'CURRENT'
-                  AND si.item_status = 'ACTIVE'
-                  AND si.product_source_id = ps.product_source_id
-                  AND coalesce(si.effective_end_at, TIMESTAMPTZ '9999-12-31 00:00:00+00') &gt; now()
+                FROM public.myd_contract mc
+                WHERE mc.user_id = #{userId}
+                  AND mc.contract_status_code IN ('NORMAL', 'ACTIVE', 'IN_FORCE')
+                  AND (
+                      mc.end_date IS NULL
+                      OR mc.end_date &gt;= current_date
+                  )
+                  AND regexp_replace(lower(coalesce(mc.product_name, '')), '\s+', '', 'g')
+                      = regexp_replace(lower(coalesce(ps.product_name, '')), '\s+', '', 'g')
             )
         </if>
         <if test="category != null and category != ''">
@@ -320,7 +320,14 @@
             ps.loaded_at,
             ps.updated_at
         <include refid="productSourcesFilterFromWhere"/>
-        ORDER BY ps.product_source_id ASC
+        <choose>
+            <when test="sortBy == 'price_asc'">
+                ORDER BY monthly_price ASC NULLS LAST, ps.product_source_id ASC
+            </when>
+            <otherwise>
+                ORDER BY monthly_price DESC NULLS LAST, ps.product_source_id ASC
+            </otherwise>
+        </choose>
         LIMIT #{limit}
         OFFSET #{offset}
     </select>

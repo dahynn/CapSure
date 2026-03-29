@@ -81,14 +81,14 @@ class InsurerServiceTest {
         when(userAccountMapper.findByUserId(userId)).thenReturn(mockUser);
         when(insurerCatalogMapper.countProductSourcesByFilter(eq(category), eq(expectedMaxPrice), eq("M"), eq(userId)))
                 .thenReturn(1L);
-        when(insurerCatalogMapper.findProductSourcesByFilterPaged(eq(category), eq(expectedMaxPrice), eq("M"), eq(userId), eq(12), eq(0)))
+        when(insurerCatalogMapper.findProductSourcesByFilterPaged(eq(category), eq(expectedMaxPrice), eq("M"), eq(userId), eq("price_desc"), eq(12), eq(0)))
                 .thenReturn(List.of(mockDto));
 
         // when
-        var result = insurerService.getProducts(category, budget, 0, 12, userId);
+        var result = insurerService.getProducts(category, budget, "popular", 0, 12, userId);
 
         // then
-        verify(insurerCatalogMapper).findProductSourcesByFilterPaged(category, expectedMaxPrice, "M", userId, 12, 0);
+        verify(insurerCatalogMapper).findProductSourcesByFilterPaged(category, expectedMaxPrice, "M", userId, "price_desc", 12, 0);
         assertThat(result.items()).hasSize(1);
         assertThat(result.totalElements()).isEqualTo(1L);
         assertThat(result.items().get(0).productName()).isEqualTo("Mock Product");
@@ -123,14 +123,14 @@ class InsurerServiceTest {
         when(userAccountMapper.findByUserId(userId)).thenReturn(mockUser);
         when(insurerCatalogMapper.countProductSourcesByFilter(eq(null), eq(null), eq("F"), eq(userId)))
                 .thenReturn(1L);
-        when(insurerCatalogMapper.findProductSourcesByFilterPaged(eq(null), eq(null), eq("F"), eq(userId), eq(12), eq(0)))
+        when(insurerCatalogMapper.findProductSourcesByFilterPaged(eq(null), eq(null), eq("F"), eq(userId), eq("price_desc"), eq(12), eq(0)))
                 .thenReturn(List.of(mockDto));
 
         // when
-        var result = insurerService.getProducts(null, null, 0, 12, userId);
+        var result = insurerService.getProducts(null, null, null, 0, 12, userId);
 
         // then
-        verify(insurerCatalogMapper).findProductSourcesByFilterPaged(null, null, "F", userId, 12, 0);
+        verify(insurerCatalogMapper).findProductSourcesByFilterPaged(null, null, "F", userId, "price_desc", 12, 0);
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).productName()).isEqualTo("Female Product");
         assertThat(result.items().get(0).monthlyPrice()).isEqualTo(BigDecimal.valueOf(12000));
@@ -145,11 +145,11 @@ class InsurerServiceTest {
         when(userAccountMapper.findByUserId(userId)).thenReturn(null);
         when(insurerCatalogMapper.countProductSourcesByFilter(eq(null), eq(null), eq("M"), eq(userId)))
                 .thenReturn(0L);
-        when(insurerCatalogMapper.findProductSourcesByFilterPaged(eq(null), eq(null), eq("M"), eq(userId), eq(12), eq(0)))
+        when(insurerCatalogMapper.findProductSourcesByFilterPaged(eq(null), eq(null), eq("M"), eq(userId), eq("price_desc"), eq(12), eq(0)))
                 .thenReturn(List.of());
 
         // when
-        var result = insurerService.getProducts(null, null, 0, 12, userId);
+        var result = insurerService.getProducts(null, null, null, 0, 12, userId);
 
         // then
         assertThat(result.items()).isEmpty();
