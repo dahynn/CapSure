@@ -7,6 +7,7 @@ import com.capsule.insurance.subscription.application.SubscriptionService;
 import com.capsule.insurance.subscription.dto.ConfirmNextResponse;
 import com.capsule.insurance.subscription.dto.CreateSubscriptionRequest;
 import com.capsule.insurance.subscription.dto.CurrentPaymentMethodResponse;
+import com.capsule.insurance.subscription.dto.MyCapsuleSummaryResponse;
 import com.capsule.insurance.subscription.dto.MonthlyBillingResponse;
 import com.capsule.insurance.subscription.dto.NextItemsResponse;
 import com.capsule.insurance.subscription.dto.QuoteRequest;
@@ -17,6 +18,7 @@ import com.capsule.insurance.subscription.dto.ReservedItemResponse;
 import com.capsule.insurance.subscription.dto.ScheduleBillingResponse;
 import com.capsule.insurance.subscription.dto.SubscriptionDetailResponse;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -84,6 +86,14 @@ public class SubscriptionController {
     ) {
         Long userId = resolveUserId(userDetails);
         return ApiResponse.success(subscriptionService.getScheduleBilling(userId));
+    }
+
+    @GetMapping("/me/capsules")
+    public ApiResponse<List<MyCapsuleSummaryResponse>> getMyCapsules(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Long userId = resolveUserId(userDetails);
+        return ApiResponse.success(subscriptionService.getMyCapsules(userId));
     }
 
     @GetMapping("/{subscriptionId}/detail")

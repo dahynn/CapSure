@@ -56,6 +56,8 @@ const AppRouter = () => {
           {/* Dashboard Route */}
           <Route path="/dashboard" element={<DashboardPage />} />
 
+          <Route path="/my-capsure" element={<Navigate to="/mypage/capsure" replace />} />
+
           {/* consolidated MyPage Routes */}
             <Route path="/mypage">
               <Route index element={<MyPage initialView="main" />} />

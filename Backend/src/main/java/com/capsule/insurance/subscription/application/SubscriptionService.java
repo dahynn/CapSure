@@ -25,7 +25,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -257,6 +259,27 @@ public class SubscriptionService {
                 toScheduleBillingItems(subscriptions, true),
                 toScheduleBillingItems(subscriptions, false)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<MyCapsuleSummaryResponse> getMyCapsules(Long userId) {
+        List<Subscription> subscriptions = subscriptionMapper.findActiveSubscriptionsByUserId(userId);
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            return List.of();
+        }
+
+        return subscriptions.stream()
+                .sorted(Comparator
+                        .comparing(Subscription::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(Subscription::getSubscriptionId, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(subscription -> new MyCapsuleSummaryResponse(
+                        subscription.getSubscriptionId(),
+                        resolveCapsuleName(subscription.getCapsuleName()),
+                        formatDate(subscription.getCreatedAt()),
+                        formatDate(subscription.getNextBillingAt()),
+                        normalizeMoney(sumMonthlyPrice(subscription.getCurrentItems())),
+                        resolveCapsuleCategories(subscription)))
+                .toList();
     }
     // ... (rest of methods remain the same)
 
@@ -510,6 +533,20 @@ public class SubscriptionService {
 
     private List<SubscriptionItem> safeItems(List<SubscriptionItem> items) {
         return items == null ? List.of() : items;
+    }
+
+    private List<String> resolveCapsuleCategories(Subscription subscription) {
+        return safeItems(subscription.getCurrentItems()).stream()
+                .map(SubscriptionItem::getCapsuleProductId)
+                .map(insurerCatalogMapper::findCapsuleProductById)
+                .filter(Objects::nonNull)
+                .map(CapsuleProduct::getCoverageCategory)
+                .filter(Objects::nonNull)
+                .map(Enum::name)
+                .map(this::toCategoryLabel)
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toCollection(LinkedHashSet::new),
+                        ArrayList::new));
     }
 
     private BigDecimal sumMonthlyPrice(List<SubscriptionItem> items) {

@@ -83,6 +83,11 @@ export const getCapsuleDetail = async (subscriptionId) => {
     return response.data.data;
 };
 
+export const getMyCapsules = async () => {
+    const response = await httpClient.get('/subscriptions/me/capsules');
+    return response.data.data ?? [];
+};
+
 /**
  * 익월 예약 보험 조회
  */
