@@ -12,6 +12,7 @@ const ProductList = ({
     sortBy, 
     setSortBy, 
     filteredProducts, 
+    isFetchingProducts,
     onViewDetail,
     page,
     totalPages,
@@ -96,7 +97,27 @@ const ProductList = ({
 
             {/* Product List */}
             <div className="px-6 flex flex-col gap-4 pb-8">
-                {filteredProducts?.length === 0 ? (
+                {isFetchingProducts ? (
+                    Array.from({ length: 3 }).map((_, idx) => (
+                        <div
+                            key={`product-skeleton-${idx}`}
+                            className="bg-capsure-card border border-slate-800/70 rounded-[20px] p-4 animate-skeleton-soft"
+                        >
+                            <div className="flex justify-between items-center mb-3">
+                                <div className="h-4 w-24 rounded-md bg-slate-800/70" />
+                                <div className="h-3 w-16 rounded bg-slate-800/70" />
+                            </div>
+                            <div className="space-y-1.5 mb-4">
+                                <div className="h-3.5 w-full rounded bg-slate-800/70" />
+                                <div className="h-3.5 w-3/4 rounded bg-slate-800/70" />
+                            </div>
+                            <div className="flex items-end justify-between">
+                                <div className="h-5 w-24 rounded bg-slate-800/70" />
+                                <div className="h-10 w-10 rounded-full bg-slate-800/70" />
+                            </div>
+                        </div>
+                    ))
+                ) : filteredProducts?.length === 0 ? (
                     <div className="py-20 text-center text-slate-500 font-bold">검색 결과가 없습니다.</div>
                 ) : (
                     filteredProducts?.map(product => {
@@ -140,7 +161,7 @@ const ProductList = ({
                                 <div className="mt-1 flex items-end justify-between gap-3">
                                     <button 
                                         onClick={() => onViewDetail && onViewDetail(product)} 
-                                        className="w-[34%] min-w-[118px] h-11 rounded-xl border border-slate-700 text-slate-200 text-sm font-bold hover:border-slate-500 hover:bg-slate-800/60 transition-all"
+                                        className="w-[34%] min-w-[118px] h-11 rounded-xl border border-slate-700 text-slate-200 text-sm font-bold hover:border-slate-500 hover:bg-slate-800/60 transition-colors"
                                     >
                                         상품 상세
                                     </button>

@@ -14,7 +14,7 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getPaymentHistory, getCurrentPaymentMethod, getMyCapsules, registerPaymentMethod } from './api/mypage.api';
+import { getPaymentHistory, getCurrentPaymentMethod, getMyCapsules, registerPaymentMethod, prefetchCapsuleDetail } from './api/mypage.api';
 import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
 import { authApi } from '@/features/auth/api/auth.api';
 
@@ -174,6 +174,15 @@ const MyPage = ({ initialView = 'main' }) => {
     const showSavedToast = () => {
         setShowToast(true);
         window.setTimeout(() => setShowToast(false), 2500);
+    };
+
+    const handleOpenCapsuleDetail = (subscriptionId) => {
+        if (!subscriptionId) {
+            return;
+        }
+
+        prefetchCapsuleDetail(subscriptionId);
+        navigate(`/mypage/capsule/${subscriptionId}`);
     };
 
     const handlePaymentSave = async () => {
@@ -503,7 +512,9 @@ const MyPage = ({ initialView = 'main' }) => {
                         return (
                             <button
                                 key={capsule.subscriptionId ?? capsule.id}
-                                onClick={() => navigate(`/mypage/capsule/${capsule.subscriptionId ?? capsule.id}`)}
+                                onClick={() => handleOpenCapsuleDetail(capsule.subscriptionId ?? capsule.id)}
+                                onMouseEnter={() => prefetchCapsuleDetail(capsule.subscriptionId ?? capsule.id)}
+                                onFocus={() => prefetchCapsuleDetail(capsule.subscriptionId ?? capsule.id)}
                                 className="aspect-square bg-[#1C212E] hover:bg-slate-800 transition-colors rounded-2xl flex flex-col items-center justify-center gap-3 border border-slate-700/50 cursor-pointer shadow-lg hover:shadow-cyan-900/20 px-3 py-4"
                                 title={capsule.title}
                             >

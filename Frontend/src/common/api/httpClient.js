@@ -91,10 +91,16 @@ const handleResponse = async (response) => {
     return { data: payload };
 };
 
-const request = async (method, url, body, canRetry = true) => {
+const request = async (method, url, body, canRetry = true, options = {}) => {
+    const requestHeaders = {
+        ...getAuthHeaders(),
+        ...(options.headers || {}),
+    };
+
     const response = await fetch(`${BASE_URL}${url}`, {
+        ...options,
         method,
-        headers: getAuthHeaders(),
+        headers: requestHeaders,
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
 
@@ -106,7 +112,7 @@ const request = async (method, url, body, canRetry = true) => {
     if (isUnauthorizedLike && canRetry && !shouldSkipRefresh(url)) {
         try {
             await refreshAccessToken();
-            return request(method, url, body, false);
+            return request(method, url, body, false, options);
         } catch (refreshError) {
             clearAuthStorage();
             if (window.location.pathname !== '/login') {
@@ -120,16 +126,16 @@ const request = async (method, url, body, canRetry = true) => {
 };
 
 export const httpClient = {
-    get: async (url) => {
-        return request('GET', url);
+    get: async (url, options = {}) => {
+        return request('GET', url, undefined, true, options);
     },
-    post: async (url, body) => {
-        return request('POST', url, body);
+    post: async (url, body, options = {}) => {
+        return request('POST', url, body, true, options);
     },
-    put: async (url, body) => {
-        return request('PUT', url, body);
+    put: async (url, body, options = {}) => {
+        return request('PUT', url, body, true, options);
     },
-    delete: async (url) => {
-        return request('DELETE', url);
+    delete: async (url, options = {}) => {
+        return request('DELETE', url, undefined, true, options);
     },
 };

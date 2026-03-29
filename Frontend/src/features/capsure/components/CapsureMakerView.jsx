@@ -20,45 +20,83 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     const [sortBy, setSortBy] = useState('popular');
     const [products, setProducts] = useState([]);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [isFetchingProducts, setIsFetchingProducts] = useState(false);
     const [page, setPage] = useState(0);
     const [size] = useState(DEFAULT_PAGE_SIZE);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [hasNext, setHasNext] = useState(false);
     const [hasPrevious, setHasPrevious] = useState(false);
+    const cacheRef = React.useRef(new Map());
+    const abortControllerRef = React.useRef(null);
+    const requestIdRef = React.useRef(0);
+
+    const getActiveCategoryCode = () => {
+        const filteredCat = activeCategories.find(c => c !== '전체');
+        return filteredCat ? (CAPSURE_CATEGORY_CODE_BY_LABEL[filteredCat] || filteredCat) : '';
+    };
+
+    const buildQueryString = () => {
+        const params = new URLSearchParams();
+        if (totalBudget) params.append('budget', totalBudget);
+        params.append('page', String(page));
+        params.append('size', String(size));
+
+        const categoryCode = getActiveCategoryCode();
+        if (categoryCode) {
+            params.append('category', categoryCode);
+        }
+        return params.toString();
+    };
+
+    const applyPayload = (payload) => {
+        const items = Array.isArray(payload) ? payload : (payload.items || []);
+        const normalized = items.map(normalizeProductSource);
+        setProducts(normalized);
+        setTotalPages(Array.isArray(payload) ? 0 : (payload.totalPages || 0));
+        setTotalElements(Array.isArray(payload) ? normalized.length : (payload.totalElements || 0));
+        setHasNext(Array.isArray(payload) ? false : Boolean(payload.hasNext));
+        setHasPrevious(Array.isArray(payload) ? false : Boolean(payload.hasPrevious));
+    };
 
     // Fetch Products from Backend
     const fetchProducts = async () => {
+        const queryString = buildQueryString();
+        const cacheKey = queryString;
+        const cached = cacheRef.current.get(cacheKey);
+
+        if (cached) {
+            applyPayload(cached);
+        }
+
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        const requestId = ++requestIdRef.current;
+
+        setIsFetchingProducts(true);
+
         try {
-            // Build query params
-            const params = new URLSearchParams();
-            if (totalBudget) params.append('budget', totalBudget);
-            params.append('page', String(page));
-            params.append('size', String(size));
-
-            // If multiple categories are supported by backend, handle here.
-            // Currently backend getProducts takes a single String category.
-            // We'll use the first active category that isn't '전체'
-            const filteredCat = activeCategories.find(c => c !== '전체');
-            if (filteredCat) {
-                params.append('category', CAPSURE_CATEGORY_CODE_BY_LABEL[filteredCat] || filteredCat);
-            }
-
-            const queryString = params.toString();
-            const response = await httpClient.get(`/insurers/products?${queryString}`);
+            const response = await httpClient.get(`/insurers/products?${queryString}`, {
+                signal: controller.signal,
+            });
             const data = response.data;
 
             if (data.success) {
                 const payload = data.data || {};
-                const items = Array.isArray(payload) ? payload : (payload.items || []);
-                const normalized = items.map(normalizeProductSource);
-                setProducts(normalized);
-                setTotalPages(Array.isArray(payload) ? 0 : (payload.totalPages || 0));
-                setTotalElements(Array.isArray(payload) ? normalized.length : (payload.totalElements || 0));
-                setHasNext(Array.isArray(payload) ? false : Boolean(payload.hasNext));
-                setHasPrevious(Array.isArray(payload) ? false : Boolean(payload.hasPrevious));
+                cacheRef.current.set(cacheKey, payload);
+
+                if (requestId !== requestIdRef.current) {
+                    return;
+                }
+                applyPayload(payload);
             }
         } catch (error) {
+            if (error?.name === 'AbortError') {
+                return;
+            }
             console.error("Failed to fetch products:", error);
             setProducts([]); // Clear on error
             setTotalPages(0);
@@ -66,6 +104,9 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
             setHasNext(false);
             setHasPrevious(false);
         } finally {
+            if (requestId === requestIdRef.current) {
+                setIsFetchingProducts(false);
+            }
         }
     };
 
@@ -76,6 +117,14 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     React.useEffect(() => {
         fetchProducts();
     }, [activeCategories, totalBudget, page, size]);
+
+    React.useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, []);
 
     React.useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
@@ -172,6 +221,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
                     sortBy={sortBy}
                     setSortBy={setSortBy}
                     filteredProducts={filteredProducts}
+                    isFetchingProducts={isFetchingProducts}
                     onViewDetail={onViewDetail}
                     page={page}
                     totalPages={totalPages}

@@ -56,7 +56,7 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded, isReadOnly = fa
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#020715] animate-in fade-in slide-in-from-bottom-4 duration-300 pb-28">
+        <div className="flex flex-col min-h-screen bg-[#020715] pb-28">
             {copyToast.visible && (
                 <div
                     className="fixed left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-3 fade-in duration-200"

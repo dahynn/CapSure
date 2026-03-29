@@ -10,16 +10,21 @@ const CapsureProductDetailPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { selectedProducts, handleAddItem } = useCapsure();
-    
-    // Fallback to location state but we prefer fresh fetch
-    const [product, setProduct] = useState(
-        location.state?.product ? normalizeProductSource(location.state.product) : null
-    );
+    const isReadOnly = location.state?.readOnly === true;
+
+    const initialProduct = location.state?.product
+        ? normalizeProductSource(location.state.product)
+        : null;
+    const [product, setProduct] = useState(initialProduct);
     const [isLoading, setIsLoading] = useState(!product);
 
     useEffect(() => {
         const fetchDetail = async () => {
-            setIsLoading(true);
+            const shouldBlockByLoading = !product;
+            if (shouldBlockByLoading) {
+                setIsLoading(true);
+            }
+
             try {
                 const response = await httpClient.get(`/insurers/products/${id}`);
                 const data = response.data;
@@ -29,7 +34,9 @@ const CapsureProductDetailPage = () => {
             } catch (error) {
                 console.error("Failed to fetch product detail:", error);
             } finally {
-                setIsLoading(false);
+                if (shouldBlockByLoading) {
+                    setIsLoading(false);
+                }
             }
         };
 
@@ -66,6 +73,7 @@ const CapsureProductDetailPage = () => {
             onBack={() => navigate(-1)}
             onAdd={handleAdd}
             isAdded={isAdded}
+            isReadOnly={isReadOnly}
         />
     );
 };

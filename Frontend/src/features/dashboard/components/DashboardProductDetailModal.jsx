@@ -90,14 +90,14 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
     }
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 backdrop-blur-sm md:items-center">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/65 animate-modal-backdrop-in md:items-center">
             <div
                 className="absolute inset-0"
                 onClick={onClose}
                 aria-hidden="true"
             />
 
-            <div className="relative flex max-h-[90vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-slate-800 bg-[#020715] shadow-2xl md:rounded-[28px]">
+            <div className="relative flex max-h-[90vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-slate-800 bg-[#020715] shadow-2xl animate-modal-panel-in md:rounded-[28px]">
                 <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
                     <div>
                         <h3 className="mt-1 text-[18px] font-bold text-white">추천 상품 상세보기</h3>
@@ -111,7 +111,7 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
                     </button>
                 </div>
 
-                <div className="hide-scrollbar overflow-y-auto px-5 py-5">
+                <div className="hide-scrollbar min-h-[360px] overflow-y-auto px-5 py-5">
                     {isLoading ? (
                         <div className="rounded-2xl border border-slate-800 bg-[#10141D] px-4 py-12 text-center text-sm text-slate-300">
                             상품 상세 정보를 불러오는 중입니다.
