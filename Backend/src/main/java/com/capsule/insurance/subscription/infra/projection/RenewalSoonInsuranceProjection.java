@@ -10,6 +10,7 @@ public record RenewalSoonInsuranceProjection(
         String companyName,
         String coverageCategoryCode,
         BigDecimal monthlyPrice,
+        Integer billingAnchorDay,
         Instant nextBillingAt
 ) {
 }

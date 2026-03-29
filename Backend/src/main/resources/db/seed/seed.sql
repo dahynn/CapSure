@@ -321,17 +321,21 @@ INSERT INTO public.subscription (
     current_cycle_start_at,
     current_cycle_end_at,
     next_billing_at,
-    expected_next_amount
+    expected_next_amount,
+    created_at,
+    updated_at
 )
 SELECT
     u.user_id,
     '데모 건강 캡슐',
     'ACTIVE',
     5,
-    TIMESTAMPTZ '2026-03-01 00:00:00+09',
-    TIMESTAMPTZ '2026-03-31 23:59:59+09',
+    TIMESTAMPTZ '2026-03-05 00:00:00+09',
     TIMESTAMPTZ '2026-04-05 00:00:00+09',
-    0
+    TIMESTAMPTZ '2026-04-05 00:00:00+09',
+    0,
+    TIMESTAMPTZ '2026-03-05 09:00:00+09',
+    TIMESTAMPTZ '2026-03-05 09:00:00+09'
 FROM public.usr_user u
 WHERE u.email = 'demo@example.com'
   AND NOT EXISTS (
@@ -349,17 +353,21 @@ INSERT INTO public.subscription (
     current_cycle_start_at,
     current_cycle_end_at,
     next_billing_at,
-    expected_next_amount
+    expected_next_amount,
+    created_at,
+    updated_at
 )
 SELECT
     u.user_id,
     '데모 상해 캡슐',
     'ACTIVE',
     12,
-    TIMESTAMPTZ '2026-03-08 00:00:00+09',
-    TIMESTAMPTZ '2026-04-07 23:59:59+09',
+    TIMESTAMPTZ '2026-03-12 00:00:00+09',
     TIMESTAMPTZ '2026-04-12 00:00:00+09',
-    0
+    TIMESTAMPTZ '2026-04-12 00:00:00+09',
+    0,
+    TIMESTAMPTZ '2026-03-12 09:00:00+09',
+    TIMESTAMPTZ '2026-03-12 09:00:00+09'
 FROM public.usr_user u
 WHERE u.email = 'demo@example.com'
   AND NOT EXISTS (
@@ -377,17 +385,21 @@ INSERT INTO public.subscription (
     current_cycle_start_at,
     current_cycle_end_at,
     next_billing_at,
-    expected_next_amount
+    expected_next_amount,
+    created_at,
+    updated_at
 )
 SELECT
     u.user_id,
     '데모 혼합 캡슐',
     'ACTIVE',
     18,
-    TIMESTAMPTZ '2026-03-15 00:00:00+09',
-    TIMESTAMPTZ '2026-04-14 23:59:59+09',
+    TIMESTAMPTZ '2026-03-18 00:00:00+09',
     TIMESTAMPTZ '2026-04-18 00:00:00+09',
-    0
+    TIMESTAMPTZ '2026-04-18 00:00:00+09',
+    0,
+    TIMESTAMPTZ '2026-03-18 09:00:00+09',
+    TIMESTAMPTZ '2026-03-18 09:00:00+09'
 FROM public.usr_user u
 WHERE u.email = 'demo@example.com'
   AND NOT EXISTS (
@@ -415,9 +427,9 @@ SELECT
     'ACTIVE',
     cp.coverage_amount,
     CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
-    TIMESTAMPTZ '2026-03-01 00:00:00+09',
-    TIMESTAMPTZ '2026-04-01 00:00:00+09',
-    TIMESTAMPTZ '2026-04-01 00:00:00+09'
+    TIMESTAMPTZ '2026-03-05 00:00:00+09',
+    TIMESTAMPTZ '2026-04-05 00:00:00+09',
+    TIMESTAMPTZ '2026-04-05 00:00:00+09'
 FROM public.subscription s
 JOIN public.usr_user u
     ON u.user_id = s.user_id
@@ -457,9 +469,9 @@ SELECT
     'ACTIVE',
     cp.coverage_amount,
     CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
-    TIMESTAMPTZ '2026-03-08 00:00:00+09',
-    TIMESTAMPTZ '2026-04-08 00:00:00+09',
-    TIMESTAMPTZ '2026-04-08 00:00:00+09'
+    TIMESTAMPTZ '2026-03-12 00:00:00+09',
+    TIMESTAMPTZ '2026-04-12 00:00:00+09',
+    TIMESTAMPTZ '2026-04-12 00:00:00+09'
 FROM public.subscription s
 JOIN public.usr_user u
     ON u.user_id = s.user_id
@@ -499,9 +511,9 @@ SELECT
     'ACTIVE',
     cp.coverage_amount,
     CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
-    TIMESTAMPTZ '2026-03-15 00:00:00+09',
-    TIMESTAMPTZ '2026-04-15 00:00:00+09',
-    TIMESTAMPTZ '2026-04-15 00:00:00+09'
+    TIMESTAMPTZ '2026-03-18 00:00:00+09',
+    TIMESTAMPTZ '2026-04-18 00:00:00+09',
+    TIMESTAMPTZ '2026-04-18 00:00:00+09'
 FROM public.subscription s
 JOIN public.usr_user u
     ON u.user_id = s.user_id

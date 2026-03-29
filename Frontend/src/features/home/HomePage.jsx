@@ -91,14 +91,6 @@ const HomePage = () => {
     }, []);
 
     React.useEffect(() => {
-        const toPaymentDay = (nextBillingAt) => {
-            if (!nextBillingAt) {
-                return '-';
-            }
-            const split = nextBillingAt.split('.');
-            return split.length === 3 ? Number(split[2]) : '-';
-        };
-
         getHomeDashboard()
             .then((dashboard) => {
                 const mappedCapsules = (dashboard?.subscribedCapsules ?? []).map((capsule, index) => ({
@@ -117,7 +109,7 @@ const HomePage = () => {
                     statusColor: CATEGORY_COLOR_MAP[insurance.category] || CATEGORY_COLOR_MAP.기타,
                     productName: insurance.productName,
                     companyName: insurance.companyName,
-                    paymentDay: toPaymentDay(insurance.nextBillingAt),
+                    paymentDay: insurance.billingAnchorDay ?? '-',
                     monthlyPremium: Number(insurance.monthlyPremium ?? 0),
                 }));
 
@@ -141,6 +133,10 @@ const HomePage = () => {
         );
 
         setSubscribedCapsures((previousCapsures) => {
+            if (previousCapsures.length > 0) {
+                return previousCapsures;
+            }
+
             const filteredCapsures = previousCapsures.filter(
                 (capsule) => String(capsule.id) !== String(latestCapsule.subscriptionId)
             );

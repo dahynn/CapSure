@@ -9,6 +9,7 @@ const formatCurrency = (value) => {
 
 const ActiveSubscription = ({ data }) => {
     const navigate = useNavigate();
+    const capsuleCount = Number(data?.activeSubscriptionCount || 0);
 
     return (
         <div className="group relative mb-8 overflow-hidden rounded-3xl border border-slate-800 bg-[#161B26] p-6 shadow-xl">
@@ -24,6 +25,9 @@ const ActiveSubscription = ({ data }) => {
                             </span>
                             <span className="pb-1 text-[16px] font-bold text-white">원</span>
                         </div>
+                        <p className="mt-2 text-[12px] text-slate-400">
+                            전체 {capsuleCount || 0}개 캡슐 기준
+                        </p>
                     </div>
                     <div className="rounded-2xl border border-slate-700 bg-[#1B2230] p-3 text-[#82D8FC]">
                         <Receipt className="h-5 w-5" />
@@ -31,18 +35,19 @@ const ActiveSubscription = ({ data }) => {
                 </div>
 
                 <div className="mb-5 rounded-2xl border border-slate-800 bg-[#10141D] px-4 py-3">
-                    <p className="text-[12px] text-[#9D9DA4]">다음 결제일</p>
+                    <p className="text-[12px] text-[#9D9DA4]">가장 가까운 결제일</p>
                     <p className="mt-1 text-[15px] font-semibold text-white">
                         {data?.nextBillingAt || '정보 없음'}
                     </p>
                 </div>
 
                 <div className="mb-6 flex flex-wrap gap-2">
-                    {(data?.items || []).slice(0, 4).map((item) => (
+                    {(data?.items || []).slice(0, 6).map((item) => (
                         <span
-                            key={item.subscriptionItemId}
+                            key={`${item.subscriptionId}-${item.subscriptionItemId}`}
                             className="rounded-full border border-slate-700 bg-[#1B2230] px-3 py-1.5 text-[12px] text-slate-200"
                         >
+                            {item.capsuleName ? `${item.capsuleName} · ` : ''}
                             {item.productName}
                         </span>
                     ))}

@@ -19,3 +19,8 @@ export const getCoveragePercentile = async () => {
     const response = await httpClient.get('/analysis/coverage-percentile');
     return response.data.data;
 };
+
+export const getDashboardProductDetail = async (productSourceId) => {
+    const response = await httpClient.get(`/insurers/products/${productSourceId}`);
+    return response.data.data;
+};

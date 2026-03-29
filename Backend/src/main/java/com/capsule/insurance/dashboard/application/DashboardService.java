@@ -83,6 +83,7 @@ public class DashboardService {
                 projection.companyName(),
                 toCategoryLabel(projection.coverageCategoryCode()),
                 projection.monthlyPrice(),
+                projection.billingAnchorDay(),
                 formatDate(projection.nextBillingAt()),
                 daysUntilRenewal
         );
