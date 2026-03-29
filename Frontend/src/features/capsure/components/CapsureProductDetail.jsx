@@ -1,11 +1,20 @@
-import React, { useEffect } from 'react';
-import { ChevronLeft, Share2, ShieldCheck, Info, Zap, Receipt, Building2, Phone } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, Share2, ShieldCheck, Info, Zap, Receipt, Building2, Phone, CheckCircle2, AlertCircle } from 'lucide-react';
 import AppButton from '@/common/components/ui/button/AppButton';
 
 const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
+    const [copyToast, setCopyToast] = useState({ visible: false, message: '', isError: false });
+    const toastTimerRef = useRef(null);
+
     // Scroll to top on mount
     useEffect(() => {
         window.scrollTo(0, 0);
+
+        return () => {
+            if (toastTimerRef.current) {
+                window.clearTimeout(toastTimerRef.current);
+            }
+        };
     }, []);
 
     const productName = product.productName;
@@ -13,11 +22,21 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
     const categoryLabel = product.categoryLabel;
     const companyName = product.companyName;
 
+    const showCopyToast = (message, isError = false) => {
+        setCopyToast({ visible: true, message, isError });
+        if (toastTimerRef.current) {
+            window.clearTimeout(toastTimerRef.current);
+        }
+        toastTimerRef.current = window.setTimeout(() => {
+            setCopyToast((prev) => ({ ...prev, visible: false }));
+        }, 1900);
+    };
+
     const handleCopyLink = async () => {
         const currentUrl = window.location.href;
         try {
             await navigator.clipboard.writeText(currentUrl);
-            alert('링크가 복사되었습니다.');
+            showCopyToast('링크가 복사되었습니다.');
         } catch (error) {
             try {
                 const textArea = document.createElement('textarea');
@@ -29,15 +48,37 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                alert('링크가 복사되었습니다.');
+                showCopyToast('링크가 복사되었습니다.');
             } catch (fallbackError) {
-                alert('링크 복사에 실패했습니다.');
+                showCopyToast('링크 복사에 실패했습니다.', true);
             }
         }
     };
 
     return (
         <div className="flex flex-col min-h-screen bg-[#020715] animate-in fade-in slide-in-from-bottom-4 duration-300 pb-28">
+            {copyToast.visible && (
+                <div
+                    className="fixed left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-3 fade-in duration-200"
+                    style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}
+                >
+                    <div
+                        className={`backdrop-blur-md text-white px-4 py-2.5 rounded-full shadow-2xl border flex items-center gap-2.5 ${
+                            copyToast.isError
+                                ? 'bg-[#2B1318]/90 border-[#7C2D35]'
+                                : 'bg-[#1C212E]/90 border-slate-700'
+                        }`}
+                    >
+                        {copyToast.isError ? (
+                            <AlertCircle className="w-[18px] h-[18px] text-[#F87171]" />
+                        ) : (
+                            <CheckCircle2 className="w-[18px] h-[18px] text-[#82D8FC]" />
+                        )}
+                        <span className="text-sm font-bold whitespace-nowrap">{copyToast.message}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-[#020715]">
                 <button 

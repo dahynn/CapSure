@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
     Droplets,
     HeartPulse,
@@ -10,55 +11,299 @@ import {
 } from 'lucide-react';
 import AppButton from '@/common/components/ui/button/AppButton';
 
-const STACK_CARDS = [
-    { key: 'brain-heart', label: '뇌/심장', icon: HeartPulse, tone: 'purple', position: 'left-0 top-0' },
-    { key: 'injury', label: '상해', icon: ShieldAlert, tone: 'blue', position: 'right-0 top-0' },
-    { key: 'cancer', label: '암', icon: Zap, tone: 'yellow', position: 'left-0 top-[96px]' },
-    { key: 'death', label: '사망', icon: TriangleAlert, tone: 'blue', position: 'left-0 top-[192px]' },
-    { key: 'actual-loss', label: '실손', icon: Droplets, tone: 'purple', position: 'left-[100px] top-[192px]' },
-    { key: 'surgery', label: '수술', icon: Scissors, tone: 'yellow', position: 'right-0 top-[192px]' },
+const GRID_SIZE = 3;
+const CELL_SIZE = 90;
+const CELL_GAP = 10;
+const QUESTION_KEY = 'question';
+const STEP1_MOVE_GAP_MS = 260;
+const STEP1_QUESTION_SETTLE_MS = 340;
+const STEP2_STAGGER_MS = 170;
+const STEP3_MOVE_GAP_MS = 180;
+const LOOP_PAUSE_MS = 1500;
+const CTA_EXTRA_GAP_PX = 16;
+
+const CARD_SPRING_TRANSITION = {
+    type: 'spring',
+    bounce: 0.14,
+    damping: 34,
+    stiffness: 118,
+    mass: 1,
+};
+
+const TILE_MAP = {
+    'brain-heart': { label: '뇌/심장', icon: HeartPulse, tone: 'purple' },
+    injury: { label: '상해', icon: ShieldAlert, tone: 'blue' },
+    cancer: { label: '암', icon: Zap, tone: 'yellow' },
+    death: { label: '사망', icon: TriangleAlert, tone: 'blue' },
+    'actual-loss': { label: '실손', icon: Droplets, tone: 'purple' },
+    surgery: { label: '수술', icon: Scissors, tone: 'yellow' },
+    [QUESTION_KEY]: { label: '?', icon: null, tone: 'question' },
+};
+
+const INITIAL_BOARD = [
+    'brain-heart',
+    'injury',
+    null,
+    'cancer',
+    QUESTION_KEY,
+    'death',
+    'actual-loss',
+    'surgery',
+    null,
 ];
 
 const STACK_TONE_STYLES = {
     blue: {
-        card: 'border-[#3a86c6] bg-transparent',
+        card: 'border-[#3a86c6]/90 bg-[#0f2034]/72',
         iconWrap: 'bg-[#142740]',
         icon: 'text-[#82D8FC]',
     },
     purple: {
-        card: 'border-[#6e5a9c] bg-transparent',
+        card: 'border-[#7a66a8]/90 bg-[#201a35]/74',
         iconWrap: 'bg-[#2c2442]',
         icon: 'text-[#F2BEF7]',
     },
     yellow: {
-        card: 'border-[#8f7a27] bg-transparent',
+        card: 'border-[#8f7a27]/90 bg-[#242014]/76',
         iconWrap: 'bg-[#272417]',
         icon: 'text-[#F6CD3C]',
     },
+    question: {
+        card: 'border-dashed border-slate-200/85 bg-[#0b1322] shadow-[0_8px_24px_rgba(120,185,255,0.22)]',
+        iconWrap: 'bg-transparent',
+        icon: 'text-white',
+    },
 };
 
-const StackCard = ({ label, icon: Icon, tone = 'blue', position, motionClass = '' }) => {
-    const style = STACK_TONE_STYLES[tone] ?? STACK_TONE_STYLES.blue;
+const isOrthogonalMove = (from, to) => {
+    if (from === to) {
+        return false;
+    }
+
+    const fromRow = Math.floor(from / GRID_SIZE);
+    const fromCol = from % GRID_SIZE;
+    const toRow = Math.floor(to / GRID_SIZE);
+    const toCol = to % GRID_SIZE;
+
+    return Math.abs(fromRow - toRow) + Math.abs(fromCol - toCol) === 1;
+};
+
+const moveTile = (board, from, to) => {
+    if (!isOrthogonalMove(from, to)) {
+        return board;
+    }
+
+    if (board[from] === null || board[to] !== null) {
+        return board;
+    }
+
+    const nextBoard = [...board];
+    nextBoard[to] = nextBoard[from];
+    nextBoard[from] = null;
+    return nextBoard;
+};
+
+const getCellPosition = (index) => {
+    const row = Math.floor(index / GRID_SIZE);
+    const col = index % GRID_SIZE;
+    return {
+        top: row * (CELL_SIZE + CELL_GAP),
+        left: col * (CELL_SIZE + CELL_GAP),
+    };
+};
+
+const PuzzleCard = ({ tileKey, index, highlightQuestion }) => {
+    const tile = TILE_MAP[tileKey];
+    const style = STACK_TONE_STYLES[tile.tone] ?? STACK_TONE_STYLES.blue;
+    const Icon = tile.icon;
+    const isQuestion = tileKey === QUESTION_KEY;
+    const cellPosition = getCellPosition(index);
 
     return (
-        <article
-            className={`absolute z-20 ${position} w-[90px] h-[90px] rounded-[28px] border ${style.card} shadow-[0_8px_20px_rgba(0,0,0,0.28)] flex flex-col items-center justify-center ${motionClass}`}
+        <motion.article
+            layout="position"
+            transition={CARD_SPRING_TRANSITION}
+            animate={
+                isQuestion
+                    ? {
+                          opacity: highlightQuestion ? 0.8 : 1,
+                          scale: highlightQuestion ? 1.05 : 1,
+                      }
+                    : { opacity: 1, scale: 1 }
+            }
+            className={`absolute z-20 w-[90px] h-[90px] rounded-[28px] border ${style.card} shadow-[0_8px_20px_rgba(0,0,0,0.28)] flex flex-col items-center justify-center`}
+            style={cellPosition}
         >
-            <div className={`w-10 h-10 rounded-[11px] ${style.iconWrap} flex items-center justify-center`}>
-                <Icon className={`w-[18px] h-[18px] ${style.icon}`} />
-            </div>
-            <p className="mt-1 text-white text-[12px] font-bold">{label}</p>
-        </article>
+            {isQuestion ? (
+                <p className="text-[40px] leading-none font-black text-white/95">?</p>
+            ) : (
+                <>
+                    <div className={`w-10 h-10 rounded-[11px] ${style.iconWrap} flex items-center justify-center`}>
+                        <Icon className={`w-[18px] h-[18px] ${style.icon}`} />
+                    </div>
+                    <p className="mt-1 text-white text-[12px] font-bold">{tile.label}</p>
+                </>
+            )}
+        </motion.article>
     );
 };
 
 const CapsureBudgetView = ({ onProceed }) => {
     const [budgetInput, setBudgetInput] = useState('10000');
+    const [board, setBoard] = useState(INITIAL_BOARD);
+    const [highlightQuestion, setHighlightQuestion] = useState(false);
+    const [ctaHeight, setCtaHeight] = useState(0);
+
+    const boardRef = useRef(INITIAL_BOARD);
+    const timeoutsRef = useRef([]);
+    const questionTimeoutRef = useRef(null);
+    const ctaRef = useRef(null);
+
+    const clearQueuedTimers = () => {
+        timeoutsRef.current.forEach((timerId) => window.clearTimeout(timerId));
+        timeoutsRef.current = [];
+    };
+
+    const sleep = (ms) =>
+        new Promise((resolve) => {
+            const timerId = window.setTimeout(resolve, ms);
+            timeoutsRef.current.push(timerId);
+        });
+
+    const triggerQuestionHighlight = () => {
+        setHighlightQuestion(true);
+
+        if (questionTimeoutRef.current) {
+            window.clearTimeout(questionTimeoutRef.current);
+        }
+
+        questionTimeoutRef.current = window.setTimeout(() => {
+            setHighlightQuestion(false);
+        }, 320);
+    };
+
+    const runMove = (from, to) => {
+        const movingTile = boardRef.current[from];
+        if (movingTile === QUESTION_KEY) {
+            triggerQuestionHighlight();
+        }
+
+        setBoard((prev) => {
+            const next = moveTile(prev, from, to);
+            boardRef.current = next;
+            return next;
+        });
+    };
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const runOrganicFlow = async () => {
+            while (!cancelled) {
+                setBoard(INITIAL_BOARD);
+                boardRef.current = INITIAL_BOARD;
+                setHighlightQuestion(false);
+                await sleep(420);
+                if (cancelled) {
+                    break;
+                }
+
+                // Step 1: 길 터주기
+                runMove(5, 8);
+                await sleep(STEP1_MOVE_GAP_MS);
+                if (cancelled) {
+                    break;
+                }
+                runMove(4, 5);
+                await sleep(STEP1_QUESTION_SETTLE_MS);
+                if (cancelled) {
+                    break;
+                }
+                runMove(5, 2);
+                await sleep(520);
+                if (cancelled) {
+                    break;
+                }
+
+                // Step 2: 판 흔들기
+                const step2Moves = [
+                    [7, 4],
+                    [8, 7],
+                    [2, 5],
+                    [1, 2],
+                    [0, 1],
+                ];
+                for (const [from, to] of step2Moves) {
+                    runMove(from, to);
+                    await sleep(STEP2_STAGGER_MS);
+                    if (cancelled) {
+                        break;
+                    }
+                }
+                if (cancelled) {
+                    break;
+                }
+
+                await sleep(320);
+                if (cancelled) {
+                    break;
+                }
+
+                // Step 3: 중앙 안착
+                runMove(4, 0);
+                await sleep(STEP3_MOVE_GAP_MS);
+                if (cancelled) {
+                    break;
+                }
+                runMove(5, 4);
+                await sleep(LOOP_PAUSE_MS);
+            }
+        };
+
+        runOrganicFlow();
+
+        return () => {
+            cancelled = true;
+            clearQueuedTimers();
+            if (questionTimeoutRef.current) {
+                window.clearTimeout(questionTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        const ctaElement = ctaRef.current;
+        if (!ctaElement) {
+            return;
+        }
+
+        const updateCtaHeight = () => {
+            setCtaHeight(ctaElement.offsetHeight || 0);
+        };
+
+        updateCtaHeight();
+        window.addEventListener('resize', updateCtaHeight);
+
+        let observer = null;
+        if (typeof ResizeObserver !== 'undefined') {
+            observer = new ResizeObserver(updateCtaHeight);
+            observer.observe(ctaElement);
+        }
+
+        return () => {
+            if (observer) {
+                observer.disconnect();
+            }
+            window.removeEventListener('resize', updateCtaHeight);
+        };
+    }, []);
+
+    const contentPaddingBottom = `calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + ${ctaHeight + CTA_EXTRA_GAP_PX}px)`;
 
     return (
         <div
             className="flex flex-col min-h-screen"
-            style={{ paddingBottom: 'calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 122px)' }}
+            style={{ paddingBottom: contentPaddingBottom }}
         >
             <div className="px-6 pt-6 animate-in slide-in-from-right-8 duration-300">
                 <h2 className="text-2xl font-black text-white leading-snug mb-2">
@@ -95,20 +340,16 @@ const CapsureBudgetView = ({ onProceed }) => {
 
             <div className="flex flex-col items-center mt-7 mb-2 animate-in fade-in duration-500">
                 <div className="relative w-[290px] h-[290px] mb-6">
-                    {STACK_CARDS.map((card) => (
-                        <StackCard
-                            key={card.key}
-                            label={card.label}
-                            icon={card.icon}
-                            tone={card.tone}
-                            position={card.position}
-                            motionClass={card.motionClass}
-                        />
-                    ))}
-
-                    <div className="absolute z-0 left-[100px] top-[96px] w-[90px] h-[90px] rounded-[28px] border border-dashed border-slate-300/80 flex items-center justify-center bg-[#0b1322] shadow-[0_8px_20px_rgba(0,0,0,0.26)]">
-                        <span className="text-[40px] leading-none font-black text-white/90">?</span>
-                    </div>
+                    {board.map((tileKey, index) =>
+                        tileKey ? (
+                            <PuzzleCard
+                                key={tileKey}
+                                tileKey={tileKey}
+                                index={index}
+                                highlightQuestion={highlightQuestion}
+                            />
+                        ) : null
+                    )}
                 </div>
 
                 <p className="text-center text-slate-400 text-capsure-base leading-relaxed">
@@ -119,6 +360,7 @@ const CapsureBudgetView = ({ onProceed }) => {
             </div>
 
             <div
+                ref={ctaRef}
                 className="fixed left-0 right-0 max-w-[560px] mx-auto px-6 pb-4 pt-6 bg-gradient-to-t from-[#020715] via-[#020715] to-transparent z-40"
                 style={{ bottom: 'calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 2px)' }}
             >
