@@ -8,6 +8,28 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
+
+  # [Production] PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: mydata-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-capsure}
+      POSTGRES_USER: ${POSTGRES_USER:-capsure}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in Infra/mock/.env}
+    volumes:
+      - capsule-postgres-data:/var/lib/postgresql/data
+      - ${BACKEND_DIR:-../../Backend}/src/main/resources/db/schema/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+      - ${BACKEND_DIR:-../../Backend}/src/main/resources/db/schema/product_source.sql:/docker-entrypoint-initdb.d/20-product_source.sql:ro
+      - ${BACKEND_DIR:-../../Backend}/src/main/resources/db/seed/seed.sql:/docker-entrypoint-initdb.d/30-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   promtail:
     image: grafana/promtail:3.6.7
     container_name: mock-promtail
@@ -54,3 +76,6 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+
+volumes:
+  capsule-postgres-data:
