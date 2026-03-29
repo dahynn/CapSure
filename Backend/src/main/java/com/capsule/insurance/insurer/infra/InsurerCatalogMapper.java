@@ -16,9 +16,27 @@ public interface InsurerCatalogMapper {
 
     List<CapsuleProduct> findAvailableCapsuleProducts();
 
-    CapsuleProduct findCapsuleProductById(@Param("capsuleProductId") Long capsuleProductId);
+    CapsuleProduct findCapsuleProductById(@Param("productSourceId") Long productSourceId);
+
+    void upsertCapsuleProductFromProductSource(@Param("productSourceId") Long productSourceId);
 
     List<ProductSourceSummaryProjection> findProductSourcesByFilter(
+            @Param("category") String category,
+            @Param("maxPrice") java.math.BigDecimal maxPrice,
+            @Param("gender") String gender,
+            @Param("userId") Long userId
+    );
+
+    List<ProductSourceSummaryProjection> findProductSourcesByFilterPaged(
+            @Param("category") String category,
+            @Param("maxPrice") java.math.BigDecimal maxPrice,
+            @Param("gender") String gender,
+            @Param("userId") Long userId,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+    long countProductSourcesByFilter(
             @Param("category") String category,
             @Param("maxPrice") java.math.BigDecimal maxPrice,
             @Param("gender") String gender,

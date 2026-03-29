@@ -17,6 +17,7 @@ public record ProductSummaryResponse(
         String coverageCategoryCode,
         String coverageCode,
         BigDecimal monthlyPrice,
+        String termsUri,
         Instant loadedAt,
         Instant updatedAt
 ) {
@@ -27,4 +28,3 @@ public record ProductSummaryResponse(
         return coverageCategoryCode != null ? CoverageCategory.valueOf(coverageCategoryCode) : null;
     }
 }
-

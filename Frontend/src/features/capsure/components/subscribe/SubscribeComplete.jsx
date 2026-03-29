@@ -25,21 +25,21 @@ const SubscribeComplete = ({ selectedProducts, totalPremium, capsuleName, onNext
             className="min-h-screen bg-[#020715] text-white animate-in fade-in slide-in-from-bottom-4"
             style={{ paddingBottom: 'calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 180px)' }}
         >
-            <section className="px-6 pt-12 text-center">
-                <h2 className="text-[30px] leading-[1.18] tracking-[-0.025em] font-bold text-[#E7EDF8] break-keep">
+            <section className="px-6 pt-8 text-center">
+                <h2 className="text-[24px] leading-[1.22] tracking-[-0.02em] font-bold text-[#E7EDF8] break-keep">
                     결제가 완료되었습니다
                 </h2>
-                <p className="mt-3 text-base leading-relaxed text-[#A8B4C6]">보험 캡슐이 성공적으로 활성화되었습니다.</p>
+                <p className="mt-2 text-[15px] leading-relaxed text-[#A8B4C6]">보험 캡슐이 성공적으로 활성화되었습니다.</p>
             </section>
 
-            <section className="px-6 mt-6">
-                <article className="relative overflow-hidden rounded-[34px] bg-[#1A2231] px-7 py-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+            <section className="px-6 mt-5">
+                <article className="relative overflow-hidden rounded-[28px] bg-[#1A2231] px-6 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
                     <div className="pointer-events-none absolute inset-y-0 right-0 w-[42%] bg-gradient-to-l from-[#202838]/70 to-transparent" />
                     <img
                         src={logoImg}
                         alt=""
                         aria-hidden="true"
-                        className="absolute right-7 top-8 w-[38px] h-[38px] object-contain pointer-events-none select-none"
+                        className="absolute right-6 top-6 w-[34px] h-[34px] object-contain pointer-events-none select-none"
                         style={{
                             opacity: 0.12,
                             filter: 'blur(0.8px) saturate(0.9)',
@@ -47,17 +47,17 @@ const SubscribeComplete = ({ selectedProducts, totalPremium, capsuleName, onNext
                     />
 
                     <div className="relative z-10 max-w-[74%]">
-                        <p className="text-[12px] font-bold tracking-[0.24em] text-[#83CEFB] uppercase">CAPSULE NAME</p>
-                        <h3 className="mt-4 text-[34px] leading-[1.1] tracking-[-0.03em] font-semibold text-[#EDF2FB] break-keep">
+                        <p className="text-[11px] font-bold tracking-[0.2em] text-[#83CEFB] uppercase">CAPSULE NAME</p>
+                        <h3 className="mt-3 text-[28px] leading-[1.1] tracking-[-0.025em] font-semibold text-[#EDF2FB] break-keep">
                             {capsuleName}
                         </h3>
-                        <div className="mt-16">
-                            <p className="text-[#A4ADBC] text-[14px] font-medium">월 보험료</p>
-                            <div className="mt-3 flex items-end gap-3">
-                                <p className="text-[52px] leading-none tracking-[-0.04em] font-bold text-brand-blue">
+                        <div className="mt-10">
+                            <p className="text-[#A4ADBC] text-[13px] font-medium">월 보험료</p>
+                            <div className="mt-2 flex items-end gap-2">
+                                <p className="text-[44px] leading-none tracking-[-0.03em] font-bold text-brand-blue">
                                     {Math.round(Number(totalPremium ?? 0)).toLocaleString()}
                                 </p>
-                                <span className="text-[20px] leading-none font-medium text-white/70 mb-1">원</span>
+                                <span className="text-[17px] leading-none font-medium text-white/70 mb-1">원</span>
                             </div>
                         </div>
                     </div>
@@ -66,16 +66,16 @@ const SubscribeComplete = ({ selectedProducts, totalPremium, capsuleName, onNext
             </section>
 
             <section className="px-6 mt-4 grid grid-cols-2 gap-3">
-                <article className="rounded-3xl bg-[#0D1526] px-4 py-4">
-                    <CalendarDays className="w-5 h-5 text-brand-blue mb-3" />
+                <article className="rounded-3xl bg-[#0D1526] px-4 py-3.5">
+                    <CalendarDays className="w-4.5 h-4.5 text-brand-blue mb-2.5" />
                     <p className="text-[11px] text-slate-400 font-semibold">구독 기간</p>
-                    <p className="mt-2 text-lg leading-snug font-semibold">{formatDate(today)} ~ {formatDate(nextMonth)}</p>
+                    <p className="mt-1.5 text-[16px] leading-snug font-semibold">{formatDate(today)} ~ {formatDate(nextMonth)}</p>
                 </article>
-                <article className="rounded-3xl bg-[#0D1526] px-4 py-4">
-                    <RefreshCw className="w-5 h-5 text-brand-yellow mb-3" />
+                <article className="rounded-3xl bg-[#0D1526] px-4 py-3.5">
+                    <RefreshCw className="w-4.5 h-4.5 text-brand-yellow mb-2.5" />
                     <p className="text-[11px] text-slate-400 font-semibold">갱신 유형</p>
-                    <p className="mt-2 text-lg font-semibold">자동 갱신 대기</p>
-                    <p className="mt-1 text-sm text-slate-400">만료일 3일 전 안내</p>
+                    <p className="mt-1.5 text-[16px] font-semibold">자동 갱신 대기</p>
+                    <p className="mt-1 text-[13px] text-slate-400">만료일 3일 전 안내</p>
                 </article>
             </section>
 

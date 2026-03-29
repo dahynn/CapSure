@@ -201,6 +201,7 @@ const TermsSummaryCard = ({ product, summary, isLoading, isChecked, onToggle }) 
     const productName = product.productName;
     const companyName = product.companyName;
     const termsUri = product.termsUri;
+    const isLocalPdf = /^\/|^\.\//.test(termsUri || '') && /\.pdf($|\?)/i.test(termsUri || '');
 
     const bulletPoints = summary ? [
         summary.coverageSummary && { label: '핵심 보장', value: summary.coverageSummary },
@@ -222,8 +223,9 @@ const TermsSummaryCard = ({ product, summary, isLoading, isChecked, onToggle }) 
                 {/* 작고 이쁜 PDF 버튼 */}
                 <a 
                     href={termsUri}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    target={isLocalPdf ? undefined : "_blank"}
+                    rel={isLocalPdf ? undefined : "noopener noreferrer"}
+                    download={isLocalPdf ? `${productName}_전체약관.pdf` : undefined}
                     className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/50 hover:border-brand-blue/50 hover:bg-brand-blue/5 py-1.5 px-2.5 rounded-xl transition-all flex-shrink-0 group/btn"
                 >
                     <div className="relative w-3.5 h-4.5 bg-[#1D2B44] rounded-[2px] border-[1px] border-slate-600 group-hover/btn:border-brand-blue/50 transition-colors overflow-hidden">

@@ -13,6 +13,7 @@ public record ProductSourceSummaryProjection(
         String coverageCode,
         BigDecimal monthlyPrice,
         String priceIndexText,
+        String termsUri,
         Instant loadedAt,
         Instant updatedAt
 ) {

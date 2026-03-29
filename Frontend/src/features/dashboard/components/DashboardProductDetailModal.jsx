@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import {
     Building2,
+    ChevronDown,
     Phone,
     ShieldCheck,
     Info,
@@ -46,6 +47,21 @@ const FieldBlock = ({ label, value, tone = 'default' }) => {
     );
 };
 
+const ToggleBlock = ({ label, children, defaultOpen = false }) => {
+    return (
+        <details
+            className="group rounded-2xl border border-slate-800 bg-[#10141D] p-4"
+            open={defaultOpen}
+        >
+            <summary className="flex cursor-pointer list-none items-center justify-between text-[13px] font-semibold text-slate-200">
+                <span>{label}</span>
+                <ChevronDown className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-3 text-[13px] leading-relaxed text-slate-300">{children}</div>
+        </details>
+    );
+};
+
 const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, errorMessage }) => {
     useEffect(() => {
         if (!isOpen) {
@@ -74,19 +90,16 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
     }
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 backdrop-blur-sm md:items-center">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/65 animate-modal-backdrop-in md:items-center">
             <div
                 className="absolute inset-0"
                 onClick={onClose}
                 aria-hidden="true"
             />
 
-            <div className="relative flex max-h-[90vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-slate-800 bg-[#020715] shadow-2xl md:rounded-[28px]">
+            <div className="relative flex max-h-[90vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-slate-800 bg-[#020715] shadow-2xl animate-modal-panel-in md:rounded-[28px]">
                 <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
                     <div>
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#82D8FC]">
-                            Recommended Detail
-                        </p>
                         <h3 className="mt-1 text-[18px] font-bold text-white">추천 상품 상세보기</h3>
                     </div>
                     <button
@@ -98,7 +111,7 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
                     </button>
                 </div>
 
-                <div className="overflow-y-auto px-5 py-5">
+                <div className="hide-scrollbar min-h-[360px] overflow-y-auto px-5 py-5">
                     {isLoading ? (
                         <div className="rounded-2xl border border-slate-800 bg-[#10141D] px-4 py-12 text-center text-sm text-slate-300">
                             상품 상세 정보를 불러오는 중입니다.
@@ -156,13 +169,28 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
                                 />
                                 <FieldBlock
                                     label="보험금 정보"
-                                    value={product.payoutAmount || product.joinAmount || '보장 금액 정보 없음'}
+                                    value={product.joinAmount || product.payoutAmount || '보장 금액 정보 없음'}
                                     tone="accent"
                                 />
-                                <FieldBlock label="상품 요약" value={product.productSummary} />
-                                <FieldBlock label="상품 특징" value={product.productFeature} />
-                                <FieldBlock label="특이사항" value={product.specialNote} />
                             </div>
+
+                            {product.productSummary ? (
+                                <ToggleBlock label="상품 요약" defaultOpen>
+                                    {product.productSummary}
+                                </ToggleBlock>
+                            ) : null}
+
+                            {product.productFeature ? (
+                                <ToggleBlock label="상품 특징">
+                                    {product.productFeature}
+                                </ToggleBlock>
+                            ) : null}
+
+                            {product.specialNote ? (
+                                <ToggleBlock label="특이사항">
+                                    {product.specialNote}
+                                </ToggleBlock>
+                            ) : null}
 
                             {product.contactPhone ? (
                                 <div className="rounded-2xl border border-slate-800 bg-[#10141D] p-4">
@@ -174,32 +202,26 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
                                 </div>
                             ) : null}
 
-                            <div className="rounded-2xl border border-slate-800 bg-[#10141D] p-4">
+                            <ToggleBlock label="대시보드 전용 읽기 모드">
                                 <div className="flex items-start gap-3">
                                     <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#82D8FC]" />
-                                    <div>
-                                        <p className="text-[13px] font-bold text-white">대시보드 전용 읽기 모드</p>
-                                        <p className="mt-1 text-[12px] leading-relaxed text-slate-400">
-                                            이 상세보기는 추천 상품 정보를 확인하는 용도이며, 캡슐에 담기나 구매 플로우로는 이어지지 않습니다.
-                                        </p>
-                                    </div>
+                                    <p className="text-[12px] leading-relaxed text-slate-400">
+                                        이 상세보기는 추천 상품 정보를 확인하는 용도이며, 캡슐에 담기나 구매 플로우로는 이어지지 않습니다.
+                                    </p>
                                 </div>
-                            </div>
+                            </ToggleBlock>
 
-                            <div className="rounded-2xl border border-slate-800 bg-[#10141D] p-4">
+                            <ToggleBlock label="추가 정보">
                                 <div className="flex items-start gap-3">
                                     <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#F6CD3C]" />
-                                    <div>
-                                        <p className="text-[13px] font-bold text-white">추가 정보</p>
-                                        <p className="mt-1 text-[12px] leading-relaxed text-slate-400">
-                                            실제 가입 전에는 약관, 보장 범위, 가입 조건을 다시 확인해 주세요.
-                                        </p>
-                                    </div>
+                                    <p className="text-[12px] leading-relaxed text-slate-400">
+                                        실제 가입 전에는 약관, 보장 범위, 가입 조건을 다시 확인해 주세요.
+                                    </p>
                                 </div>
-                            </div>
+                            </ToggleBlock>
 
                             {(product.paymentCycle || product.paymentTerm || product.coverageTerm) ? (
-                                <div className="rounded-2xl border border-slate-800 bg-[#10141D] p-4">
+                                <ToggleBlock label="납입/보장 기간">
                                     <div className="flex items-start gap-3">
                                         <StickyNote className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#F2BEF7]" />
                                         <div className="space-y-1 text-[12px] text-slate-400">
@@ -208,21 +230,12 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
                                             {product.coverageTerm ? <p>보장 기간: {product.coverageTerm}</p> : null}
                                         </div>
                                     </div>
-                                </div>
+                                </ToggleBlock>
                             ) : null}
                         </div>
                     ) : null}
                 </div>
 
-                <div className="border-t border-slate-800 px-5 py-4">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="w-full rounded-2xl bg-[#82D8FC] px-4 py-3 text-[15px] font-bold text-[#020715] transition-colors hover:bg-[#6CCDF2]"
-                    >
-                        닫기
-                    </button>
-                </div>
             </div>
         </div>
     );

@@ -10,6 +10,7 @@ import com.capsule.insurance.insurer.dto.FixedTermsPdfSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceAiSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceLightSummaryResponse;
 import com.capsule.insurance.insurer.dto.ProductSourceTermsSummaryResponse;
+import com.capsule.insurance.insurer.dto.ProductSummaryPageResponse;
 import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
 import com.capsule.insurance.insurer.dto.CategoryRecommendResponse;
 import java.util.List;
@@ -37,13 +38,15 @@ public class InsurerController {
     }
 
     @GetMapping("/products")
-    public ApiResponse<List<ProductSummaryResponse>> getProducts(
+    public ApiResponse<ProductSummaryPageResponse> getProducts(
             @org.springframework.web.bind.annotation.RequestParam(required = false) String category,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Integer budget,
+            @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "0") Integer page,
+            @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "12") Integer size,
             org.springframework.security.core.Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        return ApiResponse.success(insurerService.getProducts(category, budget, userId));
+        return ApiResponse.success(insurerService.getProducts(category, budget, page, size, userId));
     }
 
     @GetMapping("/products/{id}")

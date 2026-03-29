@@ -7,9 +7,9 @@ import com.capsule.insurance.analysis.dto.DiagnosisReportResponse.RecommendedPro
 import com.capsule.insurance.auth.domain.Gender;
 import com.capsule.insurance.auth.domain.UserAccount;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
-import com.capsule.insurance.insurer.domain.CapsuleProduct;
 import com.capsule.insurance.insurer.domain.CoverageCategory;
 import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
+import com.capsule.insurance.insurer.infra.projection.ProductSourceDetailProjection;
 import com.capsule.insurance.insurer.infra.projection.ProductSourceSummaryProjection;
 import com.capsule.insurance.mydata.domain.ContractCoverageStatus;
 import com.capsule.insurance.mydata.domain.MyDataContract;
@@ -121,18 +121,21 @@ public class AnalysisService {
         Subscription subscription = subscriptionMapper.findSubscriptionAggregateByUserId(userId);
         if (subscription != null && subscription.getCurrentItems() != null) {
             for (SubscriptionItem item : subscription.getCurrentItems()) {
-                CapsuleProduct capsuleProduct = insurerCatalogMapper.findCapsuleProductById(item.getCapsuleProductId());
-                if (capsuleProduct == null || capsuleProduct.getCoverageCategory() == null) {
+                ProductSourceDetailProjection detail = insurerCatalogMapper.findProductSourceDetail(item.getProductSourceId(), "M");
+                if (detail == null) {
                     continue;
                 }
-                CoverageCategory category = capsuleProduct.getCoverageCategory();
+                CoverageCategory category = toCoverageCategory(detail.coverageCategoryCode());
+                if (category == null) {
+                    continue;
+                }
                 if (!DIAGNOSIS_CATEGORIES.contains(category)) {
                     continue;
                 }
                 coveredCategories.add(category);
                 coverageNamesByCategory
                         .computeIfAbsent(category, key -> new LinkedHashSet<>())
-                        .add(firstNonBlank(capsuleProduct.getProductName(), capsuleProduct.getCoverageName(), category.name()));
+                        .add(firstNonBlank(detail.productName(), detail.coverageName(), category.name()));
             }
         }
 
@@ -221,6 +224,17 @@ public class AnalysisService {
             return CoverageCategory.ACCIDENT;
         }
         return null;
+    }
+
+    private CoverageCategory toCoverageCategory(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        try {
+            return CoverageCategory.valueOf(code);
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 
     private boolean containsAny(String value, String... keywords) {

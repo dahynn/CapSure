@@ -1,5 +1,8 @@
 import { httpClient } from '@/common/api/httpClient';
 
+const CAPSULE_DETAIL_CACHE_TTL_MS = 15_000;
+const capsuleDetailCache = new Map();
+
 /**
  * 가상(더미) 결제 내역 반환
  */
@@ -79,8 +82,32 @@ export const updateUserProfile = async (updateData) => {
  * 캡슐(구독) 상세 정보 조회
  */
 export const getCapsuleDetail = async (subscriptionId) => {
+    const cacheKey = String(subscriptionId);
+    const cached = capsuleDetailCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.cachedAt < CAPSULE_DETAIL_CACHE_TTL_MS) {
+        return cached.data;
+    }
+
     const response = await httpClient.get(`/subscriptions/${subscriptionId}/detail`);
-    return response.data.data;
+    const detail = response.data.data;
+    capsuleDetailCache.set(cacheKey, {
+        data: detail,
+        cachedAt: Date.now(),
+    });
+    return detail;
+};
+
+export const prefetchCapsuleDetail = async (subscriptionId) => {
+    if (!subscriptionId) {
+        return null;
+    }
+
+    try {
+        return await getCapsuleDetail(subscriptionId);
+    } catch (error) {
+        return null;
+    }
 };
 
 export const getMyCapsules = async () => {
@@ -104,8 +131,8 @@ export const getNextItems = async (subscriptionId) => {
 /**
  * 익월 보험 예약 (추가)
  */
-export const reserveNextItem = async (subscriptionId, capsuleProductId) => {
-    const response = await httpClient.post(`/subscriptions/${subscriptionId}/next-items`, { capsuleProductId });
+export const reserveNextItem = async (subscriptionId, productSourceId) => {
+    const response = await httpClient.post(`/subscriptions/${subscriptionId}/next-items`, { productSourceId });
     return response.data.data;
 };
 

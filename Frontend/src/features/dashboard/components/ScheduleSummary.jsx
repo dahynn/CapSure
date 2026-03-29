@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarClock, CheckCircle2, Clock3 } from 'lucide-react';
+import { CalendarClock, ChevronDown, Clock3 } from 'lucide-react';
 
 const formatCurrency = (value) => {
     const amount = Number(value || 0);
@@ -10,7 +10,6 @@ const getDaysLeft = (dateText) => {
     if (!dateText) {
         return null;
     }
-
     const today = new Date();
     const targetDate = new Date(dateText);
     today.setHours(0, 0, 0, 0);
@@ -18,136 +17,110 @@ const getDaysLeft = (dateText) => {
     return Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 };
 
-const ItemRow = ({ item, tone = 'default' }) => {
-    const isNext = tone === 'next';
-
-    return (
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-[#10141D] px-4 py-4">
-            <div className="min-w-0">
-                <p className="truncate text-[14px] font-semibold text-white">{item.productName}</p>
-                <p className="mt-1 text-[12px] text-slate-400">{item.capsuleName || '캡슐 정보 없음'}</p>
-                <p className="mt-1 text-[12px] text-[#9D9DA4]">
-                    {formatCurrency(item.monthlyPrice)}원 · {item.itemStatus}
-                </p>
-            </div>
-            <div
-                className={`rounded-full px-3 py-1 text-[11px] font-bold ${
-                    isNext ? 'bg-[#1E2D24] text-[#8AE7A3]' : 'bg-[#1B2230] text-[#82D8FC]'
-                }`}
-            >
-                {isNext ? '다음 회차' : '현재'}
-            </div>
-        </div>
-    );
-};
-
-const UpcomingBillingRow = ({ item }) => {
-    return (
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-[#10141D] px-4 py-4">
-            <div className="min-w-0">
-                <p className="truncate text-[14px] font-semibold text-white">{item.capsuleName}</p>
-                <p className="mt-1 text-[12px] text-slate-400">
-                    결제일 {item.nextBillingAt || '정보 없음'}
-                    {item.billingAnchorDay ? ` · 정기 결제일 ${item.billingAnchorDay}일` : ''}
-                </p>
-            </div>
-            <div className="text-right">
-                <p className="text-[14px] font-bold text-white">{formatCurrency(item.expectedAmount)}원</p>
-            </div>
-        </div>
-    );
-};
-
 const ScheduleSummary = ({ data }) => {
+    const upcomingBillings = data?.upcomingBillings || [];
+    const currentItems = data?.currentItems || [];
+    const [openedBillingId, setOpenedBillingId] = React.useState(null);
     const daysLeft = getDaysLeft(data?.nextBillingAt);
 
+    const toggleBilling = (subscriptionId) => {
+        setOpenedBillingId((prev) => (prev === subscriptionId ? null : subscriptionId));
+    };
+
     return (
-        <div className="mb-10">
-            <div className="mb-6 px-1">
-                <h2 className="text-[20px] font-bold tracking-tight text-white">결제 예정일 일정 요약</h2>
+        <section className="mb-10">
+            <div className="mb-4 flex items-center gap-2 text-slate-100">
+                <Clock3 className="h-5 w-5 text-slate-300" />
+                <h3 className="text-[17px] font-semibold">결제 예정일 일정 요약</h3>
             </div>
 
-            <div className="mb-5 rounded-3xl border border-slate-800 bg-[#10141D] p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
+            <div className="mb-4 rounded-3xl border border-slate-800 bg-[#161B26] px-5 py-4 shadow-xl">
+                <div className="flex items-start justify-between gap-3">
                     <div>
-                        <p className="text-[13px] text-[#9D9DA4]">가장 가까운 결제 예정 금액</p>
-                        <p className="mt-2 text-[26px] font-black tracking-tight text-white">
+                        <p className="text-[12px] font-medium text-slate-400">가장 가까운 결제 예정 금액</p>
+                        <p className="mt-1 text-[34px] font-semibold tracking-tight text-[#DDE4F2]">
                             {formatCurrency(data?.expectedNextAmount)}원
                         </p>
-                        <p className="mt-2 text-[12px] text-slate-400">
+                        <p className="mt-1 text-[12px] text-slate-400">
                             결제일 {data?.nextBillingAt || '정보 없음'}
                             {data?.billingAnchorDay ? ` · 정기 결제일 ${data.billingAnchorDay}일` : ''}
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 rounded-2xl bg-[#1B2230] px-3 py-2 text-[#82D8FC]">
+                    <div className="inline-flex items-center gap-1.5 rounded-xl bg-[#1F2736] px-3 py-2 text-[12px] font-medium text-[#82D8FC]">
                         <CalendarClock className="h-4 w-4" />
-                        <span className="text-[12px] font-bold">
-                            {daysLeft === null ? '-' : daysLeft >= 0 ? `D-${daysLeft}` : '지남'}
-                        </span>
+                        {daysLeft === null ? '-' : daysLeft >= 0 ? `D-${daysLeft}` : '지남'}
                     </div>
                 </div>
             </div>
 
-            <div className="space-y-5">
-                <div>
-                    <div className="mb-3 flex items-center gap-2 px-1">
-                        <CalendarClock className="h-4 w-4 text-[#82D8FC]" />
-                        <h3 className="text-[14px] font-semibold text-slate-200">캡슐별 결제 일정</h3>
-                    </div>
-                    <div className="space-y-3">
-                        {(data?.upcomingBillings || []).map((item) => (
-                            <UpcomingBillingRow key={`billing-${item.subscriptionId}`} item={item} />
-                        ))}
-                        {!data?.upcomingBillings?.length ? (
-                            <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-4 text-[13px] text-slate-400">
-                                예정된 결제 일정이 없습니다.
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
+            <div className="space-y-3">
+                {upcomingBillings.slice(0, 2).map((item, index) => {
+                    const isOpen = openedBillingId === item.subscriptionId;
+                    const relatedItems = currentItems.filter((row) => row.subscriptionId === item.subscriptionId);
+                    return (
+                        <div
+                            key={item.subscriptionId}
+                            className={`overflow-hidden rounded-3xl bg-[#161B26] shadow-xl transition-all ${
+                                isOpen
+                                    ? 'border border-slate-700'
+                                    : 'border border-slate-700/70'
+                            }`}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => toggleBilling(item.subscriptionId)}
+                                className="flex w-full items-center justify-between px-6 py-5 text-left focus:outline-none"
+                            >
+                                <div className="min-w-0">
+                                    <div className="mb-1">
+                                        <p className="truncate text-[16px] font-semibold text-[#DDE4F2]">{item.capsuleName}</p>
+                                    </div>
+                                    <p className="text-[13px] text-slate-300">결제일 {item.nextBillingAt || '정보 없음'}</p>
+                                </div>
 
-                <div>
-                    <div className="mb-3 flex items-center gap-2 px-1">
-                        <CheckCircle2 className="h-4 w-4 text-[#82D8FC]" />
-                        <h3 className="text-[14px] font-semibold text-slate-200">현재 적용 중</h3>
-                    </div>
-                    <div className="space-y-3">
-                        {(data?.currentItems || []).map((item) => (
-                            <ItemRow
-                                key={`current-${item.subscriptionId}-${item.subscriptionItemId}`}
-                                item={item}
-                            />
-                        ))}
-                        {!data?.currentItems?.length ? (
-                            <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-4 text-[13px] text-slate-400">
-                                현재 적용 중인 상품이 없습니다.
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
+                                <div className="ml-4 flex items-center gap-4">
+                                    <p className="text-[16px] font-semibold tracking-tight text-[#DDE4F2]">
+                                        {formatCurrency(item.expectedAmount)}원
+                                    </p>
+                                    <ChevronDown
+                                        className={`h-5 w-5 text-slate-300 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                                    />
+                                </div>
+                            </button>
 
-                <div>
-                    <div className="mb-3 flex items-center gap-2 px-1">
-                        <Clock3 className="h-4 w-4 text-[#8AE7A3]" />
-                        <h3 className="text-[14px] font-semibold text-slate-200">다음 회차 예정</h3>
-                    </div>
-                    <div className="space-y-3">
-                        {(data?.nextItems || []).map((item) => (
-                            <ItemRow
-                                key={`next-${item.subscriptionId}-${item.subscriptionItemId}`}
-                                item={item}
-                                tone="next"
-                            />
-                        ))}
-                        {!data?.nextItems?.length ? (
-                            <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-4 text-[13px] text-slate-400">
-                                예정된 변경 상품이 없습니다.
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
+                            {isOpen ? (
+                                <div className="border-t border-slate-700/50 bg-[#1F2736]/70 px-4 py-3">
+                                    <p className="mb-2 px-2 text-[12px] font-medium text-slate-400">캡슐 항목별 결제 요약</p>
+                                    <div className="space-y-2">
+                                        {relatedItems.length ? (
+                                            relatedItems.map((row) => (
+                                                <div
+                                                    key={`${row.subscriptionId}-${row.subscriptionItemId}`}
+                                                    className="flex items-center justify-between rounded-xl bg-[#1A2332] px-3 py-2.5"
+                                                >
+                                                    <div className="min-w-0 pr-3">
+                                                        <p className="truncate text-[13px] font-medium text-[#DDE4F2]">{row.productName}</p>
+                                                        <p className="mt-0.5 text-[11px] text-slate-400">{row.capsuleName}</p>
+                                                    </div>
+                                                    <p className="shrink-0 text-[13px] font-semibold text-[#DDE4F2]">
+                                                        {formatCurrency(row.monthlyPrice)}원
+                                                    </p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="rounded-xl bg-[#1A2332] px-3 py-3 text-[12px] text-slate-400">
+                                                세부 항목 정보가 없습니다.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
+                    );
+                })}
             </div>
-        </div>
+
+        </section>
     );
 };
 

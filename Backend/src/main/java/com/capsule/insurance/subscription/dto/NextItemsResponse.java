@@ -11,7 +11,7 @@ public record NextItemsResponse(
 ) {
     public record SubscriptionItemDto(
             Long subscriptionItemId,
-            Long capsuleProductId,
+            Long productSourceId,
             String productName,
             String companyName,
             Integer monthlyPrice,

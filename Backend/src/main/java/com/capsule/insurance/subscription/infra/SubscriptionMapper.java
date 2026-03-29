@@ -31,10 +31,10 @@ public interface SubscriptionMapper {
     SubscriptionItem findNextItemById(@Param("subscriptionItemId") Long subscriptionItemId);
 
     boolean existsProductInCurrentOrNext(@Param("subscriptionId") Long subscriptionId,
-            @Param("capsuleProductId") Long capsuleProductId);
+            @Param("productSourceId") Long productSourceId);
 
     void insertNextItem(@Param("subscriptionId") Long subscriptionId,
-            @Param("capsuleProductId") Long capsuleProductId);
+            @Param("productSourceId") Long productSourceId);
 
     void deleteNextItem(@Param("subscriptionItemId") Long subscriptionItemId);
 
@@ -49,7 +49,7 @@ public interface SubscriptionMapper {
 
     void insertInitialSubscriptionItem(
             @Param("subscriptionId") Long subscriptionId,
-            @Param("capsuleProductId") Long capsuleProductId,
+            @Param("productSourceId") Long productSourceId,
             @Param("monthlyPriceSnapshot") java.math.BigDecimal monthlyPriceSnapshot,
             @Param("effectiveStartAt") java.time.Instant effectiveStartAt,
             @Param("effectiveEndAt") java.time.Instant effectiveEndAt);

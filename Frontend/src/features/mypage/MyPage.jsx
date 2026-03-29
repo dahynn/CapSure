@@ -14,8 +14,9 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getPaymentHistory, getCurrentPaymentMethod, getMyCapsules, registerPaymentMethod } from './api/mypage.api';
+import { getPaymentHistory, getCurrentPaymentMethod, getMyCapsules, registerPaymentMethod, prefetchCapsuleDetail } from './api/mypage.api';
 import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
+import { authApi } from '@/features/auth/api/auth.api';
 
 const MyPage = ({ initialView = 'main' }) => {
     const navigate = useNavigate();
@@ -29,6 +30,7 @@ const MyPage = ({ initialView = 'main' }) => {
     const [paymentError, setPaymentError] = useState('');
     const [capsules, setCapsules] = useState([]);
     const [capsulesLoading, setCapsulesLoading] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [paymentForm, setPaymentForm] = useState({
         provider: 'TOSS',
         methodType: 'BANK_ACCOUNT',
@@ -174,6 +176,15 @@ const MyPage = ({ initialView = 'main' }) => {
         window.setTimeout(() => setShowToast(false), 2500);
     };
 
+    const handleOpenCapsuleDetail = (subscriptionId) => {
+        if (!subscriptionId) {
+            return;
+        }
+
+        prefetchCapsuleDetail(subscriptionId);
+        navigate(`/mypage/capsule/${subscriptionId}`);
+    };
+
     const handlePaymentSave = async () => {
         if (paymentSaving) {
             return;
@@ -213,6 +224,22 @@ const MyPage = ({ initialView = 'main' }) => {
             setPaymentError('결제수단 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
         } finally {
             setPaymentSaving(false);
+        }
+    };
+
+    const handleLogout = async () => {
+        if (isLoggingOut) {
+            return;
+        }
+
+        setIsLoggingOut(true);
+        try {
+            await authApi.logout();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        } finally {
+            navigate('/login', { replace: true });
+            setIsLoggingOut(false);
         }
     };
 
@@ -292,9 +319,13 @@ const MyPage = ({ initialView = 'main' }) => {
 
             {/* Logout Button */}
             <div className="mt-12 mb-8 flex justify-center">
-                <button className="flex items-center gap-2 text-[#9D9DA4] hover:text-white transition-colors py-2 px-4 rounded-lg">
+                <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="flex items-center gap-2 text-[#9D9DA4] hover:text-white transition-colors py-2 px-4 rounded-lg disabled:opacity-60"
+                >
                     <LogOut className="w-5 h-5" />
-                    <span className="font-medium">로그아웃</span>
+                    <span className="font-medium">{isLoggingOut ? '로그아웃 중...' : '로그아웃'}</span>
                 </button>
             </div>
         </div>
@@ -481,7 +512,9 @@ const MyPage = ({ initialView = 'main' }) => {
                         return (
                             <button
                                 key={capsule.subscriptionId ?? capsule.id}
-                                onClick={() => navigate(`/mypage/capsule/${capsule.subscriptionId ?? capsule.id}`)}
+                                onClick={() => handleOpenCapsuleDetail(capsule.subscriptionId ?? capsule.id)}
+                                onMouseEnter={() => prefetchCapsuleDetail(capsule.subscriptionId ?? capsule.id)}
+                                onFocus={() => prefetchCapsuleDetail(capsule.subscriptionId ?? capsule.id)}
                                 className="aspect-square bg-[#1C212E] hover:bg-slate-800 transition-colors rounded-2xl flex flex-col items-center justify-center gap-3 border border-slate-700/50 cursor-pointer shadow-lg hover:shadow-cyan-900/20 px-3 py-4"
                                 title={capsule.title}
                             >

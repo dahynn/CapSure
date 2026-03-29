@@ -26,7 +26,7 @@ public record ScheduleBillingResponse(
             Long subscriptionId,
             String capsuleName,
             Long subscriptionItemId,
-            Long capsuleProductId,
+            Long productSourceId,
             String productName,
             BigDecimal monthlyPrice,
             String itemStatus

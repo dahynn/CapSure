@@ -1,8 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { prefetchCapsuleDetail } from '@/features/mypage/api/mypage.api';
 
 const SubscribedCapsures = ({ subscribedCapsures }) => {
     const navigate = useNavigate();
+
+    const handleOpenCapsuleDetail = (subscriptionId) => {
+        if (!subscriptionId) {
+            return;
+        }
+
+        prefetchCapsuleDetail(subscriptionId);
+        navigate(`/mypage/capsule/${subscriptionId}`);
+    };
 
     if (!subscribedCapsures || subscribedCapsures.length === 0) return null;
 
@@ -52,8 +62,11 @@ const SubscribedCapsures = ({ subscribedCapsures }) => {
                                         </p>
                                     </div>
                                     <button 
-                                        onClick={() => navigate(`/mypage/capsule/${capsure.subscriptionId ?? capsure.id}`)}
-                                        className="px-4 py-2 rounded-[14px] bg-slate-700/50 hover:bg-slate-700 text-white text-[13px] font-medium transition-colors border border-slate-600/50 active:scale-95"
+                                        type="button"
+                                        onClick={() => handleOpenCapsuleDetail(capsure.subscriptionId ?? capsure.id)}
+                                        onMouseEnter={() => prefetchCapsuleDetail(capsure.subscriptionId ?? capsure.id)}
+                                        onFocus={() => prefetchCapsuleDetail(capsure.subscriptionId ?? capsure.id)}
+                                        className="px-4 py-2 rounded-[14px] bg-slate-700/50 hover:bg-slate-700 text-white text-[13px] font-medium transition-colors border border-slate-600/50"
                                     >
                                         상세보기
                                     </button>

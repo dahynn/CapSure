@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Pill, ShieldCheck, FileText, ChevronRight, CheckCircle2, Shield, Activity, CalendarClock, Loader2 } from 'lucide-react';
+import { ChevronLeft, Pill, ShieldCheck, FileText, ChevronRight, CheckCircle2, Shield, CalendarClock } from 'lucide-react';
 import { getCapsuleDetail, getProductDetail } from '@/features/mypage/api/mypage.api';
 import DashboardProductDetailModal from '@/features/dashboard/components/DashboardProductDetailModal';
+import PageTransitionLoading from '@/common/components/ui/loading/PageTransitionLoading';
 
 const CapsuleDetailPage = () => {
     const { id } = useParams();
@@ -62,10 +63,13 @@ const CapsuleDetailPage = () => {
 
     if (loading) {
         return (
-            <div className="w-full h-screen bg-[#0B0E14] flex flex-col items-center justify-center">
-                <Loader2 className="w-8 h-8 text-[#82D8FC] animate-spin mb-4" />
-                <p className="text-[#9D9DA4] text-sm">상세 정보를 불러오는 중입니다...</p>
-            </div>
+            <PageTransitionLoading
+                message="캡슐 상세를 불러오는 중입니다."
+                backgroundClassName="bg-[#020715]"
+                openDelayMs={0}
+                textDelayMs={120}
+                doneDelayMs={420}
+            />
         );
     }
 
@@ -85,7 +89,7 @@ const CapsuleDetailPage = () => {
 
     return (
         <div className="w-full flex flex-col flex-1">
-            <div className="px-8 py-8 md:px-12 md:py-10 space-y-10 max-w-[560px] mx-auto w-full transition-all animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
+            <div className="px-8 py-8 md:px-12 md:py-10 space-y-10 max-w-[560px] mx-auto w-full transition-all pb-32">
                 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
@@ -140,26 +144,35 @@ const CapsuleDetailPage = () => {
                         <Shield className="w-4 h-4 text-[#82D8FC]" /> 속해있는 보험 상품
                     </h3>
                     <div className="space-y-3 relative before:absolute before:inset-y-0 before:left-6 before:w-[2px] before:bg-gradient-to-b before:from-[#82D8FC]/20 before:via-[#82D8FC]/10 before:to-transparent before:-z-10">
-                        {capsule.products.map((product, idx) => (
+                        {capsule.products.map((product) => (
                             <button
                                 type="button"
                                 key={product.id} 
                                 onClick={() => handleProductClick(product.id)}
-                                className="p-4 bg-[#141925] rounded-[24px] border border-slate-800/60 hover:bg-[#1C212E] hover:border-[#82D8FC]/30 transition-all cursor-pointer shadow-lg animate-in slide-in-from-bottom-4 fade-in fill-mode-both flex gap-4 items-center group relative overflow-hidden"
-                                style={{ animationDelay: `${100 + idx * 100}ms` }}
+                                className="w-full h-[134px] p-4 bg-[#141925] rounded-[24px] border border-slate-800/60 hover:bg-[#1C212E] hover:border-[#82D8FC]/30 transition-all cursor-pointer shadow-lg flex gap-4 items-center group relative overflow-hidden text-left"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#82D8FC]/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                                <div className="w-10 h-10 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center text-[#9D9DA4] group-hover:text-[#82D8FC] group-hover:bg-[#82D8FC]/5 transition-colors shrink-0 shadow-inner z-10">
+                                <div className="w-10 h-10 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center text-[#9D9DA4] group-hover:text-[#82D8FC] group-hover:bg-[#82D8FC]/5 transition-colors shadow-inner z-10">
                                     <FileText className="w-4 h-4" />
                                 </div>
-                                <div className="flex-1 space-y-1.5 z-10">
+                                <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1.5 z-10">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-extrabold text-[#141925] bg-[#82D8FC] px-2 py-[2px] rounded-full">{product.type}</span>
                                     </div>
-                                    <h4 className="text-white text-sm font-bold tracking-tight">{product.productName}</h4>
+                                    <h4
+                                        className="text-white text-sm font-bold tracking-tight leading-[1.35] min-h-[38px]"
+                                        style={{
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        {product.productName}
+                                    </h4>
                                     <p className="text-[#9D9DA4] text-[11px] font-medium">{product.companyName}</p>
                                 </div>
-                                <div className="w-8 h-8 rounded-full bg-[#0B0E14] border border-slate-800/50 flex items-center justify-center text-[#4E5669] group-hover:border-[#82D8FC]/30 group-hover:text-[#82D8FC] transition-all shrink-0 z-10 group-hover:translate-x-1">
+                                <div className="w-8 h-8 rounded-full bg-[#0B0E14] border border-slate-800/50 flex items-center justify-center text-[#4E5669] group-hover:border-[#82D8FC]/30 group-hover:text-[#82D8FC] transition-all z-10 group-hover:translate-x-1">
                                     <ChevronRight className="w-4 h-4" />
                                 </div>
                             </button>
@@ -179,8 +192,7 @@ const CapsuleDetailPage = () => {
                                 {capsule.coverages.map((coverage, idx) => (
                                     <div 
                                         key={idx} 
-                                        className="flex justify-between items-center py-4 border-b border-slate-800/50 last:border-0 hover:bg-[#1C212E]/60 px-3 -mx-3 rounded-xl transition-colors animate-in slide-in-from-bottom-4 fade-in fill-mode-both group"
-                                        style={{ animationDelay: `${300 + idx * 100}ms` }}
+                                        className="flex justify-between items-center py-4 border-b border-slate-800/50 last:border-0 hover:bg-[#1C212E]/60 px-3 -mx-3 rounded-xl transition-colors group"
                                     >
                                         <div className="flex items-start gap-3 w-[60%]">
                                             <div className="w-6 h-6 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center shrink-0 group-hover:bg-[#82D8FC]/20 group-hover:border-[#82D8FC]/30 transition-colors mt-0.5">

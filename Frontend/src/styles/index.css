@@ -236,7 +236,7 @@
 
 .transition-loader-snackbar {
   width: fit-content;
-  max-width: calc(100vw - 48px);
+  max-width: calc(100vw - 24px);
   min-height: 58px;
   border-radius: 9999px;
   background: #05070d;
@@ -287,7 +287,7 @@
   font-weight: 700;
   letter-spacing: -0.01em;
   white-space: nowrap;
-  max-width: calc(100vw - 132px);
+  max-width: calc(100vw - 108px);
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0;
@@ -340,4 +340,48 @@
   -webkit-box-shadow: 0 0 0 1000px rgba(11, 20, 37, 0.55) inset;
   box-shadow: 0 0 0 1000px rgba(11, 20, 37, 0.55) inset;
   transition: background-color 9999s ease-in-out 0s;
+}
+
+@keyframes skeleton-soft-pulse {
+  0%,
+  100% {
+    opacity: 0.78;
+  }
+  50% {
+    opacity: 0.64;
+  }
+}
+
+.animate-skeleton-soft {
+  animation: skeleton-soft-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.animate-modal-backdrop-in {
+  animation: modal-backdrop-in 180ms ease-out both;
+}
+
+.animate-modal-panel-in {
+  animation: modal-panel-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }

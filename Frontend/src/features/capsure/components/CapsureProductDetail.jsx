@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, Share2, ShieldCheck, Info, Zap, Receipt, Building2, Phone, CheckCircle2, AlertCircle } from 'lucide-react';
 import AppButton from '@/common/components/ui/button/AppButton';
 
-const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
+const CapsureProductDetail = ({ product, onBack, onAdd, isAdded, isReadOnly = false }) => {
     const [copyToast, setCopyToast] = useState({ visible: false, message: '', isError: false });
     const toastTimerRef = useRef(null);
 
@@ -56,7 +56,7 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#020715] animate-in fade-in slide-in-from-bottom-4 duration-300 pb-28">
+        <div className="flex flex-col min-h-screen bg-[#020715] pb-28">
             {copyToast.visible && (
                 <div
                     className="fixed left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-3 fade-in duration-200"
@@ -145,10 +145,10 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
                             <div className="flex flex-col gap-1.5">
                                 <span className="text-slate-500 text-capsure-sm font-bold">지급 금액</span>
                                 <span className="text-brand-blue text-2xl font-black">
-                                    {product.payoutAmount || product.joinAmount || '상세 약관 참조'}
+                                    {product.joinAmount || product.payoutAmount || '상세 약관 참조'}
                                 </span>
-                                {(product.payoutAmount && product.joinAmount && product.payoutAmount !== product.joinAmount) && (
-                                    <span className="text-slate-500 text-xs mt-1">가입금액: {product.joinAmount}</span>
+                                {(product.joinAmount && product.payoutAmount && product.joinAmount !== product.payoutAmount) && (
+                                    <span className="text-slate-500 text-xs mt-1">지급금액: {product.payoutAmount}</span>
                                 )}
                             </div>
                         </div>
@@ -211,15 +211,17 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
             </div>
 
             {/* Sticky Bottom Action */}
-            <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto bg-gradient-to-t from-[#020715] via-[#020715] to-transparent pt-12 px-6 pb-8 z-40">
-                <AppButton
-                    onClick={onAdd}
-                    tone={isAdded ? 'subtle' : 'primary'}
-                    className="rounded-[16px] text-lg shadow-lg"
-                >
-                    {isAdded ? '이미 캡슐에 담겨있어요' : '캡슐에 담기'}
-                </AppButton>
-            </div>
+            {!isReadOnly ? (
+                <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto bg-gradient-to-t from-[#020715] via-[#020715] to-transparent pt-12 px-6 pb-8 z-40">
+                    <AppButton
+                        onClick={onAdd}
+                        tone={isAdded ? 'subtle' : 'primary'}
+                        className="rounded-[16px] text-lg shadow-lg"
+                    >
+                        {isAdded ? '이미 캡슐에 담겨있어요' : '캡슐에 담기'}
+                    </AppButton>
+                </div>
+            ) : null}
         </div>
     );
 };
