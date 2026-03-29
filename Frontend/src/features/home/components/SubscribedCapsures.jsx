@@ -11,7 +11,7 @@ const SubscribedCapsures = ({ subscribedCapsures }) => {
             <div className="flex justify-between items-end mb-6 px-1">
                 <h2 className="text-[22px] font-semibold text-white tracking-tight">나의 가입 캡슐</h2>
                 <button 
-                    onClick={() => navigate('/my-capsure')}
+                    onClick={() => navigate('/mypage/capsure')}
                     className="text-[14px] text-[#82D8FC] font-medium transition-opacity hover:opacity-80"
                 >
                     전체보기

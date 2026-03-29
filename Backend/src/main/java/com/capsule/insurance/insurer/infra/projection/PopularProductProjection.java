@@ -8,7 +8,7 @@ public record PopularProductProjection(
         String productName,
         String coverageCategoryCode,
         BigDecimal monthlyPrice,
-        long subscriberCount,
-        int categoryRank
+        Long subscriberCount,
+        Integer categoryRank
 ) {
 }

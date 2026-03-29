@@ -79,6 +79,7 @@
             <arg column="company_name" javaType="java.lang.String"/>
             <arg column="coverage_category_code" javaType="java.lang.String"/>
             <arg column="monthly_price" javaType="java.math.BigDecimal"/>
+            <arg column="billing_anchor_day" javaType="java.lang.Integer"/>
             <arg column="next_billing_at" javaType="java.time.Instant"/>
         </constructor>
     </resultMap>
@@ -102,6 +103,27 @@
         where user_id = #{userId}
         order by created_at desc, subscription_id desc
         limit 1
+    </select>
+
+    <select id="findActiveSubscriptionsByUserId" resultMap="subscriptionAggregateResultMap">
+        select
+            subscription_id,
+            user_id,
+            capsule_name,
+            subscription_status,
+            billing_anchor_day,
+            current_cycle_start_at,
+            current_cycle_end_at,
+            next_billing_at,
+            expected_next_amount,
+            paused_at,
+            cancelled_at,
+            created_at,
+            updated_at
+        from subscription
+        where user_id = #{userId}
+          and subscription_status = 'ACTIVE'
+        order by next_billing_at asc nulls last, created_at asc, subscription_id asc
     </select>
 
     <select id="findCurrentItemsBySubscriptionId" resultMap="subscriptionItemResultMap">
@@ -342,6 +364,7 @@
             ps.company_name,
             ps.coverage_category_code::text as coverage_category_code,
             round(coalesce(si.monthly_price_snapshot, 0), 0) as monthly_price,
+            s.billing_anchor_day,
             s.next_billing_at
         from subscription s
         join subscription_item si

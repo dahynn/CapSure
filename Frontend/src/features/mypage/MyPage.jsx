@@ -14,8 +14,7 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getPaymentHistory, getCurrentPaymentMethod, registerPaymentMethod } from './api/mypage.api';
-import { getHomeDashboard } from '@/features/home/api/home.api';
+import { getPaymentHistory, getCurrentPaymentMethod, getMyCapsules, registerPaymentMethod } from './api/mypage.api';
 import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
 
 const MyPage = ({ initialView = 'main' }) => {
@@ -39,7 +38,7 @@ const MyPage = ({ initialView = 'main' }) => {
     const [user, setUser] = useState({
         name: '고객',
         email: 'capsure_user@email.com',
-        subscriptionCount: 3
+        subscriptionCount: 0
     });
 
     useEffect(() => {
@@ -77,21 +76,28 @@ const MyPage = ({ initialView = 'main' }) => {
             setCapsulesLoading(true);
 
             try {
-                const dashboard = await getHomeDashboard();
-                const mappedCapsules = (dashboard?.subscribedCapsules ?? []).map((capsule, index) => ({
-                    id: capsule.capsuleSnapshotId ?? `${capsule.subscriptionId}-${index}`,
+                const capsuleSummaries = await getMyCapsules();
+                const mappedCapsules = (capsuleSummaries ?? []).map((capsule, index) => ({
+                    id: capsule.subscriptionId ?? `capsule-${index}`,
                     subscriptionId: capsule.subscriptionId,
                     title: capsule.capsuleName?.trim() || '나만의 캡슐',
                 }));
 
-                const mergedCapsules = mergeLatestCapsule(mappedCapsules);
-                setCapsules(mergedCapsules);
-                setUser(prev => ({ ...prev, subscriptionCount: mergedCapsules.length }));
+                setCapsules(mappedCapsules);
+                setUser(prev => ({ ...prev, subscriptionCount: mappedCapsules.length }));
             } catch (error) {
-                const fallbackCapsules = mergeLatestCapsule([]);
-                setCapsules(fallbackCapsules);
-                if (fallbackCapsules.length > 0) {
+                const latestCapsule = getLatestCapsureSubscription();
+                if (latestCapsule?.subscriptionId) {
+                    const fallbackCapsules = [{
+                        id: latestCapsule.subscriptionId,
+                        subscriptionId: latestCapsule.subscriptionId,
+                        title: latestCapsule.capsuleName?.trim() || '?ì„Žì­”??ï§¦â‰ªë’“',
+                    }];
+                    setCapsules(fallbackCapsules);
                     setUser(prev => ({ ...prev, subscriptionCount: fallbackCapsules.length }));
+                } else {
+                    setCapsules([]);
+                    setUser(prev => ({ ...prev, subscriptionCount: 0 }));
                 }
             } finally {
                 setCapsulesLoading(false);

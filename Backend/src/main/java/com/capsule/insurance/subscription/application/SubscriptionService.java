@@ -25,7 +25,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -203,6 +205,81 @@ public class SubscriptionService {
     public QuoteResponse createQuote(QuoteRequest request) {
         BigDecimal quotedPremium = BigDecimal.valueOf(10000L + (long) request.insuredAge() * 100L);
         return new QuoteResponse(request.productCode(), quotedPremium, "Placeholder quote response");
+    }
+
+    public MonthlyBillingResponse getMonthlyBilling(Long userId) {
+        List<Subscription> subscriptions = requireActiveSubscriptions(userId);
+        Subscription nearestSubscription = findNearestBillingSubscription(subscriptions);
+
+        BigDecimal totalMonthlyBilling = subscriptions.stream()
+                .map(subscription -> sumMonthlyPrice(subscription.getCurrentItems()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (BigDecimal.ZERO.compareTo(totalMonthlyBilling) == 0) {
+            totalMonthlyBilling = subscriptions.stream()
+                    .map(this::resolveExpectedNextAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        return new MonthlyBillingResponse(
+                nearestSubscription != null ? nearestSubscription.getSubscriptionId() : null,
+                subscriptions.size(),
+                normalizeMoney(totalMonthlyBilling),
+                formatDate(nearestSubscription != null ? nearestSubscription.getNextBillingAt() : null),
+                toMonthlyBillingItems(subscriptions)
+        );
+    }
+
+    public ScheduleBillingResponse getScheduleBilling(Long userId) {
+        List<Subscription> subscriptions = requireActiveSubscriptions(userId);
+        Subscription nearestSubscription = findNearestBillingSubscription(subscriptions);
+        Instant nearestBillingAt = nearestSubscription != null ? nearestSubscription.getNextBillingAt() : null;
+
+        List<Subscription> nearestDueSubscriptions = nearestBillingAt == null
+                ? List.of()
+                : subscriptions.stream()
+                        .filter(subscription -> nearestBillingAt.equals(subscription.getNextBillingAt()))
+                        .toList();
+
+        BigDecimal expectedNextAmount = nearestDueSubscriptions.isEmpty()
+                ? subscriptions.stream().map(this::resolveExpectedNextAmount).reduce(BigDecimal.ZERO, BigDecimal::add)
+                : nearestDueSubscriptions.stream().map(this::resolveExpectedNextAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Integer billingAnchorDay = nearestDueSubscriptions.size() == 1
+                ? nearestDueSubscriptions.get(0).getBillingAnchorDay()
+                : null;
+
+        return new ScheduleBillingResponse(
+                nearestSubscription != null ? nearestSubscription.getSubscriptionId() : null,
+                subscriptions.size(),
+                billingAnchorDay,
+                formatDate(nearestBillingAt),
+                normalizeMoney(expectedNextAmount),
+                toUpcomingBillings(subscriptions),
+                toScheduleBillingItems(subscriptions, true),
+                toScheduleBillingItems(subscriptions, false)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<MyCapsuleSummaryResponse> getMyCapsules(Long userId) {
+        List<Subscription> subscriptions = subscriptionMapper.findActiveSubscriptionsByUserId(userId);
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            return List.of();
+        }
+
+        return subscriptions.stream()
+                .sorted(Comparator
+                        .comparing(Subscription::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(Subscription::getSubscriptionId, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(subscription -> new MyCapsuleSummaryResponse(
+                        subscription.getSubscriptionId(),
+                        resolveCapsuleName(subscription.getCapsuleName()),
+                        formatDate(subscription.getCreatedAt()),
+                        formatDate(subscription.getNextBillingAt()),
+                        normalizeMoney(sumMonthlyPrice(subscription.getCurrentItems())),
+                        resolveCapsuleCategories(subscription)))
+                .toList();
     }
     // ... (rest of methods remain the same)
 
@@ -411,6 +488,165 @@ public class SubscriptionService {
         }
 
         return totalAmount;
+    }
+    private Subscription requireUserSubscription(Long userId) {
+        Subscription subscription = subscriptionMapper.findSubscriptionAggregateByUserId(userId);
+        if (subscription == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "구독 정보를 찾을 수 없습니다.");
+        }
+        return subscription;
+    }
+
+    private List<Subscription> requireActiveSubscriptions(Long userId) {
+        List<Subscription> subscriptions = subscriptionMapper.findActiveSubscriptionsByUserId(userId);
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "구독 정보를 찾을 수 없습니다.");
+        }
+        return subscriptions;
+    }
+
+    private Subscription findNearestBillingSubscription(List<Subscription> subscriptions) {
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            return null;
+        }
+        return subscriptions.stream()
+                .filter(subscription -> subscription.getNextBillingAt() != null)
+                .min(Comparator.comparing(Subscription::getNextBillingAt))
+                .orElse(subscriptions.get(0));
+    }
+
+    private String formatDate(Instant instant) {
+        return instant == null ? null : DATE_FORMATTER.format(instant);
+    }
+
+    private BigDecimal resolveExpectedNextAmount(Subscription subscription) {
+        if (subscription == null) {
+            return BigDecimal.ZERO;
+        }
+        if (subscription.getExpectedNextAmount() != null) {
+            return normalizeMoney(subscription.getExpectedNextAmount());
+        }
+        List<SubscriptionItem> nextItems = safeItems(subscription.getNextItems());
+        List<SubscriptionItem> currentItems = safeItems(subscription.getCurrentItems());
+        return nextItems.isEmpty() ? sumMonthlyPrice(currentItems) : sumMonthlyPrice(nextItems);
+    }
+
+    private List<SubscriptionItem> safeItems(List<SubscriptionItem> items) {
+        return items == null ? List.of() : items;
+    }
+
+    private List<String> resolveCapsuleCategories(Subscription subscription) {
+        return safeItems(subscription.getCurrentItems()).stream()
+                .map(SubscriptionItem::getCapsuleProductId)
+                .map(insurerCatalogMapper::findCapsuleProductById)
+                .filter(Objects::nonNull)
+                .map(CapsuleProduct::getCoverageCategory)
+                .filter(Objects::nonNull)
+                .map(Enum::name)
+                .map(this::toCategoryLabel)
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toCollection(LinkedHashSet::new),
+                        ArrayList::new));
+    }
+
+    private BigDecimal sumMonthlyPrice(List<SubscriptionItem> items) {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return items.stream()
+                .map(SubscriptionItem::getMonthlyPriceSnapshot)
+                .filter(price -> price != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private List<MonthlyBillingResponse.MonthlyBillingItem> toMonthlyBillingItems(List<Subscription> subscriptions) {
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            return List.of();
+        }
+        return subscriptions.stream()
+                .flatMap(subscription -> safeItems(subscription.getCurrentItems()).stream()
+                        .map(item -> toMonthlyBillingItem(subscription, item)))
+                .sorted(Comparator
+                        .comparing(MonthlyBillingResponse.MonthlyBillingItem::capsuleName)
+                        .thenComparing(MonthlyBillingResponse.MonthlyBillingItem::productName))
+                .toList();
+    }
+
+    private MonthlyBillingResponse.MonthlyBillingItem toMonthlyBillingItem(
+            Subscription subscription,
+            SubscriptionItem item
+    ) {
+        CapsuleProduct product = insurerCatalogMapper.findCapsuleProductById(item.getCapsuleProductId());
+        return new MonthlyBillingResponse.MonthlyBillingItem(
+                subscription.getSubscriptionId(),
+                resolveCapsuleName(subscription.getCapsuleName()),
+                item.getSubscriptionItemId(),
+                item.getCapsuleProductId(),
+                resolveProductName(product),
+                normalizeMoney(item.getMonthlyPriceSnapshot()),
+                item.getItemStatus() != null ? item.getItemStatus().name() : ""
+        );
+    }
+
+    private List<ScheduleBillingResponse.ScheduleBillingItem> toScheduleBillingItems(
+            List<Subscription> subscriptions,
+            boolean currentPlan
+    ) {
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            return List.of();
+        }
+        return subscriptions.stream()
+                .flatMap(subscription -> (currentPlan ? safeItems(subscription.getCurrentItems()) : safeItems(subscription.getNextItems()))
+                        .stream()
+                        .map(item -> toScheduleBillingItem(subscription, item)))
+                .sorted(Comparator
+                        .comparing(ScheduleBillingResponse.ScheduleBillingItem::capsuleName)
+                        .thenComparing(ScheduleBillingResponse.ScheduleBillingItem::productName))
+                .toList();
+    }
+
+    private ScheduleBillingResponse.ScheduleBillingItem toScheduleBillingItem(
+            Subscription subscription,
+            SubscriptionItem item
+    ) {
+        CapsuleProduct product = insurerCatalogMapper.findCapsuleProductById(item.getCapsuleProductId());
+        return new ScheduleBillingResponse.ScheduleBillingItem(
+                subscription.getSubscriptionId(),
+                resolveCapsuleName(subscription.getCapsuleName()),
+                item.getSubscriptionItemId(),
+                item.getCapsuleProductId(),
+                resolveProductName(product),
+                normalizeMoney(item.getMonthlyPriceSnapshot()),
+                item.getItemStatus() != null ? item.getItemStatus().name() : ""
+        );
+    }
+
+    private List<ScheduleBillingResponse.UpcomingBilling> toUpcomingBillings(List<Subscription> subscriptions) {
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            return List.of();
+        }
+        return subscriptions.stream()
+                .map(subscription -> new ScheduleBillingResponse.UpcomingBilling(
+                        subscription.getSubscriptionId(),
+                        resolveCapsuleName(subscription.getCapsuleName()),
+                        subscription.getBillingAnchorDay(),
+                        formatDate(subscription.getNextBillingAt()),
+                        resolveExpectedNextAmount(subscription)))
+                .sorted(Comparator
+                        .comparing(
+                                ScheduleBillingResponse.UpcomingBilling::nextBillingAt,
+                                Comparator.nullsLast(String::compareTo))
+                        .thenComparing(
+                                ScheduleBillingResponse.UpcomingBilling::capsuleName,
+                                Comparator.nullsLast(String::compareTo)))
+                .toList();
+    }
+
+    private String resolveProductName(CapsuleProduct product) {
+        if (product == null || product.getProductName() == null || product.getProductName().isBlank()) {
+            return "상품 정보 없음";
+        }
+        return product.getProductName();
     }
 
     private List<SubscriptionItemDto> toItemDtos(List<SubscriptionItem> items) {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Pill, ShieldCheck, FileText, ChevronRight, CheckCircle2, Shield, Activity, CalendarClock, Loader2 } from 'lucide-react';
-import { getCapsuleDetail } from '@/features/mypage/api/mypage.api';
+import { getCapsuleDetail, getProductDetail } from '@/features/mypage/api/mypage.api';
+import DashboardProductDetailModal from '@/features/dashboard/components/DashboardProductDetailModal';
 
 const CapsuleDetailPage = () => {
     const { id } = useParams();
@@ -9,6 +10,10 @@ const CapsuleDetailPage = () => {
     const [capsule, setCapsule] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
+    const [isProductDetailLoading, setIsProductDetailLoading] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [productDetailError, setProductDetailError] = useState('');
 
     useEffect(() => {
         const fetchDetail = async () => {
@@ -26,6 +31,34 @@ const CapsuleDetailPage = () => {
 
         fetchDetail();
     }, [id]);
+
+    const handleProductClick = async (productSourceId) => {
+        if (!productSourceId) {
+            return;
+        }
+
+        setIsProductDetailOpen(true);
+        setIsProductDetailLoading(true);
+        setSelectedProduct(null);
+        setProductDetailError('');
+
+        try {
+            const detail = await getProductDetail(productSourceId);
+            setSelectedProduct(detail);
+        } catch (detailError) {
+            console.error(detailError);
+            setProductDetailError('보험 상품 상세 정보를 불러오지 못했습니다.');
+        } finally {
+            setIsProductDetailLoading(false);
+        }
+    };
+
+    const handleCloseProductDetail = () => {
+        setIsProductDetailOpen(false);
+        setIsProductDetailLoading(false);
+        setSelectedProduct(null);
+        setProductDetailError('');
+    };
 
     if (loading) {
         return (
@@ -108,8 +141,10 @@ const CapsuleDetailPage = () => {
                     </h3>
                     <div className="space-y-3 relative before:absolute before:inset-y-0 before:left-6 before:w-[2px] before:bg-gradient-to-b before:from-[#82D8FC]/20 before:via-[#82D8FC]/10 before:to-transparent before:-z-10">
                         {capsule.products.map((product, idx) => (
-                            <div 
+                            <button
+                                type="button"
                                 key={product.id} 
+                                onClick={() => handleProductClick(product.id)}
                                 className="p-4 bg-[#141925] rounded-[24px] border border-slate-800/60 hover:bg-[#1C212E] hover:border-[#82D8FC]/30 transition-all cursor-pointer shadow-lg animate-in slide-in-from-bottom-4 fade-in fill-mode-both flex gap-4 items-center group relative overflow-hidden"
                                 style={{ animationDelay: `${100 + idx * 100}ms` }}
                             >
@@ -127,7 +162,7 @@ const CapsuleDetailPage = () => {
                                 <div className="w-8 h-8 rounded-full bg-[#0B0E14] border border-slate-800/50 flex items-center justify-center text-[#4E5669] group-hover:border-[#82D8FC]/30 group-hover:text-[#82D8FC] transition-all shrink-0 z-10 group-hover:translate-x-1">
                                     <ChevronRight className="w-4 h-4" />
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 </div>
@@ -170,6 +205,14 @@ const CapsuleDetailPage = () => {
                     )}
                 </div>
             </div>
+
+            <DashboardProductDetailModal
+                isOpen={isProductDetailOpen}
+                onClose={handleCloseProductDetail}
+                product={selectedProduct}
+                isLoading={isProductDetailLoading}
+                errorMessage={productDetailError}
+            />
         </div>
     );
 };

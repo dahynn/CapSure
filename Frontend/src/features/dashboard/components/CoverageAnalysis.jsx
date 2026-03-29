@@ -1,47 +1,182 @@
-import React from 'react';
-import { Info, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { CircleAlert, ShieldCheck, Sparkles } from 'lucide-react';
+import { getDashboardProductDetail } from '../api/dashboard.api';
+import DashboardProductDetailModal from './DashboardProductDetailModal';
 
-const CoverageAnalysis = () => {
+const scoreMessage = (score) => {
+    if (score >= 85) {
+        return '핵심 보장이 전반적으로 잘 갖춰져 있습니다.';
+    }
+    if (score >= 55) {
+        return '기본 보장은 갖췄지만 몇몇 카테고리는 보강 여지가 있습니다.';
+    }
+    return '미가입 카테고리가 많아 우선 보완이 필요합니다.';
+};
+
+const formatPrice = (value) => {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('ko-KR').format(amount);
+};
+
+const CoverageAnalysis = ({ diagnosisReport, coveragePercentile }) => {
+    const score = coveragePercentile?.coveragePercentile || 0;
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [isDetailLoading, setIsDetailLoading] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [detailErrorMessage, setDetailErrorMessage] = useState('');
+
+    const handleRecommendedProductClick = async (productSourceId) => {
+        if (!productSourceId) {
+            return;
+        }
+
+        setIsDetailOpen(true);
+        setIsDetailLoading(true);
+        setSelectedProduct(null);
+        setDetailErrorMessage('');
+
+        try {
+            const detail = await getDashboardProductDetail(productSourceId);
+            setSelectedProduct(detail);
+        } catch (error) {
+            console.error('Failed to load recommended product detail:', error);
+            setDetailErrorMessage('추천 상품 상세 정보를 불러오지 못했습니다.');
+        } finally {
+            setIsDetailLoading(false);
+        }
+    };
+
+    const handleCloseDetail = () => {
+        setIsDetailOpen(false);
+        setSelectedProduct(null);
+        setDetailErrorMessage('');
+    };
+
     return (
-        <div className="mb-8">
-            <div className="flex justify-between items-center mb-4 px-1">
-                <h2 className="text-[20px] font-bold text-white tracking-tight">보장 분석</h2>
-                <button className="w-6 h-6 rounded-full bg-[#161B26] border border-slate-700 text-[#82D8FC] flex items-center justify-center transition-colors hover:bg-slate-800">
-                    <Info className="w-3.5 h-3.5" strokeWidth={3} />
-                </button>
-            </div>
+        <>
+            <div className="mb-8">
+                <div className="mb-4 flex items-center justify-between px-1">
+                    <h2 className="text-[20px] font-bold tracking-tight text-white">정밀 진단 리포트</h2>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-700 bg-[#161B26] text-[#82D8FC]">
+                        <CircleAlert className="h-3.5 w-3.5" strokeWidth={3} />
+                    </div>
+                </div>
 
-            <div className="bg-[#10141D] rounded-3xl p-6 shadow-lg border border-slate-800/80">
-                <div className="flex justify-between items-end mb-4">
-                    <div>
-                        <p className="text-[13px] text-[#9D9DA4] font-medium mb-1">나의 보장 수준 백분위</p>
-                        <div className="flex items-baseline gap-1">
-                            <h3 className="text-[26px] font-black text-white tracking-tight">상위 </h3>
-                            <span className="text-[26px] font-black text-[#F2BEF7]">15%</span>
+                <div className="rounded-3xl border border-slate-800/80 bg-[#10141D] p-6 shadow-lg">
+                    <div className="mb-5 flex items-end justify-between gap-4">
+                        <div>
+                            <p className="mb-1 text-[13px] font-medium text-[#9D9DA4]">7대 보장 충족률</p>
+                            <div className="flex items-baseline gap-1">
+                                <h3 className="text-[30px] font-black tracking-tight text-white">{score}</h3>
+                                <span className="text-[26px] font-black text-[#F2BEF7]">%</span>
+                            </div>
+                        </div>
+                        <span className="pb-1 text-[11px] font-black uppercase tracking-widest text-[#F6CD3C]">
+                            Coverage Score
+                        </span>
+                    </div>
+
+                    <div className="relative mb-5 h-3.5 w-full overflow-hidden rounded-full bg-[#1C212E]">
+                        <div
+                            className="absolute left-0 top-0 h-full rounded-full"
+                            style={{
+                                width: `${Math.max(0, Math.min(score, 100))}%`,
+                                background: 'linear-gradient(90deg, #82D8FC 0%, #F2BEF7 50%, #F6CD3C 100%)',
+                            }}
+                        />
+                    </div>
+
+                    <div className="mb-6 flex gap-3 rounded-2xl border border-[#2B233A] bg-[#191523] p-4 text-white">
+                        <Sparkles className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#F2BEF7]" />
+                        <div>
+                            <p className="text-[13px] leading-snug text-[#BBBBCA]">
+                                {coveragePercentile?.message || scoreMessage(score)}
+                            </p>
+                            {diagnosisReport?.description ? (
+                                <p className="mt-2 text-[12px] text-slate-400">{diagnosisReport.description}</p>
+                            ) : null}
                         </div>
                     </div>
-                    <span className="text-[11px] font-black tracking-widest text-[#F6CD3C] pb-1 uppercase">Premium Grade</span>
-                </div>
 
-                {/* Custom Gradient Progress Bar */}
-                <div className="w-full h-3.5 bg-[#1C212E] rounded-full mb-6 relative overflow-hidden">
-                    <div 
-                        className="absolute top-0 left-0 h-full rounded-full"
-                        style={{ 
-                            width: '85%', // 상위 15% means they beat 85%
-                            background: 'linear-gradient(90deg, #82D8FC 0%, #F2BEF7 50%, #F6CD3C 100%)' 
-                        }}
-                    />
-                </div>
+                    <div className="space-y-3">
+                        {(diagnosisReport?.diagnoses || []).map((item) => {
+                            const isInsured = item.insured;
 
-                <div className="bg-[#191523] border border-[#2B233A] rounded-2xl p-4 flex gap-3 text-white">
-                    <Sparkles className="w-5 h-5 text-[#F2BEF7] mt-0.5 flex-shrink-0" />
-                    <p className="text-[13px] leading-snug text-[#BBBBCA]">
-                        현재 적용된 <span className="font-bold text-[#F2BEF7]">보험 캡슐</span>은 한 달 동안 유지되며, 보장 범위가 최적화된 상태입니다.
-                    </p>
+                            return (
+                                <div
+                                    key={item.categoryCode}
+                                    className="rounded-2xl border border-slate-800 bg-[#151A24] px-4 py-4"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span
+                                                    className={`h-2.5 w-2.5 rounded-full ${
+                                                        isInsured ? 'bg-[#79E79C]' : 'bg-[#F36B7F]'
+                                                    }`}
+                                                />
+                                                <p className="text-[15px] font-semibold text-white">{item.categoryName}</p>
+                                                <span
+                                                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                                                        isInsured
+                                                            ? 'bg-[#1E2D24] text-[#8AE7A3]'
+                                                            : 'bg-[#351923] text-[#FF9CAC]'
+                                                    }`}
+                                                >
+                                                    {item.status}
+                                                </span>
+                                            </div>
+                                            {item.coverageNames?.length ? (
+                                                <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
+                                                    보유 보장: {item.coverageNames.join(', ')}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                        {isInsured ? <ShieldCheck className="h-5 w-5 text-[#82D8FC]" /> : null}
+                                    </div>
+
+                                    {!isInsured && item.recommendedProduct ? (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleRecommendedProductClick(item.recommendedProduct.productSourceId)
+                                            }
+                                            className="mt-3 block w-full rounded-xl border border-dashed border-slate-700 bg-[#10141D] px-3 py-3 text-left transition-colors hover:border-[#82D8FC]/60 hover:bg-[#121A28]"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#82D8FC]">
+                                                        추천 상품
+                                                    </p>
+                                                    <p className="mt-1 text-[13px] font-semibold leading-relaxed text-white">
+                                                        {item.recommendedProduct.productName}
+                                                    </p>
+                                                    <p className="mt-1 text-[12px] text-slate-400">
+                                                        {item.recommendedProduct.companyName} ·{' '}
+                                                        {formatPrice(item.recommendedProduct.monthlyPrice)}원/월
+                                                    </p>
+                                                </div>
+                                                <span className="shrink-0 rounded-full bg-[#1B2230] px-3 py-1 text-[11px] font-bold text-[#82D8FC]">
+                                                    상세보기
+                                                </span>
+                                            </div>
+                                        </button>
+                                    ) : null}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <DashboardProductDetailModal
+                isOpen={isDetailOpen}
+                onClose={handleCloseDetail}
+                product={selectedProduct}
+                isLoading={isDetailLoading}
+                errorMessage={detailErrorMessage}
+            />
+        </>
     );
 };
 

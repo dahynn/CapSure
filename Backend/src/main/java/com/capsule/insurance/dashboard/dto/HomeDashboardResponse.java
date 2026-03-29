@@ -25,6 +25,7 @@ public record HomeDashboardResponse(
             String companyName,
             String category,
             BigDecimal monthlyPremium,
+            Integer billingAnchorDay,
             String nextBillingAt,
             long daysUntilRenewal
     ) {

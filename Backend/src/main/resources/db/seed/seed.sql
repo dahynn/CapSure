@@ -321,17 +321,21 @@ INSERT INTO public.subscription (
     current_cycle_start_at,
     current_cycle_end_at,
     next_billing_at,
-    expected_next_amount
+    expected_next_amount,
+    created_at,
+    updated_at
 )
 SELECT
     u.user_id,
     '데모 건강 캡슐',
     'ACTIVE',
     5,
-    TIMESTAMPTZ '2026-03-01 00:00:00+09',
-    TIMESTAMPTZ '2026-03-31 23:59:59+09',
+    TIMESTAMPTZ '2026-03-05 00:00:00+09',
     TIMESTAMPTZ '2026-04-05 00:00:00+09',
-    0
+    TIMESTAMPTZ '2026-04-05 00:00:00+09',
+    0,
+    TIMESTAMPTZ '2026-03-05 09:00:00+09',
+    TIMESTAMPTZ '2026-03-05 09:00:00+09'
 FROM public.usr_user u
 WHERE u.email = 'demo@example.com'
   AND NOT EXISTS (
@@ -349,17 +353,21 @@ INSERT INTO public.subscription (
     current_cycle_start_at,
     current_cycle_end_at,
     next_billing_at,
-    expected_next_amount
+    expected_next_amount,
+    created_at,
+    updated_at
 )
 SELECT
     u.user_id,
     '데모 상해 캡슐',
     'ACTIVE',
     12,
-    TIMESTAMPTZ '2026-03-08 00:00:00+09',
-    TIMESTAMPTZ '2026-04-07 23:59:59+09',
+    TIMESTAMPTZ '2026-03-12 00:00:00+09',
     TIMESTAMPTZ '2026-04-12 00:00:00+09',
-    0
+    TIMESTAMPTZ '2026-04-12 00:00:00+09',
+    0,
+    TIMESTAMPTZ '2026-03-12 09:00:00+09',
+    TIMESTAMPTZ '2026-03-12 09:00:00+09'
 FROM public.usr_user u
 WHERE u.email = 'demo@example.com'
   AND NOT EXISTS (
@@ -377,17 +385,21 @@ INSERT INTO public.subscription (
     current_cycle_start_at,
     current_cycle_end_at,
     next_billing_at,
-    expected_next_amount
+    expected_next_amount,
+    created_at,
+    updated_at
 )
 SELECT
     u.user_id,
     '데모 혼합 캡슐',
     'ACTIVE',
     18,
-    TIMESTAMPTZ '2026-03-15 00:00:00+09',
-    TIMESTAMPTZ '2026-04-14 23:59:59+09',
+    TIMESTAMPTZ '2026-03-18 00:00:00+09',
     TIMESTAMPTZ '2026-04-18 00:00:00+09',
-    0
+    TIMESTAMPTZ '2026-04-18 00:00:00+09',
+    0,
+    TIMESTAMPTZ '2026-03-18 09:00:00+09',
+    TIMESTAMPTZ '2026-03-18 09:00:00+09'
 FROM public.usr_user u
 WHERE u.email = 'demo@example.com'
   AND NOT EXISTS (
@@ -415,9 +427,9 @@ SELECT
     'ACTIVE',
     cp.coverage_amount,
     CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
-    TIMESTAMPTZ '2026-03-01 00:00:00+09',
-    TIMESTAMPTZ '2026-04-01 00:00:00+09',
-    TIMESTAMPTZ '2026-04-01 00:00:00+09'
+    TIMESTAMPTZ '2026-03-05 00:00:00+09',
+    TIMESTAMPTZ '2026-04-05 00:00:00+09',
+    TIMESTAMPTZ '2026-04-05 00:00:00+09'
 FROM public.subscription s
 JOIN public.usr_user u
     ON u.user_id = s.user_id
@@ -457,9 +469,9 @@ SELECT
     'ACTIVE',
     cp.coverage_amount,
     CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
-    TIMESTAMPTZ '2026-03-08 00:00:00+09',
-    TIMESTAMPTZ '2026-04-08 00:00:00+09',
-    TIMESTAMPTZ '2026-04-08 00:00:00+09'
+    TIMESTAMPTZ '2026-03-12 00:00:00+09',
+    TIMESTAMPTZ '2026-04-12 00:00:00+09',
+    TIMESTAMPTZ '2026-04-12 00:00:00+09'
 FROM public.subscription s
 JOIN public.usr_user u
     ON u.user_id = s.user_id
@@ -499,9 +511,9 @@ SELECT
     'ACTIVE',
     cp.coverage_amount,
     CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
-    TIMESTAMPTZ '2026-03-15 00:00:00+09',
-    TIMESTAMPTZ '2026-04-15 00:00:00+09',
-    TIMESTAMPTZ '2026-04-15 00:00:00+09'
+    TIMESTAMPTZ '2026-03-18 00:00:00+09',
+    TIMESTAMPTZ '2026-04-18 00:00:00+09',
+    TIMESTAMPTZ '2026-04-18 00:00:00+09'
 FROM public.subscription s
 JOIN public.usr_user u
     ON u.user_id = s.user_id
@@ -864,6 +876,223 @@ JOIN public.usr_user u
     ON u.user_id = c.user_id
 WHERE u.email = 'demo@example.com'
   AND c.insu_num = 'DEMO-0001'
+ON CONFLICT (myd_contract_id, coverage_num) DO UPDATE
+SET
+    coverage_name = EXCLUDED.coverage_name,
+    coverage_amount = EXCLUDED.coverage_amount,
+    currency_code = EXCLUDED.currency_code,
+    coverage_status = EXCLUDED.coverage_status,
+    start_date = EXCLUDED.start_date,
+    end_date = EXCLUDED.end_date,
+    coverage_code = EXCLUDED.coverage_code,
+    extra_payload_json = EXCLUDED.extra_payload_json,
+    updated_at = NOW();
+
+-- ---------------------------------------------------------------------------
+-- 104dashdemo cohort for dashboard / analysis demos
+-- ---------------------------------------------------------------------------
+INSERT INTO public.usr_user (
+    email,
+    password_encrypted,
+    name,
+    phone,
+    birth_date,
+    gender,
+    user_status,
+    onboarding_completed_at
+)
+VALUES
+    (
+        '104dashdemo01@example.com',
+        '$2a$10$QCibuURntLkkHh.yHFyMQeIVzl8.th7Kj2uvUMaOCmZIXLypM3ow.',
+        'D104U01',
+        '010-1040-0001',
+        DATE '1988-01-11',
+        'M',
+        'ACTIVE',
+        NOW()
+    ),
+    (
+        '104dashdemo02@example.com',
+        '$2a$10$QCibuURntLkkHh.yHFyMQeIVzl8.th7Kj2uvUMaOCmZIXLypM3ow.',
+        'D104U02',
+        '010-1040-0002',
+        DATE '1991-03-21',
+        'F',
+        'ACTIVE',
+        NOW()
+    ),
+    (
+        '104dashdemo03@example.com',
+        '$2a$10$QCibuURntLkkHh.yHFyMQeIVzl8.th7Kj2uvUMaOCmZIXLypM3ow.',
+        'D104U03',
+        '010-1040-0003',
+        DATE '1986-07-09',
+        'M',
+        'ACTIVE',
+        NOW()
+    ),
+    (
+        '104dashdemo04@example.com',
+        '$2a$10$QCibuURntLkkHh.yHFyMQeIVzl8.th7Kj2uvUMaOCmZIXLypM3ow.',
+        'D104U04',
+        '010-1040-0004',
+        DATE '1994-11-02',
+        'F',
+        'ACTIVE',
+        NOW()
+    ),
+    (
+        '104dashdemo05@example.com',
+        '$2a$10$QCibuURntLkkHh.yHFyMQeIVzl8.th7Kj2uvUMaOCmZIXLypM3ow.',
+        'D104U05',
+        '010-1040-0005',
+        DATE '1983-05-18',
+        'M',
+        'ACTIVE',
+        NOW()
+    ),
+    (
+        '104dashdemo06@example.com',
+        '$2a$10$QCibuURntLkkHh.yHFyMQeIVzl8.th7Kj2uvUMaOCmZIXLypM3ow.',
+        'D104U06',
+        '010-1040-0006',
+        DATE '1996-09-27',
+        'F',
+        'ACTIVE',
+        NOW()
+    )
+ON CONFLICT (email) DO UPDATE
+SET
+    password_encrypted = EXCLUDED.password_encrypted,
+    name = EXCLUDED.name,
+    phone = EXCLUDED.phone,
+    birth_date = EXCLUDED.birth_date,
+    gender = EXCLUDED.gender,
+    user_status = EXCLUDED.user_status,
+    onboarding_completed_at = EXCLUDED.onboarding_completed_at,
+    updated_at = NOW();
+
+INSERT INTO public.myd_contract (
+    user_id,
+    provider_code,
+    insu_num,
+    is_consent,
+    business_type,
+    product_name,
+    insu_type_code,
+    contract_status_code,
+    contract_date,
+    start_date,
+    end_date,
+    premium_amount,
+    currency_code,
+    insured_list_json,
+    prize_list_json,
+    contract_list_json,
+    policy_uri,
+    extra_payload_json
+)
+SELECT
+    u.user_id,
+    '104DASHDEMO',
+    v.insu_num,
+    TRUE,
+    v.business_type::public.business_type_enum,
+    v.product_name,
+    '104DASHDEMO',
+    'NORMAL',
+    DATE '2024-01-01',
+    DATE '2024-01-01',
+    DATE '2034-12-31',
+    v.premium_amount,
+    'KRW',
+    '["104dashdemo insured"]',
+    '["104dashdemo prize"]',
+    '{"source":"seed","cohort":"104dashdemo"}',
+    'https://example.com/policies/' || v.insu_num,
+    '{"source":"seed","cohort":"104dashdemo"}'
+FROM (
+    VALUES
+        ('104dashdemo01@example.com', '104DASHDEMO-0001', 'LIFE', '104dashdemo Death Plan', 41000),
+        ('104dashdemo02@example.com', '104DASHDEMO-0002', 'NONLIFE', '104dashdemo Cancer Loss Plan', 53000),
+        ('104dashdemo03@example.com', '104DASHDEMO-0003', 'LIFE', '104dashdemo Brain Surgery Plan', 62000),
+        ('104dashdemo04@example.com', '104DASHDEMO-0004', 'NONLIFE', '104dashdemo Mixed Safety Plan', 47000),
+        ('104dashdemo05@example.com', '104DASHDEMO-0005', 'LIFE', '104dashdemo Full Coverage Plan', 89000),
+        ('104dashdemo06@example.com', '104DASHDEMO-0006', 'NONLIFE', '104dashdemo Actual Loss Plan', 29000)
+) AS v(email, insu_num, business_type, product_name, premium_amount)
+JOIN public.usr_user u
+    ON u.email = v.email
+ON CONFLICT (user_id, provider_code, insu_num) DO UPDATE
+SET
+    is_consent = EXCLUDED.is_consent,
+    business_type = EXCLUDED.business_type,
+    product_name = EXCLUDED.product_name,
+    insu_type_code = EXCLUDED.insu_type_code,
+    contract_status_code = EXCLUDED.contract_status_code,
+    contract_date = EXCLUDED.contract_date,
+    start_date = EXCLUDED.start_date,
+    end_date = EXCLUDED.end_date,
+    premium_amount = EXCLUDED.premium_amount,
+    currency_code = EXCLUDED.currency_code,
+    insured_list_json = EXCLUDED.insured_list_json,
+    prize_list_json = EXCLUDED.prize_list_json,
+    contract_list_json = EXCLUDED.contract_list_json,
+    policy_uri = EXCLUDED.policy_uri,
+    extra_payload_json = EXCLUDED.extra_payload_json,
+    synced_at = NOW(),
+    updated_at = NOW();
+
+INSERT INTO public.myd_contract_coverage (
+    myd_contract_id,
+    coverage_num,
+    coverage_name,
+    coverage_amount,
+    currency_code,
+    coverage_status,
+    start_date,
+    end_date,
+    coverage_code,
+    extra_payload_json
+)
+SELECT
+    c.myd_contract_id,
+    v.coverage_num,
+    v.coverage_name,
+    v.coverage_amount,
+    'KRW',
+    'NORMAL',
+    DATE '2024-01-01',
+    DATE '2034-12-31',
+    v.coverage_code,
+    '{"source":"seed","cohort":"104dashdemo"}'
+FROM (
+    VALUES
+        ('104dashdemo01@example.com', '104DASHDEMO-0001', 'COV-104-0001', 'Death Benefit', 100000000, 'DEATH_GENERAL'),
+        ('104dashdemo02@example.com', '104DASHDEMO-0002', 'COV-104-0001', 'Cancer Diagnosis', 30000000, 'CANCER_GENERAL'),
+        ('104dashdemo02@example.com', '104DASHDEMO-0002', 'COV-104-0002', 'Actual Loss Medical', 5000000, 'ACTUAL_LOSS_MEDICAL'),
+        ('104dashdemo03@example.com', '104DASHDEMO-0003', 'COV-104-0001', 'Brain Stroke', 20000000, 'BRAIN_STROKE'),
+        ('104dashdemo03@example.com', '104DASHDEMO-0003', 'COV-104-0002', 'Surgery Benefit', 7000000, 'SURGERY_GENERAL'),
+        ('104dashdemo03@example.com', '104DASHDEMO-0003', 'COV-104-0003', 'Accident Injury', 10000000, 'ACCIDENT_INJURY'),
+        ('104dashdemo04@example.com', '104DASHDEMO-0004', 'COV-104-0001', 'Liability Shield', 100000000, 'LIABILITY_GENERAL'),
+        ('104dashdemo04@example.com', '104DASHDEMO-0004', 'COV-104-0002', 'Cancer Diagnosis', 20000000, 'CANCER_GENERAL'),
+        ('104dashdemo04@example.com', '104DASHDEMO-0004', 'COV-104-0003', 'Death Benefit', 50000000, 'DEATH_GENERAL'),
+        ('104dashdemo04@example.com', '104DASHDEMO-0004', 'COV-104-0004', 'Accident Injury', 8000000, 'ACCIDENT_INJURY'),
+        ('104dashdemo05@example.com', '104DASHDEMO-0005', 'COV-104-0001', 'Death Benefit', 120000000, 'DEATH_GENERAL'),
+        ('104dashdemo05@example.com', '104DASHDEMO-0005', 'COV-104-0002', 'Cancer Diagnosis', 40000000, 'CANCER_GENERAL'),
+        ('104dashdemo05@example.com', '104DASHDEMO-0005', 'COV-104-0003', 'Brain Heart Care', 30000000, 'BRAIN_HEART_GENERAL'),
+        ('104dashdemo05@example.com', '104DASHDEMO-0005', 'COV-104-0004', 'Actual Loss Medical', 7000000, 'ACTUAL_LOSS_MEDICAL'),
+        ('104dashdemo05@example.com', '104DASHDEMO-0005', 'COV-104-0005', 'Surgery Benefit', 10000000, 'SURGERY_GENERAL'),
+        ('104dashdemo05@example.com', '104DASHDEMO-0005', 'COV-104-0006', 'Accident Injury', 12000000, 'ACCIDENT_INJURY'),
+        ('104dashdemo05@example.com', '104DASHDEMO-0005', 'COV-104-0007', 'Liability Shield', 150000000, 'LIABILITY_GENERAL'),
+        ('104dashdemo06@example.com', '104DASHDEMO-0006', 'COV-104-0001', 'Actual Loss Medical', 3000000, 'ACTUAL_LOSS_MEDICAL')
+) AS v(email, insu_num, coverage_num, coverage_name, coverage_amount, coverage_code)
+JOIN public.usr_user u
+    ON u.email = v.email
+JOIN public.myd_contract c
+    ON c.user_id = u.user_id
+   AND c.provider_code = '104DASHDEMO'
+   AND c.insu_num = v.insu_num
 ON CONFLICT (myd_contract_id, coverage_num) DO UPDATE
 SET
     coverage_name = EXCLUDED.coverage_name,

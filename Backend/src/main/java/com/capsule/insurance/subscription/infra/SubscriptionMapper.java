@@ -20,6 +20,8 @@ public interface SubscriptionMapper {
 
     Subscription findSubscriptionAggregateByUserId(@Param("userId") Long userId);
 
+    List<Subscription> findActiveSubscriptionsByUserId(@Param("userId") Long userId);
+
     Subscription findSubscriptionById(@Param("subscriptionId") Long subscriptionId);
 
     List<SubscriptionItem> findCurrentItemsBySubscriptionId(@Param("subscriptionId") Long subscriptionId);
