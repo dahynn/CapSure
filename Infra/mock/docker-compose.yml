@@ -11,7 +11,7 @@ services:
 
   # [Production] PostgreSQL
   postgres:
-    image: postgres:17
+    image: postgres:16-alpine
     container_name: mydata-postgres-prod
     restart: always
     environment:
@@ -19,7 +19,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-capsure}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in Infra/mock/.env}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - capsule-postgres-data:/var/lib/postgresql/data
+      - ${BACKEND_DIR:-../../Backend}/src/main/resources/db/schema/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+      - ${BACKEND_DIR:-../../Backend}/src/main/resources/db/schema/product_source.sql:/docker-entrypoint-initdb.d/20-product_source.sql:ro
+      - ${BACKEND_DIR:-../../Backend}/src/main/resources/db/seed/seed.sql:/docker-entrypoint-initdb.d/30-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -75,4 +78,4 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
 
 volumes:
-  postgres_data:
+  capsule-postgres-data:
