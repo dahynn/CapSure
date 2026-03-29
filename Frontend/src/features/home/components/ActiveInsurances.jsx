@@ -21,7 +21,15 @@ const ActiveInsurances = ({ activeInsurances }) => {
 
             <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-6 snap-x snap-mandatory w-full">
                 {activeInsurances.map((ins) => (
-                    <div key={ins.id} className="flex-shrink-0 w-[260px] md:w-[300px] bg-[#161B26] rounded-3xl p-6 relative overflow-hidden snap-start shadow-xl border border-slate-800 flex flex-col hover:border-slate-700 transition-colors">
+                    <div
+                        key={ins.id}
+                        onClick={() =>
+                            navigate(`/capsure-insurance/detail/${ins.productSourceId}`, {
+                                state: { readOnly: true, from: 'active-insurance' },
+                            })
+                        }
+                        className="flex-shrink-0 w-[260px] md:w-[300px] bg-[#161B26] rounded-3xl p-6 relative overflow-hidden snap-start shadow-xl border border-slate-800 flex flex-col hover:border-slate-700 transition-colors cursor-pointer"
+                    >
                         <div className="flex justify-between items-start mb-6">
                             <span
                                 className="px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide"
@@ -33,7 +41,12 @@ const ActiveInsurances = ({ activeInsurances }) => {
                                 {ins.status}
                             </span>
                             <button
-                                onClick={() => navigate(`/capsure-insurance/detail/${ins.productSourceId}`)}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    navigate(`/capsure-insurance/detail/${ins.productSourceId}`, {
+                                        state: { readOnly: true, from: 'active-insurance' },
+                                    });
+                                }}
                                 className="text-slate-500 hover:text-white transition-colors"
                                 aria-label="보험 상세 보기"
                             >

@@ -145,11 +145,11 @@ const CapsuleDetailPage = () => {
                                 type="button"
                                 key={product.id} 
                                 onClick={() => handleProductClick(product.id)}
-                                className="h-[134px] p-4 bg-[#141925] rounded-[24px] border border-slate-800/60 hover:bg-[#1C212E] hover:border-[#82D8FC]/30 transition-all cursor-pointer shadow-lg animate-in slide-in-from-bottom-4 fade-in fill-mode-both flex gap-4 items-center group relative overflow-hidden"
+                                className="w-full h-[134px] p-4 bg-[#141925] rounded-[24px] border border-slate-800/60 hover:bg-[#1C212E] hover:border-[#82D8FC]/30 transition-all cursor-pointer shadow-lg animate-in slide-in-from-bottom-4 fade-in fill-mode-both flex gap-4 items-center group relative overflow-hidden text-left"
                                 style={{ animationDelay: `${100 + idx * 100}ms` }}
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#82D8FC]/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                                <div className="w-10 h-10 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center text-[#9D9DA4] group-hover:text-[#82D8FC] group-hover:bg-[#82D8FC]/5 transition-colors shrink-0 shadow-inner z-10">
+                                <div className="w-10 h-10 rounded-full bg-[#0B0E14] border border-slate-800/80 flex items-center justify-center text-[#9D9DA4] group-hover:text-[#82D8FC] group-hover:bg-[#82D8FC]/5 transition-colors shadow-inner z-10">
                                     <FileText className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1.5 z-10">
@@ -169,7 +169,7 @@ const CapsuleDetailPage = () => {
                                     </h4>
                                     <p className="text-[#9D9DA4] text-[11px] font-medium">{product.companyName}</p>
                                 </div>
-                                <div className="w-8 h-8 rounded-full bg-[#0B0E14] border border-slate-800/50 flex items-center justify-center text-[#4E5669] group-hover:border-[#82D8FC]/30 group-hover:text-[#82D8FC] transition-all shrink-0 z-10 group-hover:translate-x-1">
+                                <div className="w-8 h-8 rounded-full bg-[#0B0E14] border border-slate-800/50 flex items-center justify-center text-[#4E5669] group-hover:border-[#82D8FC]/30 group-hover:text-[#82D8FC] transition-all z-10 group-hover:translate-x-1">
                                     <ChevronRight className="w-4 h-4" />
                                 </div>
                             </button>

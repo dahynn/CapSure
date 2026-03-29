@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, Share2, ShieldCheck, Info, Zap, Receipt, Building2, Phone, CheckCircle2, AlertCircle } from 'lucide-react';
 import AppButton from '@/common/components/ui/button/AppButton';
 
-const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
+const CapsureProductDetail = ({ product, onBack, onAdd, isAdded, isReadOnly = false }) => {
     const [copyToast, setCopyToast] = useState({ visible: false, message: '', isError: false });
     const toastTimerRef = useRef(null);
 
@@ -211,15 +211,17 @@ const CapsureProductDetail = ({ product, onBack, onAdd, isAdded }) => {
             </div>
 
             {/* Sticky Bottom Action */}
-            <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto bg-gradient-to-t from-[#020715] via-[#020715] to-transparent pt-12 px-6 pb-8 z-40">
-                <AppButton
-                    onClick={onAdd}
-                    tone={isAdded ? 'subtle' : 'primary'}
-                    className="rounded-[16px] text-lg shadow-lg"
-                >
-                    {isAdded ? '이미 캡슐에 담겨있어요' : '캡슐에 담기'}
-                </AppButton>
-            </div>
+            {!isReadOnly ? (
+                <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto bg-gradient-to-t from-[#020715] via-[#020715] to-transparent pt-12 px-6 pb-8 z-40">
+                    <AppButton
+                        onClick={onAdd}
+                        tone={isAdded ? 'subtle' : 'primary'}
+                        className="rounded-[16px] text-lg shadow-lg"
+                    >
+                        {isAdded ? '이미 캡슐에 담겨있어요' : '캡슐에 담기'}
+                    </AppButton>
+                </div>
+            ) : null}
         </div>
     );
 };
