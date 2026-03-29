@@ -327,7 +327,7 @@ INSERT INTO public.subscription (
 )
 SELECT
     u.user_id,
-    '데모 건강 캡슐',
+    '봄 준비 캡슐',
     'ACTIVE',
     5,
     TIMESTAMPTZ '2026-03-05 00:00:00+09',
@@ -342,7 +342,7 @@ WHERE u.email = 'demo@example.com'
     SELECT 1
     FROM public.subscription s
     WHERE s.user_id = u.user_id
-      AND s.capsule_name = '데모 건강 캡슐'
+      AND s.capsule_name = '봄 준비 캡슐'
   );
 
 INSERT INTO public.subscription (
@@ -359,7 +359,7 @@ INSERT INTO public.subscription (
 )
 SELECT
     u.user_id,
-    '데모 상해 캡슐',
+    '골프 케어 캡슐',
     'ACTIVE',
     12,
     TIMESTAMPTZ '2026-03-12 00:00:00+09',
@@ -374,7 +374,7 @@ WHERE u.email = 'demo@example.com'
     SELECT 1
     FROM public.subscription s
     WHERE s.user_id = u.user_id
-      AND s.capsule_name = '데모 상해 캡슐'
+      AND s.capsule_name = '골프 케어 캡슐'
   );
 
 INSERT INTO public.subscription (
@@ -391,7 +391,7 @@ INSERT INTO public.subscription (
 )
 SELECT
     u.user_id,
-    '데모 혼합 캡슐',
+    '출퇴근 안심 캡슐',
     'ACTIVE',
     18,
     TIMESTAMPTZ '2026-03-18 00:00:00+09',
@@ -406,7 +406,39 @@ WHERE u.email = 'demo@example.com'
     SELECT 1
     FROM public.subscription s
     WHERE s.user_id = u.user_id
-      AND s.capsule_name = '데모 혼합 캡슐'
+      AND s.capsule_name = '출퇴근 안심 캡슐'
+  );
+
+INSERT INTO public.subscription (
+    user_id,
+    capsule_name,
+    subscription_status,
+    billing_anchor_day,
+    current_cycle_start_at,
+    current_cycle_end_at,
+    next_billing_at,
+    expected_next_amount,
+    created_at,
+    updated_at
+)
+SELECT
+    u.user_id,
+    '주말 드라이브 캡슐',
+    'ACTIVE',
+    28,
+    TIMESTAMPTZ '2026-03-28 00:00:00+09',
+    TIMESTAMPTZ '2026-04-28 00:00:00+09',
+    TIMESTAMPTZ '2026-04-28 00:00:00+09',
+    0,
+    TIMESTAMPTZ '2026-03-28 09:00:00+09',
+    TIMESTAMPTZ '2026-03-28 09:00:00+09'
+FROM public.usr_user u
+WHERE u.email = 'demo@example.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.subscription s
+    WHERE s.user_id = u.user_id
+      AND s.capsule_name = '주말 드라이브 캡슐'
   );
 
 INSERT INTO public.subscription_item (
@@ -440,7 +472,7 @@ JOIN public.capsule_product cp
         'CAPSULE-ACTUALLOSS-001'
     )
 WHERE u.email = 'demo@example.com'
-  AND s.capsule_name = '데모 건강 캡슐'
+  AND s.capsule_name = '봄 준비 캡슐'
 ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
 SET
     item_status = EXCLUDED.item_status,
@@ -482,7 +514,7 @@ JOIN public.capsule_product cp
         'CAPSULE-DEATH-001'
     )
 WHERE u.email = 'demo@example.com'
-  AND s.capsule_name = '데모 상해 캡슐'
+  AND s.capsule_name = '골프 케어 캡슐'
 ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
 SET
     item_status = EXCLUDED.item_status,
@@ -519,12 +551,54 @@ JOIN public.usr_user u
     ON u.user_id = s.user_id
 JOIN public.capsule_product cp
     ON cp.capsule_code IN (
+        'CAPSULE-BRAINHEART-001',
         'CAPSULE-CANCER-001',
-        'CAPSULE-SURGERY-001',
         'CAPSULE-LIABILITY-001'
     )
 WHERE u.email = 'demo@example.com'
-  AND s.capsule_name = '데모 혼합 캡슐'
+  AND s.capsule_name = '출퇴근 안심 캡슐'
+ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
+SET
+    item_status = EXCLUDED.item_status,
+    coverage_amount_snapshot = EXCLUDED.coverage_amount_snapshot,
+    monthly_price_snapshot = EXCLUDED.monthly_price_snapshot,
+    effective_start_at = EXCLUDED.effective_start_at,
+    effective_end_at = EXCLUDED.effective_end_at,
+    editable_after_at = EXCLUDED.editable_after_at,
+    updated_at = NOW();
+
+INSERT INTO public.subscription_item (
+    subscription_id,
+    capsule_product_id,
+    plan_version,
+    item_status,
+    coverage_amount_snapshot,
+    monthly_price_snapshot,
+    effective_start_at,
+    effective_end_at,
+    editable_after_at
+)
+SELECT
+    s.subscription_id,
+    cp.capsule_product_id,
+    'CURRENT',
+    'ACTIVE',
+    cp.coverage_amount,
+    CASE WHEN u.gender = 'F' THEN cp.monthly_price_female ELSE cp.monthly_price_male END,
+    TIMESTAMPTZ '2026-03-28 00:00:00+09',
+    TIMESTAMPTZ '2026-04-28 00:00:00+09',
+    TIMESTAMPTZ '2026-04-28 00:00:00+09'
+FROM public.subscription s
+JOIN public.usr_user u
+    ON u.user_id = s.user_id
+JOIN public.capsule_product cp
+    ON cp.capsule_code IN (
+        'CAPSULE-BRAINHEART-001',
+        'CAPSULE-DEATH-001',
+        'CAPSULE-ACTUALLOSS-001'
+    )
+WHERE u.email = 'demo@example.com'
+  AND s.capsule_name = '주말 드라이브 캡슐'
 ON CONFLICT (subscription_id, capsule_product_id, plan_version) DO UPDATE
 SET
     item_status = EXCLUDED.item_status,
