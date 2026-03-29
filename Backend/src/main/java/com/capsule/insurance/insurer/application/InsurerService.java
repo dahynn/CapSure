@@ -295,6 +295,8 @@ public class InsurerService {
     }
 
     private ProductDetailResponse toProductDetailResponse(ProductSourceDetailProjection projection) {
+        String prioritizedCoverageAmount = firstNonBlank(projection.joinAmount(), projection.payoutAmount());
+
         return new ProductDetailResponse(
                 projection.productSourceId(),
                 projection.companyName(),
@@ -303,7 +305,7 @@ public class InsurerService {
                 projection.saleChannel(),
                 projection.coverageName(),
                 projection.claimReason(),
-                projection.payoutAmount(),
+                prioritizedCoverageAmount,
                 projection.joinAmount(),
                 projection.minimumJoinPremium(),
                 projection.paymentCycle(),
