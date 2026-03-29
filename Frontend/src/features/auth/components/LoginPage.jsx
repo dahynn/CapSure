@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth.api';
+import { Eye, EyeOff } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import capsureLogo from '@/assets/capsure_logo.png';
 
@@ -9,6 +10,7 @@ const LoginPage = () => {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
 
@@ -66,15 +68,25 @@ const LoginPage = () => {
           {/* 비밀번호 */}
           <div>
             <label className="mb-2 block text-sm font-medium text-white">비밀번호</label>
-            <input
-              type="password"
-              name="password"
-              value={loginForm.password}
-              onChange={handleChange}
-              required
-              placeholder="암호를 입력해주세요."
-              className="w-full rounded-2xl px-4 py-4 text-sm text-white placeholder-gray-500 outline-none transition-all bg-[#131B2E] border border-[#1E2A40] focus:ring-2 focus:ring-[#82D8FC] autofill:!bg-[#131B2E] autofill:!shadow-[inset_0_0_0px_1000px_#131B2E] autofill:[-webkit-text-fill-color:white]"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={loginForm.password}
+                onChange={handleChange}
+                required
+                placeholder="암호를 입력해주세요."
+                className="w-full rounded-2xl px-4 py-4 pr-12 text-sm text-white placeholder-gray-500 outline-none transition-all bg-[#131B2E] border border-[#1E2A40] focus:ring-2 focus:ring-[#82D8FC] autofill:!bg-[#131B2E] autofill:!shadow-[inset_0_0_0px_1000px_#131B2E] autofill:[-webkit-text-fill-color:white]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white transition-colors"
+                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           {/* 비밀번호 찾기 */}

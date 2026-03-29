@@ -17,6 +17,17 @@ const CATEGORY_LABEL_MAP = {
     LIABILITY: '일상배상책임',
     ETC: '기타',
 };
+const CATEGORY_COLOR_MAP = {
+    사망: '#F2BEF7',
+    암: '#F2BEF7',
+    '뇌/심장': '#F6CD3C',
+    실손: '#82D8FC',
+    수술: '#82D8FC',
+    상해: '#FFB4C8',
+    배상: '#8B9DC4',
+    일상배상책임: '#8B9DC4',
+    기타: '#8B9DC4',
+};
 
 const RECOMMEND_TONES = ['blue', 'yellow', 'purple', 'gray'];
 const ALL_CATEGORY_CODES = ['DEATH', 'CANCER', 'BRAIN_HEART', 'ACTUAL_LOSS', 'SURGERY', 'ACCIDENT', 'LIABILITY', 'ETC'];
@@ -57,13 +68,19 @@ const HomePage = () => {
             .then((recommendations) => {
                 const mapped = (recommendations ?? []).map((item, index) => {
                     const tone = RECOMMEND_TONES[index % RECOMMEND_TONES.length];
-                    const categoryLabel = CATEGORY_LABEL_MAP[item.coverageCategoryCode] ?? item.coverageCategoryCode;
+                    const categoryLabel =
+                        CATEGORY_LABEL_MAP[item.coverageCategoryCode] ??
+                        item.coverageCategoryCode ??
+                        item.category ??
+                        item.categoryLabel ??
+                        '';
                     const monthlyPrice = Number(item.monthlyPrice ?? 0);
                     return {
                         id: item.productSourceId,
                         productSourceId: item.productSourceId,
-                        title: `${categoryLabel} 추천\n${item.productName}`,
-                        desc: `${item.companyName} · 월 ${monthlyPrice.toLocaleString()}원 · 가입 ${item.subscriberCount}건`,
+                        categoryLabel,
+                        title: item.productName,
+                        desc: `${item.companyName} · 월 ${monthlyPrice.toLocaleString()}원`,
                         tone,
                         btnText: '자세히 보기',
                     };
@@ -95,9 +112,11 @@ const HomePage = () => {
 
                 const mappedInsurances = (dashboard?.activeInsurances ?? []).map((insurance) => ({
                     id: `${insurance.subscriptionId}-${insurance.productSourceId}`,
-                    status: insurance.daysUntilRenewal <= 7 ? '갱신 임박' : '정상 유지',
-                    statusColor: insurance.daysUntilRenewal <= 7 ? '#F6CD3C' : '#82D8FC',
+                    productSourceId: insurance.productSourceId,
+                    status: insurance.category || '기타',
+                    statusColor: CATEGORY_COLOR_MAP[insurance.category] || CATEGORY_COLOR_MAP.기타,
                     productName: insurance.productName,
+                    companyName: insurance.companyName,
                     paymentDay: toPaymentDay(insurance.nextBillingAt),
                     monthlyPremium: Number(insurance.monthlyPremium ?? 0),
                 }));

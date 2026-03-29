@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getProductSourceId, normalizeProductSource } from '../utils/productSource';
-import { saveLatestCapsureSubscription } from '../utils/capsuleStorage';
+import {
+    clearCapsureDraft,
+    getCapsureDraft,
+    saveCapsureDraft,
+    saveLatestCapsureSubscription,
+} from '../utils/capsuleStorage';
 
 const CapsureContext = createContext(null);
 
@@ -13,16 +18,33 @@ export const useCapsure = () => {
 };
 
 export const CapsureProvider = ({ children }) => {
+    const initialDraft = getCapsureDraft();
+    const initialSelectedProducts = Array.isArray(initialDraft?.selectedProducts)
+        ? initialDraft.selectedProducts.map(normalizeProductSource)
+        : [];
+    const initialTotalBudget = Number(initialDraft?.totalBudget);
+    const initialCapsuleName = typeof initialDraft?.capsuleName === 'string'
+        ? initialDraft.capsuleName
+        : '';
+
     // Global Subscription State
     const [hasSubscription, setHasSubscription] = useState(false);
     const [checkoutSummary, setCheckoutSummary] = useState(null);
-    const [capsuleName, setCapsuleName] = useState('');
+    const [capsuleName, setCapsuleName] = useState(initialCapsuleName);
     
     // Budget Page State
-    const [totalBudget, setTotalBudget] = useState(100000);
+    const [totalBudget, setTotalBudget] = useState(Number.isFinite(initialTotalBudget) && initialTotalBudget > 0 ? initialTotalBudget : 100000);
     
     // Maker Page State
-    const [selectedProducts, setSelectedProducts] = useState([]);
+    const [selectedProducts, setSelectedProducts] = useState(initialSelectedProducts);
+
+    useEffect(() => {
+        saveCapsureDraft({
+            totalBudget,
+            selectedProducts,
+            capsuleName,
+        });
+    }, [totalBudget, selectedProducts, capsuleName]);
 
     const handleAddItem = (product) => {
         const normalizedProduct = normalizeProductSource(product);
@@ -36,12 +58,12 @@ export const CapsureProvider = ({ children }) => {
         }
         if (selectedProducts.find((p) => getProductSourceId(p) === productId)) return false;
         
-        setSelectedProducts([...selectedProducts, normalizedProduct]);
+        setSelectedProducts((previousProducts) => [...previousProducts, normalizedProduct]);
         return true;
     };
 
     const handleRemoveItem = (id) => {
-        setSelectedProducts(selectedProducts.filter((p) => getProductSourceId(p) !== id));
+        setSelectedProducts((previousProducts) => previousProducts.filter((p) => getProductSourceId(p) !== id));
     };
 
     const completeSubscription = ({ subscriptionId, products, capsuleName: nextCapsuleName }) => {
@@ -58,6 +80,7 @@ export const CapsureProvider = ({ children }) => {
         };
         setCheckoutSummary(summary);
         saveLatestCapsureSubscription(summary);
+        clearCapsureDraft();
         setSelectedProducts([]);
         setCapsuleName('');
     };

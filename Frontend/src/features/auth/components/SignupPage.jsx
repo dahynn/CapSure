@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth.api';
+import { Eye, EyeOff } from 'lucide-react';
 
 const CustomSelect = ({ value, onChange, options, placeholder, dropUp }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -86,6 +87,8 @@ const SignupPage = () => {
     const [agreed, setAgreed] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
     const handleChange = (e) => setSignupForm({ ...signupForm, [e.target.name]: e.target.value });
 
@@ -187,27 +190,47 @@ const SignupPage = () => {
                     {/* 비밀번호 */}
                     <div>
                         <label className="block text-sm font-medium text-white mb-2">비밀번호</label>
-                        <input
-                            type="password" name="password"
-                            value={signupForm.password} onChange={handleChange} required
-                            placeholder="••••••••"
-                            className="w-full px-4 py-4 rounded-2xl text-slate-900 placeholder-slate-400 text-sm outline-none bg-white transition-all"
-                            onFocus={e => e.target.style.boxShadow = '0 0 0 2px var(--color-brand-blue)'}
-                            onBlur={e => e.target.style.boxShadow = 'none'}
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'} name="password"
+                                value={signupForm.password} onChange={handleChange} required
+                                placeholder="••••••••"
+                                className="w-full px-4 py-4 pr-12 rounded-2xl text-slate-900 placeholder-slate-400 text-sm outline-none bg-white transition-all"
+                                onFocus={e => e.target.style.boxShadow = '0 0 0 2px var(--color-brand-blue)'}
+                                onBlur={e => e.target.style.boxShadow = 'none'}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword((prev) => !prev)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-700 transition-colors"
+                                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+                            >
+                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
                     </div>
 
                     {/* 비밀번호 확인 */}
                     <div>
                         <label className="block text-sm font-medium text-white mb-2">비밀번호 확인</label>
-                        <input
-                            type="password" name="passwordConfirm"
-                            value={signupForm.passwordConfirm} onChange={handleChange} required
-                            placeholder="••••••••"
-                            className="w-full px-4 py-4 rounded-2xl text-slate-900 placeholder-slate-400 text-sm outline-none bg-white transition-all"
-                            onFocus={e => e.target.style.boxShadow = '0 0 0 2px var(--color-brand-blue)'}
-                            onBlur={e => e.target.style.boxShadow = 'none'}
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPasswordConfirm ? 'text' : 'password'} name="passwordConfirm"
+                                value={signupForm.passwordConfirm} onChange={handleChange} required
+                                placeholder="••••••••"
+                                className="w-full px-4 py-4 pr-12 rounded-2xl text-slate-900 placeholder-slate-400 text-sm outline-none bg-white transition-all"
+                                onFocus={e => e.target.style.boxShadow = '0 0 0 2px var(--color-brand-blue)'}
+                                onBlur={e => e.target.style.boxShadow = 'none'}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPasswordConfirm((prev) => !prev)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-700 transition-colors"
+                                aria-label={showPasswordConfirm ? '비밀번호 숨기기' : '비밀번호 보기'}
+                            >
+                                {showPasswordConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
                     </div>
 
                     {/* 전화번호 */}

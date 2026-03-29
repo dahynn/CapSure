@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getPaymentHistory, getCurrentPaymentMethod, registerPaymentMethod } from './api/mypage.api';
+import { getHomeDashboard } from '@/features/home/api/home.api';
+import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
 
 const MyPage = ({ initialView = 'main' }) => {
     const navigate = useNavigate();
@@ -26,6 +28,8 @@ const MyPage = ({ initialView = 'main' }) => {
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [paymentSaving, setPaymentSaving] = useState(false);
     const [paymentError, setPaymentError] = useState('');
+    const [capsules, setCapsules] = useState([]);
+    const [capsulesLoading, setCapsulesLoading] = useState(false);
     const [paymentForm, setPaymentForm] = useState({
         provider: 'TOSS',
         methodType: 'BANK_ACCOUNT',
@@ -45,6 +49,56 @@ const MyPage = ({ initialView = 'main' }) => {
                 if (data) setUser(prev => ({ ...prev, name: data.name || '고객', email: data.email || prev.email }));
             })
             .catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        const mergeLatestCapsule = (baseCapsules = []) => {
+            const latestCapsule = getLatestCapsureSubscription();
+            if (!latestCapsule?.subscriptionId) {
+                return baseCapsules;
+            }
+
+            const latestCapsuleItem = {
+                id: latestCapsule.subscriptionId,
+                subscriptionId: latestCapsule.subscriptionId,
+                title: latestCapsule.capsuleName?.trim() || '나만의 캡슐',
+            };
+
+            return [
+                latestCapsuleItem,
+                ...baseCapsules.filter(
+                    (capsule) =>
+                        String(capsule.subscriptionId ?? capsule.id) !== String(latestCapsule.subscriptionId)
+                ),
+            ];
+        };
+
+        const fetchCapsules = async () => {
+            setCapsulesLoading(true);
+
+            try {
+                const dashboard = await getHomeDashboard();
+                const mappedCapsules = (dashboard?.subscribedCapsules ?? []).map((capsule, index) => ({
+                    id: capsule.capsuleSnapshotId ?? `${capsule.subscriptionId}-${index}`,
+                    subscriptionId: capsule.subscriptionId,
+                    title: capsule.capsuleName?.trim() || '나만의 캡슐',
+                }));
+
+                const mergedCapsules = mergeLatestCapsule(mappedCapsules);
+                setCapsules(mergedCapsules);
+                setUser(prev => ({ ...prev, subscriptionCount: mergedCapsules.length }));
+            } catch (error) {
+                const fallbackCapsules = mergeLatestCapsule([]);
+                setCapsules(fallbackCapsules);
+                if (fallbackCapsules.length > 0) {
+                    setUser(prev => ({ ...prev, subscriptionCount: fallbackCapsules.length }));
+                }
+            } finally {
+                setCapsulesLoading(false);
+            }
+        };
+
+        fetchCapsules();
     }, []);
 
     useEffect(() => {
@@ -402,25 +456,43 @@ const MyPage = ({ initialView = 'main' }) => {
                 <div className="w-20 h-20 bg-[#1C212E] rounded-full flex items-center justify-center text-[#82D8FC] mx-auto mb-6">
                     <Pill className="w-10 h-10" />
                 </div>
-                <h3 className="text-white text-xl font-bold mb-2">현재 3개의 캡슐 사용 중</h3>
+                <h3 className="text-white text-xl font-bold mb-2">현재 {capsules.length}개의 캡슐 사용 중</h3>
                 <p className="text-[#9D9DA4] text-sm mb-8">각 캡슐을 클릭하여 상세 보장 내용을 확인하세요.</p>
                 
                 <div className="grid grid-cols-3 gap-4">
-                    {[1, 2, 3].map(i => (
-                        <button 
-                            key={i} 
-                            onClick={() => navigate(`/mypage/capsule/${i}`)}
-                            className="aspect-square bg-[#1C212E] hover:bg-slate-800 transition-colors rounded-2xl flex items-center justify-center border border-slate-700/50 cursor-pointer shadow-lg hover:shadow-cyan-900/20"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-[#82D8FC]/20 text-[#82D8FC] flex items-center justify-center">
-                                <Pill className="w-4 h-4" />
-                            </div>
-                        </button>
-                    ))}
-                    {[4, 5, 6, 7, 8, 9].map(i => (
-                        <div key={i} className="aspect-square bg-[#141925]/50 rounded-2xl border border-slate-800/20"></div>
-                    ))}
+                    {Array.from({ length: 9 }).map((_, index) => {
+                        const capsule = capsules[index];
+
+                        if (!capsule) {
+                            return (
+                                <div
+                                    key={`empty-${index}`}
+                                    className="aspect-square bg-[#141925]/50 rounded-2xl border border-slate-800/20"
+                                />
+                            );
+                        }
+
+                        return (
+                            <button
+                                key={capsule.subscriptionId ?? capsule.id}
+                                onClick={() => navigate(`/mypage/capsule/${capsule.subscriptionId ?? capsule.id}`)}
+                                className="aspect-square bg-[#1C212E] hover:bg-slate-800 transition-colors rounded-2xl flex flex-col items-center justify-center gap-3 border border-slate-700/50 cursor-pointer shadow-lg hover:shadow-cyan-900/20 px-3 py-4"
+                                title={capsule.title}
+                            >
+                                <div className="w-9 h-9 rounded-full bg-[#82D8FC]/20 text-[#82D8FC] flex items-center justify-center shrink-0">
+                                    <Pill className="w-4 h-4" />
+                                </div>
+                                <span className="text-white text-[12px] leading-[1.35] font-semibold break-keep line-clamp-2">
+                                    {capsule.title}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
+
+                {!capsulesLoading && capsules.length === 0 && (
+                    <p className="text-[#9D9DA4] text-sm mt-6">아직 사용 중인 캡슐이 없습니다.</p>
+                )}
             </div>
         </div>
     );

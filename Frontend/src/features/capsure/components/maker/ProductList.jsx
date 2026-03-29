@@ -24,7 +24,7 @@ const ProductList = ({
                             <button
                                 key={idx}
                                 onClick={() => handleCategoryClick(cat)}
-                                className={`px-4 py-2 rounded-full outline-none text-capsure-base font-bold transition-all border ${activeCategories.includes(cat) ? 'bg-brand-blue text-[#020715] border-brand-blue' : 'bg-capsure-card text-slate-400 border-slate-800 hover:border-slate-600'}`}
+                                className={`min-w-[88px] h-10 px-4 rounded-full outline-none text-capsure-base font-bold transition-all border text-center ${activeCategories.includes(cat) ? 'bg-brand-blue text-[#020715] border-brand-blue' : 'bg-capsure-card text-slate-400 border-slate-800 hover:border-slate-600'}`}
                             >
                                 {cat}
                             </button>
@@ -120,23 +120,24 @@ const ProductList = ({
 
                                 <h3 className="text-white font-bold text-capsure-lg leading-[1.3] mb-4 truncate w-full">{productName}</h3>
 
-                                {/* Bottom Row: Price & Buttons */}
+                                {/* Bottom Row: Price */}
                                 <div className="flex items-end justify-between">
-                                    {/* Price & Link */}
                                     <div className="flex flex-col">
-                                        <div className="flex items-baseline gap-1 mb-2">
+                                        <div className="flex items-baseline gap-1 mb-3">
                                             <span className="text-brand-blue font-black text-capsure-title tracking-tight">{productPrice?.toLocaleString()}</span>
                                             <span className="text-slate-400 font-bold text-sm">원/월 가입가격</span>
                                         </div>
-                                        <button 
-                                            onClick={() => onViewDetail && onViewDetail(product)} 
-                                            className="text-slate-500 text-capsure-sm underline self-start hover:text-slate-300 transition-colors"
-                                        >
-                                            자세히 보기
-                                        </button>
                                     </div>
-                                    {/* Add Button */}
+                                </div>
+
+                                <div className="mt-1 flex items-end justify-between gap-3">
                                     <button 
+                                        onClick={() => onViewDetail && onViewDetail(product)} 
+                                        className="w-[34%] min-w-[118px] h-11 rounded-xl border border-slate-700 text-slate-200 text-sm font-bold hover:border-slate-500 hover:bg-slate-800/60 transition-all"
+                                    >
+                                        상품 상세
+                                    </button>
+                                    <button
                                         onClick={() => {
                                             if (isSelected) {
                                                 onRemoveItem(productId);

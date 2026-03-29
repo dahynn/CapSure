@@ -1,46 +1,11 @@
 import React from 'react';
 import {
     ArrowLeft,
-    ArrowRight,
-    Banknote,
     CalendarDays,
-    CircleHelp,
-    CreditCard,
-    Cross,
-    HeartPulse,
-    Info,
     Pencil,
-    Shield,
-    ShieldAlert,
+    X,
 } from 'lucide-react';
-
-const CATEGORY_STYLES = {
-    실손: {
-        chip: 'bg-[#1A3B50] text-[#82D8FC]',
-        iconBg: 'bg-[#0E2538]',
-        icon: Cross,
-    },
-    암: {
-        chip: 'bg-[#3B2447] text-[#F2BEF7]',
-        iconBg: 'bg-[#291A37]',
-        icon: ShieldAlert,
-    },
-    '뇌/심장': {
-        chip: 'bg-[#3A331C] text-[#F6CD3C]',
-        iconBg: 'bg-[#2A2516]',
-        icon: HeartPulse,
-    },
-    상해: {
-        chip: 'bg-[#3A2534] text-[#FFB4C8]',
-        iconBg: 'bg-[#2A1B26]',
-        icon: ShieldAlert,
-    },
-    default: {
-        chip: 'bg-[#2A3345] text-[#A7B6D8]',
-        iconBg: 'bg-[#1C2434]',
-        icon: Shield,
-    },
-};
+import AppButton from '@/common/components/ui/button/AppButton';
 
 const formatDate = (date) => {
     const year = date.getFullYear();
@@ -51,6 +16,26 @@ const formatDate = (date) => {
 
 const toWholeWon = (value) => Math.round(Number(value ?? 0));
 const formatWon = (value) => `${toWholeWon(value).toLocaleString()}원`;
+
+const PROVIDER_KR_MAP = {
+    'TOSS BANK': '토스뱅크',
+    TOSSBANK: '토스뱅크',
+    TOSS: '토스',
+    'KAKAO BANK': '카카오뱅크',
+    KAKAOBANK: '카카오뱅크',
+    KB: 'KB국민',
+    'KB BANK': 'KB국민',
+    SHINHAN: '신한',
+    WOORI: '우리',
+    HANA: '하나',
+    NH: 'NH농협',
+};
+
+const getKoreanProvider = (provider = '') => {
+    const trimmed = provider.trim();
+    const upper = trimmed.toUpperCase();
+    return PROVIDER_KR_MAP[upper] || trimmed;
+};
 
 const InsuranceInfoConfirm = ({
     selectedProducts,
@@ -65,6 +50,7 @@ const InsuranceInfoConfirm = ({
 }) => {
     const totalPremium = selectedProducts.reduce((sum, product) => sum + product.monthlyPrice, 0);
     const canSubmit = capsuleName.trim() && paymentMethod && !paymentLoading && !isSubmitting;
+
     const today = React.useMemo(() => new Date(), []);
     const nextMonth = React.useMemo(() => {
         const next = new Date(today);
@@ -74,51 +60,53 @@ const InsuranceInfoConfirm = ({
 
     return (
         <div className="min-h-screen bg-[#020715] text-white pb-40 animate-in fade-in slide-in-from-bottom-4">
-            <header className="sticky top-0 z-50 flex items-center p-4 border-b border-slate-800/70 bg-[#020715] min-h-[56px]">
+            <header className="sticky top-0 z-50 flex items-center gap-2 p-4 bg-[#020715] min-h-[56px]">
                 <button onClick={onPrev} className="p-2 text-white hover:bg-slate-800 rounded-full transition-colors">
-                    <ArrowLeft className="w-6 h-6" />
+                    <ArrowLeft className="w-5 h-5" />
                 </button>
-                <h1 className="text-base font-bold text-white absolute left-1/2 -translate-x-1/2">결제 정보 확인</h1>
-                <button className="text-slate-400 ml-auto p-2">
-                    <CircleHelp className="w-6 h-6" />
+                <h1 className="text-base font-semibold text-white absolute left-1/2 -translate-x-1/2">결제 정보 확인</h1>
+                <button onClick={onPrev} className="text-slate-400 ml-auto p-2 hover:bg-slate-800 rounded-full transition-colors">
+                    <X className="w-5 h-5" />
                 </button>
             </header>
 
-            <section className="px-6 pt-7">
-                <h2 className="text-lg font-black text-white leading-snug">결제 전 보험 정보 확인</h2>
-                <p className="mt-2 text-xs text-slate-400">선택하신 상품과 총 결제 금액을 확인해주세요.</p>
+            <section className="px-6 pt-8">
+                <h2 className="text-xl font-semibold text-white leading-snug break-keep">결제 전 보험 정보를 최종 확인해 주세요</h2>
+                <p className="mt-2 text-sm text-slate-400">선택하신 보호 캡슐 구성과 구독 주기를 확인하세요.</p>
+                <div className="mt-3 inline-flex items-center gap-2 text-[#F6CD3C]">
+                    <span className="w-4 h-4 rounded-full border border-[#F6CD3C] flex items-center justify-center text-[11px] font-bold leading-none">
+                        !
+                    </span>
+                    <p className="text-sm font-medium">캡슐 이름을 등록해주세요</p>
+                </div>
             </section>
 
-            <section className="mx-6 mt-8 rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_85%_10%,rgba(130,216,252,0.12),transparent_50%),#0C1628] px-6 py-6 shadow-sm">
-                <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-[#82D8FC] text-[#020715] flex items-center justify-center shadow-[0_6px_22px_rgba(130,216,252,0.45)]">
-                        <Shield className="w-8 h-8" />
-                    </div>
-                    <div className="flex-1">
-                        <label htmlFor="capsule-name" className="mt-2 flex items-center gap-2 text-xl font-black text-white">
-                            <input
-                                id="capsule-name"
-                                value={capsuleName}
-                                onChange={(event) => onCapsuleNameChange(event.target.value)}
-                                maxLength={20}
-                                placeholder="캡슐 이름을 입력해주세요"
-                                className="w-full bg-transparent border-none outline-none p-0 placeholder:text-slate-500"
-                            />
-                            <Pencil className="w-5 h-5 text-slate-400 flex-shrink-0" />
-                        </label>
-                    </div>
+            <section className="mx-6 mt-7 rounded-3xl border border-slate-700/80 bg-[#0D1526]/45 px-5 py-5">
+                <p className="text-xs font-semibold text-[#9DB3D6] mb-2">캡슐 이름</p>
+                <div className="rounded-2xl border border-slate-700/80 bg-[#0B1425]/55 px-4 py-3.5">
+                    <label htmlFor="capsule-name" className="flex items-center gap-2 text-xl font-semibold text-white leading-none">
+                        <input
+                            id="capsule-name"
+                            value={capsuleName}
+                            onChange={(event) => onCapsuleNameChange(event.target.value)}
+                            maxLength={20}
+                            placeholder="캡슐 이름을 입력해주세요"
+                            className="capsule-name-input w-full bg-transparent appearance-none border-0 outline-none ring-0 focus:ring-0 focus:outline-none p-0 text-white font-semibold placeholder:font-medium placeholder:text-slate-500"
+                        />
+                        <Pencil className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                    </label>
                 </div>
 
-                <div className="mt-8 text-right">
-                    <p className="text-[#9D9DA4] text-sm font-semibold">총 월 보험료</p>
-                    <p className="mt-1 text-3xl leading-none font-black text-[#82D8FC] tracking-tight">
-                        {formatWon(totalPremium)}
+                <div className="mt-7 text-center">
+                    <p className="text-[#9D9DA4] text-xs font-medium">총 월 보험료</p>
+                    <p className="mt-2 text-4xl leading-none font-bold text-white tracking-tight">
+                        {toWholeWon(totalPremium).toLocaleString()} <span className="text-2xl">원</span>
                     </p>
                 </div>
 
-                <div className="mt-6 flex justify-end">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-[#111B2D] px-3 py-1.5 text-[#C7D3EA] text-[13px]">
-                        <CalendarDays className="w-4 h-4" />
+                <div className="mt-6 flex justify-center">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-[#0B1425]/55 px-4 py-2 text-[#C7D3EA] text-[13px] font-medium">
+                        <CalendarDays className="w-3.5 h-3.5" />
                         <span>{formatDate(today)} ~ {formatDate(nextMonth)}</span>
                     </div>
                 </div>
@@ -126,27 +114,27 @@ const InsuranceInfoConfirm = ({
 
             <section className="px-6 mt-8">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-white">결제 수단</h3>
+                    <h3 className="text-base font-semibold text-white">결제 수단</h3>
                 </div>
-                <article className="rounded-3xl border border-slate-800 bg-[#0C1628] px-5 py-5">
+                <article className="rounded-[26px] border border-slate-700/80 bg-[#0D1526]/45 px-5 py-5">
                     {paymentLoading ? (
                         <p className="text-sm text-slate-400">등록된 결제수단을 불러오는 중...</p>
                     ) : paymentMethod ? (
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-[#1C2434] flex items-center justify-center text-[#82D8FC]">
-                                {paymentMethod.methodType === 'BANK_ACCOUNT' ? (
-                                    <Banknote className="w-6 h-6" />
-                                ) : (
-                                    <CreditCard className="w-6 h-6" />
-                                )}
-                            </div>
+                        <>
                             <div className="min-w-0">
-                                <p className="text-base font-bold text-white truncate">
-                                    {paymentMethod.provider} {paymentMethod.methodType === 'BANK_ACCOUNT' ? '계좌' : '카드'}
+                                <p className="text-xs font-medium text-slate-400">
+                                    {paymentMethod.methodType === 'BANK_ACCOUNT' ? '계좌' : '카드'}
                                 </p>
-                                <p className="text-sm text-[#9D9DA4] mt-1">{paymentMethod.maskedNumber}</p>
+                                <p className="text-base font-semibold text-white mt-1">
+                                    {getKoreanProvider(paymentMethod.provider)} {paymentMethod.maskedNumber}
+                                </p>
                             </div>
-                        </div>
+                            <div className="h-px bg-slate-800 my-4" />
+                            <div className="flex items-center gap-2 text-sm text-[#9db8d8]">
+                                <span className="w-2 h-2 rounded-full bg-brand-blue" />
+                                생체인증 결제 활성화됨
+                            </div>
+                        </>
                     ) : (
                         <p className="text-sm text-slate-400">
                             {paymentError || '등록된 결제수단이 없습니다. 마이페이지에서 먼저 등록해주세요.'}
@@ -157,75 +145,42 @@ const InsuranceInfoConfirm = ({
 
             <section className="px-6 mt-8">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-white">구성 상품 리스트</h3>
-                    <p className="text-xs text-slate-400">{selectedProducts.length}개 상품 포함</p>
+                    <h3 className="text-base font-semibold text-white">상세 구성</h3>
+                    <p className="text-xs text-slate-400">{selectedProducts.length}개 상품</p>
                 </div>
 
-                <div className="space-y-4">
-                    {selectedProducts.map((product) => {
-                        const style = CATEGORY_STYLES[product.categoryLabel] ?? CATEGORY_STYLES.default;
-                        const Icon = style.icon;
-
-                        return (
-                            <article
-                                key={product.productSourceId}
-                                className="rounded-3xl border border-slate-800 bg-[#0C1628] px-5 py-5"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${style.iconBg}`}>
-                                        <Icon className="w-7 h-7 text-[#82D8FC]" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`text-xs leading-none font-black rounded-md px-2 py-1 ${style.chip}`}>
-                                                        {product.categoryLabel}
-                                                    </span>
-                                                </div>
-                                                <h4 className="text-base leading-tight font-bold break-keep">{product.productName}</h4>
-                                                <p className="text-xs text-[#9D9DA4] mt-1">{product.companyName}</p>
-                                            </div>
-                                            <p className="text-xl leading-tight font-black text-right">
-                                                {formatWon(product.monthlyPrice)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
-                        );
-                    })}
+                <div className="space-y-3">
+                    {selectedProducts.map((product, idx) => (
+                        <article
+                            key={product.productSourceId ?? `${product.productName}-${idx}`}
+                            className="rounded-2xl border border-slate-700/80 bg-[#0D1526]/45 px-4 py-4"
+                        >
+                            <h4 className="text-base leading-tight font-semibold break-keep">{product.productName}</h4>
+                            <div className="mt-2 flex items-end justify-between gap-3">
+                                <p className="text-xs text-[#9D9DA4] truncate">{product.companyName}</p>
+                                <p className="text-2xl leading-none font-bold text-white tracking-tight shrink-0">
+                                    {formatWon(product.monthlyPrice)}
+                                </p>
+                            </div>
+                        </article>
+                    ))}
                 </div>
             </section>
 
             <section className="px-6 mt-8">
-                <div className="rounded-3xl border border-slate-800 bg-[#071226] px-5 py-4 flex items-start gap-3 text-sm leading-relaxed text-[#B9C7DF]">
-                    <Info className="w-5 h-5 mt-1 text-[#82D8FC] flex-shrink-0" />
+                <div className="rounded-3xl border border-slate-700/80 bg-transparent px-5 py-4 flex items-start gap-3 text-sm leading-relaxed text-[#B9C7DF]">
                     <p>
-                        구독 시작 시 매월 정해진 날짜에 자동 결제가 진행됩니다. 보험 효력은 결제 완료 시점부터 발생하며,
-                        상세 약관은 등록된 메일로 즉시 발송됩니다.
+                        구독 시작 시 매월 정해진 날짜에 자동 결제가 진행됩니다.
+                        <br />
+                        보험 효력은 결제 완료 시점부터 발생하며, 상세 약관은 등록된 메일로 즉시 발송됩니다.
                     </p>
                 </div>
             </section>
 
             <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto px-6 z-40">
-                <button
-                    onClick={onNext}
-                    disabled={!canSubmit}
-                    className={`w-full rounded-2xl py-3.5 text-[15px] font-bold transition-all ${
-                        canSubmit
-                            ? 'bg-[#82D8FC] text-[#020715] border-2 border-[#D9F2FF] shadow-[0_0_0_2px_#1D5EC7] hover:opacity-95'
-                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                    }`}
-                >
-                    <span className="relative inline-flex items-center gap-2">
-                        <span className="absolute left-0 top-[1px] text-[#0b2746]/25 select-none">
-                            {isSubmitting ? '결제 처리 중...' : '이름 등록 및 결제하기'}
-                        </span>
-                        <span className="relative">{isSubmitting ? '결제 처리 중...' : '이름 등록 및 결제하기'}</span>
-                        <ArrowRight className="w-5 h-5 relative" strokeWidth={3} />
-                    </span>
-                </button>
+                <AppButton onClick={onNext} disabled={!canSubmit}>
+                    {isSubmitting ? '구독 처리 중...' : '구독하기'}
+                </AppButton>
             </div>
         </div>
     );

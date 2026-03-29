@@ -60,6 +60,7 @@ const CategoryRecommend = ({ recommendations, onViewDetail }) => {
             <div className="relative w-full grid">
                 {safeRecommendations.map((rec, index) => {
                     const tone = TONE_STYLES[rec.tone] ?? TONE_STYLES.blue;
+                    const badgeLabel = rec.isFallback ? '' : (rec.categoryLabel || '').trim();
                     return (
                         <div
                             key={rec.id}
@@ -70,13 +71,15 @@ const CategoryRecommend = ({ recommendations, onViewDetail }) => {
                         >
                             <div className={`absolute inset-0 opacity-10 pointer-events-none ${tone.overlay}`} />
                             <div className="relative z-10 flex flex-col h-full">
-                                <div className="mb-4">
-                                    <span
-                                        className={`inline-flex items-center px-3 py-1.5 bg-[#1F2736] text-[10px] font-black tracking-wider rounded-lg shadow-sm border ${tone.badgeText} ${tone.badgeBorder}`}
-                                    >
-                                        AI 추천
-                                    </span>
-                                </div>
+                                {badgeLabel && (
+                                    <div className="mb-4">
+                                        <span
+                                            className={`inline-flex items-center px-3 py-1.5 bg-[#1F2736] text-[10px] font-black tracking-wider rounded-lg shadow-sm border ${tone.badgeText} ${tone.badgeBorder}`}
+                                        >
+                                            {badgeLabel}
+                                        </span>
+                                    </div>
+                                )}
                                 <h3 className="text-[20px] md:text-[22px] font-bold text-white leading-snug tracking-tight mb-2 whitespace-pre-line">
                                     {rec.title}
                                 </h3>

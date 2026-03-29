@@ -14,7 +14,7 @@ const MainLayout = () => {
     
 
     return (
-        <div className="min-h-screen bg-black flex flex-col items-center">
+        <div className="min-h-screen flex flex-col items-center" style={{ backgroundColor: 'var(--color-bg)' }}>
             {/* App Container (Max Width 560px for Mobile Feel) */}
             <div className="w-full max-w-[560px] flex flex-col min-h-screen relative shadow-[0_0_40px_rgba(255,255,255,0.05)]" style={{ backgroundColor: 'var(--color-bg)' }}>
 
@@ -83,7 +83,7 @@ const MainLayout = () => {
                                     <Icon 
                                         className="w-[22px] h-[22px]" 
                                         strokeWidth={isActive ? 2.5 : 2}
-                                        fill={isActive ? 'currentColor' : 'none'}
+                                        fill="none"
                                     />
                                     <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'}`}>
                                         {item.name}

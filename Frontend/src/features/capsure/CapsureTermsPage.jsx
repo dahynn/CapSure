@@ -4,6 +4,7 @@ import { useCapsure } from './context/CapsureContext';
 import { ChevronLeft, Sparkles, ChevronRight, Check, FileText } from 'lucide-react';
 import { httpClient } from '@/common/api/httpClient';
 import { getProductSourceId } from './utils/productSource';
+import AppButton from '@/common/components/ui/button/AppButton';
 
 // 개별 상품별 약관 요약을 API에서 가져오는 함수
 const fetchTermsSummary = async (productSourceId) => {
@@ -94,9 +95,14 @@ const CapsureTermsPage = () => {
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                 <p className="text-white mb-4">선택된 상품이 없습니다.</p>
-                <button onClick={() => navigate('/capsure-insurance')} className="bg-brand-blue text-[#020715] px-6 py-3 rounded-xl font-bold">
+                <AppButton
+                    onClick={() => navigate('/capsure-insurance')}
+                    fullWidth={false}
+                    size="md"
+                    className="px-6"
+                >
                     캡슐 보험 시작하기
-                </button>
+                </AppButton>
             </div>
         );
     }
@@ -177,14 +183,13 @@ const CapsureTermsPage = () => {
 
             {/* 하단 CTA */}
             <div className="fixed app-fixed-cta left-0 right-0 max-w-[560px] mx-auto px-6 pb-8 pt-6 bg-gradient-to-t from-[#020715] via-[#020715] to-transparent z-40">
-                <button
+                <AppButton
                     onClick={handleNext}
                     disabled={!requiredChecked}
-                    className={`w-full py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 transition-all ${requiredChecked ? 'bg-brand-blue text-[#020715] hover:opacity-80 active:scale-[0.98]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                    className="text-lg font-black"
                 >
                     결제 정보 확인하기
-                    {requiredChecked && <Check className="w-5 h-5" strokeWidth={3} />}
-                </button>
+                </AppButton>
                 <p className="text-center text-slate-600 text-xs mt-3">다음 단계에서 총 결제 금액을 확인한 뒤 결제를 진행합니다.</p>
             </div>
         </div>
