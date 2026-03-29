@@ -1,7 +1,13 @@
 import React from 'react';
 import { Check, ChevronRight } from 'lucide-react';
 
-const PageTransitionLoading = ({ message = '페이지로 이동했어요' }) => {
+const PageTransitionLoading = ({
+    message = '페이지로 이동했어요',
+    backgroundClassName = 'bg-[#020715]',
+    openDelayMs = 100,
+    textDelayMs = 920,
+    doneDelayMs = 1220,
+}) => {
     const textRef = React.useRef(null);
     const [targetWidth, setTargetWidth] = React.useState(280);
     const [expanded, setExpanded] = React.useState(false);
@@ -28,25 +34,25 @@ const PageTransitionLoading = ({ message = '페이지로 이동했어요' }) => 
     React.useEffect(() => {
         const expandTimer = window.setTimeout(() => {
             setExpanded(true);
-        }, 100);
+        }, openDelayMs);
 
         const textTimer = window.setTimeout(() => {
             setTextVisible(true);
-        }, 920);
+        }, textDelayMs);
 
         const doneTimer = window.setTimeout(() => {
             setDone(true);
-        }, 1220);
+        }, doneDelayMs);
 
         return () => {
             window.clearTimeout(expandTimer);
             window.clearTimeout(textTimer);
             window.clearTimeout(doneTimer);
         };
-    }, []);
+    }, [openDelayMs, textDelayMs, doneDelayMs]);
 
     return (
-        <div className="fixed inset-0 z-[200] bg-white flex items-center justify-center px-6">
+        <div className={`fixed inset-0 z-[200] ${backgroundClassName} flex items-center justify-center px-6`}>
             <div className="flex flex-col items-center justify-center w-full max-w-[420px]">
                 <div className="transition-loader-circle" aria-hidden="true" />
 
