@@ -9,6 +9,10 @@ export const getProductSourceId = (product) => {
 
 export const normalizeProductSource = (product) => {
     const productSourceId = getProductSourceId(product);
+    const rawTermsUri = product.termsUri ?? '#';
+    const normalizedTermsUri = rawTermsUri === '/terms/samsung-fire-pet/index.html'
+        ? '/terms/samsung-fire-pet/full-terms-223.pdf'
+        : rawTermsUri;
 
     return {
         ...product,
@@ -20,6 +24,6 @@ export const normalizeProductSource = (product) => {
         categoryLabel: getCapsureCategoryLabel(product.coverageCategoryCode),
         insurerSector: product.insurerSector ?? 'NONLIFE',
         saleChannel: product.saleChannel ?? '다이렉트',
-        termsUri: product.termsUri ?? '#',
+        termsUri: normalizedTermsUri,
     };
 };

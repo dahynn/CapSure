@@ -19,7 +19,14 @@ public class ManualDbCheckTest {
     @Test
     void checkProductRetrieval() {
         List<ProductSourceSummaryProjection> products =
-                insurerCatalogMapper.findProductSourcesByFilter("CANCER", BigDecimal.valueOf(1000000), "M", 1L);
+                insurerCatalogMapper.findProductSourcesByFilterPaged(
+                        "CANCER",
+                        BigDecimal.valueOf(1000000),
+                        "M",
+                        1L,
+                        20,
+                        0
+                );
         System.out.println("Fetched products: " + products.size());
         if (!products.isEmpty()) {
             ProductSourceSummaryProjection first = products.get(0);

@@ -27,6 +27,22 @@ public interface InsurerCatalogMapper {
             @Param("userId") Long userId
     );
 
+    List<ProductSourceSummaryProjection> findProductSourcesByFilterPaged(
+            @Param("category") String category,
+            @Param("maxPrice") java.math.BigDecimal maxPrice,
+            @Param("gender") String gender,
+            @Param("userId") Long userId,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+    long countProductSourcesByFilter(
+            @Param("category") String category,
+            @Param("maxPrice") java.math.BigDecimal maxPrice,
+            @Param("gender") String gender,
+            @Param("userId") Long userId
+    );
+
     ProductSourceDetailProjection findProductSourceDetail(
             @Param("productSourceId") Long productSourceId,
             @Param("gender") String gender

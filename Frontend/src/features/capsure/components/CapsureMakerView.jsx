@@ -9,7 +9,10 @@ import { CAPSURE_CATEGORY_CODE_BY_LABEL, CAPSURE_CATEGORY_OPTIONS } from '../con
 import AppButton from '@/common/components/ui/button/AppButton';
 import PageTransitionLoading from '@/common/components/ui/loading/PageTransitionLoading';
 
+const DEFAULT_PAGE_SIZE = 12;
+
 const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveItem, onConfirm, onViewDetail }) => {
+    const MIN_TRANSITION_VISIBLE_MS = 760;
     const navigate = useNavigate();
     const location = useLocation();
     
@@ -20,6 +23,13 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     const [isLoading, setIsLoading] = useState(true);
     const [showTransitionLoading, setShowTransitionLoading] = useState(false);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [page, setPage] = useState(0);
+    const [size] = useState(DEFAULT_PAGE_SIZE);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [hasNext, setHasNext] = useState(false);
+    const [hasPrevious, setHasPrevious] = useState(false);
+    const transitionShownAtRef = React.useRef(0);
 
     // Fetch Products from Backend
     const fetchProducts = async () => {
@@ -28,8 +38,10 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
             // Build query params
             const params = new URLSearchParams();
             if (totalBudget) params.append('budget', totalBudget);
-            
-            // If multiple categories are supported by backend, handle here. 
+            params.append('page', String(page));
+            params.append('size', String(size));
+
+            // If multiple categories are supported by backend, handle here.
             // Currently backend getProducts takes a single String category.
             // We'll use the first active category that isn't '전체'
             const filteredCat = activeCategories.find(c => c !== '전체');
@@ -37,23 +49,39 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
                 params.append('category', CAPSURE_CATEGORY_CODE_BY_LABEL[filteredCat] || filteredCat);
             }
 
-            const response = await httpClient.get(`/insurers/products?${params.toString()}`);
+            const queryString = params.toString();
+            const response = await httpClient.get(`/insurers/products?${queryString}`);
             const data = response.data;
-            
+
             if (data.success) {
-                setProducts((data.data || []).map(normalizeProductSource));
+                const payload = data.data || {};
+                const items = Array.isArray(payload) ? payload : (payload.items || []);
+                const normalized = items.map(normalizeProductSource);
+                setProducts(normalized);
+                setTotalPages(Array.isArray(payload) ? 0 : (payload.totalPages || 0));
+                setTotalElements(Array.isArray(payload) ? normalized.length : (payload.totalElements || 0));
+                setHasNext(Array.isArray(payload) ? false : Boolean(payload.hasNext));
+                setHasPrevious(Array.isArray(payload) ? false : Boolean(payload.hasPrevious));
             }
         } catch (error) {
             console.error("Failed to fetch products:", error);
             setProducts([]); // Clear on error
+            setTotalPages(0);
+            setTotalElements(0);
+            setHasNext(false);
+            setHasPrevious(false);
         } finally {
             setIsLoading(false);
         }
     };
 
     React.useEffect(() => {
+        setPage(0);
+    }, [totalBudget]);
+
+    React.useEffect(() => {
         fetchProducts();
-    }, [activeCategories, totalBudget]);
+    }, [activeCategories, totalBudget, page, size]);
 
     React.useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
@@ -80,12 +108,15 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
 
         if (isLoading) {
             openTimer = window.setTimeout(() => {
+                transitionShownAtRef.current = Date.now();
                 setShowTransitionLoading(true);
-            }, 250);
+            }, 40);
         } else if (showTransitionLoading) {
+            const elapsed = Date.now() - transitionShownAtRef.current;
+            const remaining = Math.max(0, MIN_TRANSITION_VISIBLE_MS - elapsed);
             closeTimer = window.setTimeout(() => {
                 setShowTransitionLoading(false);
-            }, 280);
+            }, remaining);
         }
 
         return () => {
@@ -99,6 +130,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     }, [isLoading, showTransitionLoading]);
 
     const handleCategoryClick = (cat) => {
+        setPage(0);
         if (cat === '전체') {
             setActiveCategories(['전체']);
         } else {
@@ -131,8 +163,16 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
         return 0;
     });
 
-    if (isPreviewLoading || (showTransitionLoading && isLoading)) {
-        return <PageTransitionLoading message="맞춤 보험 추천으로 이동했어요" />;
+    if (isPreviewLoading || showTransitionLoading) {
+        return (
+            <PageTransitionLoading
+                message="보험 리스트를 불러오는 중이에요"
+                backgroundClassName="bg-[#020715]"
+                openDelayMs={0}
+                textDelayMs={140}
+                doneDelayMs={420}
+            />
+        );
     }
 
     return (
@@ -166,6 +206,13 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
                     setSortBy={setSortBy}
                     filteredProducts={filteredProducts}
                     onViewDetail={onViewDetail}
+                    page={page}
+                    totalPages={totalPages}
+                    totalElements={totalElements}
+                    hasNext={hasNext}
+                    hasPrevious={hasPrevious}
+                    onPrevPage={() => setPage(prev => Math.max(prev - 1, 0))}
+                    onNextPage={() => setPage(prev => prev + 1)}
                 />
             </div>
 

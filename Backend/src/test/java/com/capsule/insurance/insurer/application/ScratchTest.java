@@ -18,7 +18,7 @@ public class ScratchTest {
         System.out.println("FOUND MAPPER1: catalogMapper!");
         
         java.util.List<com.capsule.insurance.insurer.infra.projection.ProductSourceSummaryProjection> list =
-                catalogMapper.findProductSourcesByFilter(null, null, "M", 1L);
+                catalogMapper.findProductSourcesByFilterPaged(null, null, "M", 1L, 20, 0);
         System.out.println("FOUND CATALOG: " + list.size());
     }
 }

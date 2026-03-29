@@ -6,6 +6,7 @@ import com.capsule.insurance.auth.infra.UserAccountMapper;
 import com.capsule.insurance.insurer.infra.InsurerCatalogMapper;
 import com.capsule.insurance.insurer.dto.ProductDetailResponse;
 import com.capsule.insurance.insurer.dto.CategoryRecommendResponse;
+import com.capsule.insurance.insurer.dto.ProductSummaryPageResponse;
 import com.capsule.insurance.insurer.dto.ProductSummaryResponse;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
@@ -39,6 +40,8 @@ public class InsurerService {
     private static final String TERMS_DISCLAIMER = "이 요약은 product_source 컬럼 기반 안내이며 실제 보장 제외·면책·지급 조건은 약관 원문을 확인해야 합니다.";
     private static final String LIGHT_TERMS_DISCLAIMER = "이 요약은 핵심 3가지만 빠르게 보여주는 light 버전 안내이며, 세부 조건은 전체 약관 요약 또는 원문을 확인해야 합니다.";
     private static final Pattern NUMBER_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
+    private static final int DEFAULT_PRODUCTS_PAGE_SIZE = 12;
+    private static final int MAX_PRODUCTS_PAGE_SIZE = 30;
 
     private final ProductSourceMapper productSourceMapper;
     private final InsurerCatalogMapper insurerCatalogMapper;
@@ -61,12 +64,31 @@ public class InsurerService {
         this.openAiApiKey = openAiApiKey;
     }
 
-    public List<ProductSummaryResponse> getProducts(String category, Integer budget, Long userId) {
+    public ProductSummaryPageResponse getProducts(String category, Integer budget, Integer page, Integer size, Long userId) {
         String gender = resolveGender(userId);
         BigDecimal maxPrice = (budget != null) ? BigDecimal.valueOf(budget) : null;
-        return insurerCatalogMapper.findProductSourcesByFilter(category, maxPrice, gender, userId).stream()
+        int safePage = page == null || page < 0 ? 0 : page;
+        int safeSize = size == null || size <= 0 ? DEFAULT_PRODUCTS_PAGE_SIZE : Math.min(size, MAX_PRODUCTS_PAGE_SIZE);
+        int offset = safePage * safeSize;
+
+        long totalElements = insurerCatalogMapper.countProductSourcesByFilter(category, maxPrice, gender, userId);
+        int totalPages = totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / safeSize);
+
+        List<ProductSummaryResponse> items = insurerCatalogMapper
+                .findProductSourcesByFilterPaged(category, maxPrice, gender, userId, safeSize, offset)
+                .stream()
                 .map(this::toProductSummaryResponse)
                 .toList();
+
+        return new ProductSummaryPageResponse(
+                items,
+                safePage,
+                safeSize,
+                totalElements,
+                totalPages,
+                safePage + 1 < totalPages,
+                safePage > 0
+        );
     }
 
     public ProductDetailResponse getProductDetail(Long productSourceId, Long userId) {

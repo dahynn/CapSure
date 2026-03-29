@@ -222,33 +222,7 @@
         ON CONFLICT (capsule_product_id) DO NOTHING
     </insert>
 
-    <select id="findProductSourcesByFilter" resultMap="productSourceSummaryProjectionResultMap">
-        SELECT
-            ps.product_source_id,
-            ps.company_name,
-            ps.product_name,
-            ps.insurer_sector::text as insurer_sector,
-            ps.coverage_category_code::text as coverage_category_code,
-            ps.coverage_code,
-            <choose>
-                <when test="gender == 'M'.toString()">round(ps.monthly_premium_male, 0)</when>
-                <when test="gender == 'F'.toString()">round(ps.monthly_premium_female, 0)</when>
-                <otherwise>NULL</otherwise>
-            </choose> AS monthly_price,
-            <choose>
-                <when test="gender == 'M'.toString()">ps.price_index_male</when>
-                <when test="gender == 'F'.toString()">ps.price_index_female</when>
-                <otherwise>NULL</otherwise>
-            </choose> AS price_index_text,
-            COALESCE(
-                cp.terms_uri,
-                CASE
-                    WHEN ps.product_name = '무배당 삼성화재 펫보험 의기냥냥(2601.2)' THEN '/terms/samsung-fire-pet/index.html'
-                    ELSE NULL
-                END
-            ) AS terms_uri,
-            ps.loaded_at,
-            ps.updated_at
+    <sql id="productSourcesFilterFromWhere">
         FROM insurance.product_source ps
         LEFT JOIN public.capsule_product cp
           ON cp.capsule_product_id = ps.product_source_id
@@ -285,7 +259,75 @@
                 </if>
             </when>
         </choose>
+    </sql>
+
+    <select id="findProductSourcesByFilter" resultMap="productSourceSummaryProjectionResultMap">
+        SELECT
+            ps.product_source_id,
+            ps.company_name,
+            ps.product_name,
+            ps.insurer_sector::text as insurer_sector,
+            ps.coverage_category_code::text as coverage_category_code,
+            ps.coverage_code,
+            <choose>
+                <when test="gender == 'M'.toString()">round(ps.monthly_premium_male, 0)</when>
+                <when test="gender == 'F'.toString()">round(ps.monthly_premium_female, 0)</when>
+                <otherwise>NULL</otherwise>
+            </choose> AS monthly_price,
+            <choose>
+                <when test="gender == 'M'.toString()">ps.price_index_male</when>
+                <when test="gender == 'F'.toString()">ps.price_index_female</when>
+                <otherwise>NULL</otherwise>
+            </choose> AS price_index_text,
+            COALESCE(
+                cp.terms_uri,
+                CASE
+                    WHEN ps.product_name = '무배당 삼성화재 펫보험 의기냥냥(2601.2)' THEN '/terms/samsung-fire-pet/index.html'
+                    ELSE NULL
+                END
+            ) AS terms_uri,
+            ps.loaded_at,
+            ps.updated_at
+        <include refid="productSourcesFilterFromWhere"/>
         ORDER BY ps.product_source_id ASC
+    </select>
+
+    <select id="findProductSourcesByFilterPaged" resultMap="productSourceSummaryProjectionResultMap">
+        SELECT
+            ps.product_source_id,
+            ps.company_name,
+            ps.product_name,
+            ps.insurer_sector::text as insurer_sector,
+            ps.coverage_category_code::text as coverage_category_code,
+            ps.coverage_code,
+            <choose>
+                <when test="gender == 'M'.toString()">round(ps.monthly_premium_male, 0)</when>
+                <when test="gender == 'F'.toString()">round(ps.monthly_premium_female, 0)</when>
+                <otherwise>NULL</otherwise>
+            </choose> AS monthly_price,
+            <choose>
+                <when test="gender == 'M'.toString()">ps.price_index_male</when>
+                <when test="gender == 'F'.toString()">ps.price_index_female</when>
+                <otherwise>NULL</otherwise>
+            </choose> AS price_index_text,
+            COALESCE(
+                cp.terms_uri,
+                CASE
+                    WHEN ps.product_name = '무배당 삼성화재 펫보험 의기냥냥(2601.2)' THEN '/terms/samsung-fire-pet/index.html'
+                    ELSE NULL
+                END
+            ) AS terms_uri,
+            ps.loaded_at,
+            ps.updated_at
+        <include refid="productSourcesFilterFromWhere"/>
+        ORDER BY ps.product_source_id ASC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countProductSourcesByFilter" resultType="long">
+        SELECT count(*)
+        <include refid="productSourcesFilterFromWhere"/>
     </select>
     <select id="findProductSourceDetail" resultMap="productSourceDetailProjectionResultMap">
         SELECT

@@ -12,7 +12,14 @@ const ProductList = ({
     sortBy, 
     setSortBy, 
     filteredProducts, 
-    onViewDetail 
+    onViewDetail,
+    page,
+    totalPages,
+    totalElements,
+    hasNext,
+    hasPrevious,
+    onPrevPage,
+    onNextPage
 }) => {
     return (
         <>
@@ -154,6 +161,37 @@ const ProductList = ({
                         );
                     })
                 )}
+
+                <div className="mt-2 mb-6 border border-slate-800/70 rounded-2xl bg-capsure-card px-4 py-3 flex items-center justify-between">
+                    <div className="text-slate-400 text-xs font-semibold">
+                        총 {totalElements?.toLocaleString?.() ?? totalElements ?? 0}개
+                        {totalPages > 0 ? ` · ${page + 1}/${totalPages} 페이지` : ''}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={onPrevPage}
+                            disabled={!hasPrevious}
+                            className={`h-9 px-3 rounded-lg text-sm font-bold border transition-colors ${
+                                hasPrevious
+                                    ? 'border-slate-600 text-slate-200 hover:bg-slate-800/70'
+                                    : 'border-slate-800 text-slate-600 cursor-not-allowed'
+                            }`}
+                        >
+                            이전
+                        </button>
+                        <button
+                            onClick={onNextPage}
+                            disabled={!hasNext}
+                            className={`h-9 px-3 rounded-lg text-sm font-bold border transition-colors ${
+                                hasNext
+                                    ? 'border-slate-600 text-slate-200 hover:bg-slate-800/70'
+                                    : 'border-slate-800 text-slate-600 cursor-not-allowed'
+                            }`}
+                        >
+                            다음
+                        </button>
+                    </div>
+                </div>
             </div>
         </>
     );
