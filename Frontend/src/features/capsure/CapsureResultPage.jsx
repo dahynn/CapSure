@@ -8,6 +8,14 @@ const CapsureResultPage = () => {
     const location = useLocation();
     const { checkoutSummary } = useCapsure();
 
+    React.useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        const rafId = window.requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, behavior: 'auto' });
+        });
+        return () => window.cancelAnimationFrame(rafId);
+    }, []);
+
     const summary = checkoutSummary ?? (location.state?.subscriptionId ? {
         subscriptionId: location.state.subscriptionId,
         capsuleName: location.state.capsuleName ?? '나만의 캡슐',

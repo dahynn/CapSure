@@ -1,52 +1,135 @@
 // Vite proxy 사용 - /auth, /subscriptions 등은 vite.config.js에서 localhost:8080으로 프록시됨
 const BASE_URL = '';  // 직접 호출 대신 Vite proxy 경유
+let refreshPromise = null;
+
+const getAccessToken = () => localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+const getRefreshToken = () => localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
+const hasLocalAuthToken = () => Boolean(localStorage.getItem('accessToken') || localStorage.getItem('refreshToken'));
+const hasSessionAuthToken = () => Boolean(sessionStorage.getItem('accessToken') || sessionStorage.getItem('refreshToken'));
 
 const getAuthHeaders = () => {
-    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    const token = getAccessToken();
     return {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
     };
 };
 
+const clearAuthStorage = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+};
+
+const setAuthStorage = ({ accessToken, refreshToken }) => {
+    const useSession = !hasLocalAuthToken() && hasSessionAuthToken();
+    const targetStorage = useSession ? sessionStorage : localStorage;
+    const mirrorStorage = useSession ? localStorage : sessionStorage;
+
+    if (accessToken) {
+        targetStorage.setItem('accessToken', accessToken);
+        mirrorStorage.removeItem('accessToken');
+    }
+    if (refreshToken) {
+        targetStorage.setItem('refreshToken', refreshToken);
+        mirrorStorage.removeItem('refreshToken');
+    }
+};
+
+const shouldSkipRefresh = (url) => (
+    url.startsWith('/auth/login')
+    || url.startsWith('/auth/signup')
+    || url.startsWith('/auth/refresh')
+);
+
+const refreshAccessToken = async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+        throw new Error('No refresh token');
+    }
+
+    if (!refreshPromise) {
+        refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+        })
+            .then(async (response) => {
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload?.success) {
+                    throw new Error(payload?.message || 'Refresh token failed');
+                }
+                const data = payload?.data || {};
+                if (!data.accessToken) {
+                    throw new Error('Missing access token');
+                }
+                setAuthStorage({
+                    accessToken: data.accessToken,
+                    refreshToken: data.refreshToken,
+                });
+                return data.accessToken;
+            })
+            .finally(() => {
+                refreshPromise = null;
+            });
+    }
+
+    return refreshPromise;
+};
+
 const handleResponse = async (response) => {
+    const payload = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-        const error = new Error(`HTTP error! status: ${response.status}`);
+        const message = payload?.message || `HTTP error! status: ${response.status}`;
+        const error = new Error(message);
         error.response = response;
+        error.payload = payload;
         throw error;
     }
-    return { data: await response.json() };
+    return { data: payload };
+};
+
+const request = async (method, url, body, canRetry = true) => {
+    const response = await fetch(`${BASE_URL}${url}`, {
+        method,
+        headers: getAuthHeaders(),
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+
+    const parsedPayload = await response.clone().json().catch(() => ({}));
+    const isUnauthorizedLike =
+        response.status === 401
+        || (response.status === 403 && parsedPayload?.errorCode === 'UNAUTHORIZED');
+
+    if (isUnauthorizedLike && canRetry && !shouldSkipRefresh(url)) {
+        try {
+            await refreshAccessToken();
+            return request(method, url, body, false);
+        } catch (refreshError) {
+            clearAuthStorage();
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+            throw refreshError;
+        }
+    }
+
+    return handleResponse(response);
 };
 
 export const httpClient = {
     get: async (url) => {
-        const response = await fetch(`${BASE_URL}${url}`, {
-            method: 'GET',
-            headers: getAuthHeaders(),
-        });
-        return handleResponse(response);
+        return request('GET', url);
     },
     post: async (url, body) => {
-        const response = await fetch(`${BASE_URL}${url}`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(body),
-        });
-        return handleResponse(response);
+        return request('POST', url, body);
     },
     put: async (url, body) => {
-        const response = await fetch(`${BASE_URL}${url}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(body),
-        });
-        return handleResponse(response);
+        return request('PUT', url, body);
     },
     delete: async (url) => {
-        const response = await fetch(`${BASE_URL}${url}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
-        });
-        return handleResponse(response);
+        return request('DELETE', url);
     },
 };

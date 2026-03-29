@@ -10,9 +10,11 @@ import {
     LogOut, 
     ChevronRight 
 } from 'lucide-react';
+import { authApi } from '@/features/auth/api/auth.api';
 
 const Profile = () => {
     const navigate = useNavigate();
+    const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
     // Mock user data
     const user = {
@@ -27,6 +29,21 @@ const Profile = () => {
         { icon: Megaphone, label: '공지사항', path: '/notices' },
         { icon: Headphones, label: '고객센터', path: '/support' },
     ];
+
+    const handleLogout = async () => {
+        if (isLoggingOut) {
+            return;
+        }
+        setIsLoggingOut(true);
+        try {
+            await authApi.logout();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        } finally {
+            navigate('/login', { replace: true });
+            setIsLoggingOut(false);
+        }
+    };
 
     return (
         <div className="flex flex-col min-h-full text-white px-6 py-4 animate-in fade-in duration-500">
@@ -96,9 +113,13 @@ const Profile = () => {
 
             {/* Logout Button */}
             <div className="mt-12 mb-8 flex justify-center">
-                <button className="flex items-center gap-2 text-[#9D9DA4] hover:text-white transition-colors py-2 px-4 rounded-lg">
+                <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="flex items-center gap-2 text-[#9D9DA4] hover:text-white transition-colors py-2 px-4 rounded-lg disabled:opacity-60"
+                >
                     <LogOut className="w-5 h-5" />
-                    <span className="font-medium">로그아웃</span>
+                    <span className="font-medium">{isLoggingOut ? '로그아웃 중...' : '로그아웃'}</span>
                 </button>
             </div>
         </div>

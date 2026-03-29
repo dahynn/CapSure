@@ -21,6 +21,14 @@ const CapsurePaymentSummaryPage = () => {
     const totalPremium = selectedProducts.reduce((sum, product) => sum + product.monthlyPrice, 0);
 
     useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        const rafId = window.requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, behavior: 'auto' });
+        });
+        return () => window.cancelAnimationFrame(rafId);
+    }, []);
+
+    useEffect(() => {
         let active = true;
 
         const fetchPaymentMethod = async () => {

@@ -9,7 +9,7 @@ const CapsureBudgetPage = () => {
 
     const handleProceed = (amount) => {
         setTotalBudget(amount);
-        navigate('/capsure-insurance/maker');
+        navigate('/capsure-insurance/maker?previewLoading=1');
     };
 
     return (

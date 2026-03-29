@@ -68,6 +68,8 @@ export const authApi = {
         }
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('refreshToken');
         return { success: true };
     },
 
