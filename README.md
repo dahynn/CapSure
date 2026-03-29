@@ -428,9 +428,9 @@
 | <img src="docs/assets/gif/signup.gif" width="400"> | <img src="docs/assets/gif/login.gif" width="400"> |
 
 ### 2. 온보딩 (디지털 인감 & 마이데이터)
-| 디지털 인감 생성 | 마이데이터 동의 |
-| :---: | :---: |
-| <img src="docs/assets/gif/onboarding_seal.gif" width="400"> | <img src="docs/assets/gif/onboarding_mydata.gif" width="400"> |
+| 디지털 인감 생성 | 마이데이터 동의 | 카테고리 선택 |
+| :---: | :---: | :---: |
+| <img src="docs/assets/gif/onboarding_seal.gif" width="400"> | <img src="docs/assets/gif/onboarding_mydata.gif" width="400"> | <img src="docs/assets/gif/onboarding_category.gif" width="400"> |
 
 ### 3. 대시보드 (보험 보관함)
 | 보험 캡슐 대시보드 | 진단 리포트 |
@@ -443,9 +443,9 @@
 | <img src="docs/assets/gif/capsure_search.gif" width="300"> | <img src="docs/assets/gif/capsure_add.gif" width="300"> | <img src="docs/assets/gif/capsure_terms.gif" width="300"> |
 
 ### 5. 구독 변경 (익월 예약)
-| 보험 변경 예약 | 변경 확정 |
-| :---: | :---: |
-| <img src="docs/assets/gif/subscription_reserve.gif" width="400"> | <img src="docs/assets/gif/subscription_confirm.gif" width="400"> |
+| 보험 변경 예약 |
+| :---: |
+| <img src="docs/assets/gif/subscription_reserve.gif" width="400"> |
 
 ### 6. 결제
 | 구독 결제 | 결제 내역 |
