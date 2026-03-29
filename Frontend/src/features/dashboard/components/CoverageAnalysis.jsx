@@ -1,182 +1,111 @@
-import React, { useState } from 'react';
-import { CircleAlert, ShieldCheck, Sparkles } from 'lucide-react';
-import { getDashboardProductDetail } from '../api/dashboard.api';
-import DashboardProductDetailModal from './DashboardProductDetailModal';
+import React from 'react';
+import { CircleAlert } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-const scoreMessage = (score) => {
-    if (score >= 85) {
-        return '핵심 보장이 전반적으로 잘 갖춰져 있습니다.';
-    }
-    if (score >= 55) {
-        return '기본 보장은 갖췄지만 몇몇 카테고리는 보강 여지가 있습니다.';
-    }
-    return '미가입 카테고리가 많아 우선 보완이 필요합니다.';
-};
-
-const formatPrice = (value) => {
-    const amount = Number(value || 0);
-    return new Intl.NumberFormat('ko-KR').format(amount);
+const CATEGORY_LABELS = {
+    DEATH: '사망',
+    CANCER: '암',
+    BRAIN_HEART: '뇌/심장',
+    ACTUAL_LOSS: '실손',
+    SURGERY: '수술',
+    ACCIDENT: '상해',
+    LIABILITY: '배상',
+    ETC: '기타',
 };
 
 const CoverageAnalysis = ({ diagnosisReport, coveragePercentile }) => {
-    const score = coveragePercentile?.coveragePercentile || 0;
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
-    const [isDetailLoading, setIsDetailLoading] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [detailErrorMessage, setDetailErrorMessage] = useState('');
+    const navigate = useNavigate();
+    const gradientId = React.useId();
+    const score = Math.max(0, Math.min(coveragePercentile?.coveragePercentile || 0, 100));
+    const total = coveragePercentile?.totalCategoryCount || 7;
+    const covered = coveragePercentile?.coveredCategoryCount || 0;
+    const diagnoses = diagnosisReport?.diagnoses || [];
+    const coveredBadges = diagnoses
+        .filter((item) => item.insured)
+        .map((item) => CATEGORY_LABELS[item.categoryCode] || item.categoryName || item.categoryCode)
+        .slice(0, 6);
 
-    const handleRecommendedProductClick = async (productSourceId) => {
-        if (!productSourceId) {
-            return;
-        }
-
-        setIsDetailOpen(true);
-        setIsDetailLoading(true);
-        setSelectedProduct(null);
-        setDetailErrorMessage('');
-
-        try {
-            const detail = await getDashboardProductDetail(productSourceId);
-            setSelectedProduct(detail);
-        } catch (error) {
-            console.error('Failed to load recommended product detail:', error);
-            setDetailErrorMessage('추천 상품 상세 정보를 불러오지 못했습니다.');
-        } finally {
-            setIsDetailLoading(false);
-        }
-    };
-
-    const handleCloseDetail = () => {
-        setIsDetailOpen(false);
-        setSelectedProduct(null);
-        setDetailErrorMessage('');
-    };
+    const radius = 48;
+    const stroke = 7;
+    const normalizedRadius = radius - stroke / 2;
+    const circumference = 2 * Math.PI * normalizedRadius;
+    const strokeDashoffset = circumference * (1 - score / 100);
 
     return (
-        <>
-            <div className="mb-8">
-                <div className="mb-4 flex items-center justify-between px-1">
-                    <h2 className="text-[20px] font-bold tracking-tight text-white">정밀 진단 리포트</h2>
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-700 bg-[#161B26] text-[#82D8FC]">
-                        <CircleAlert className="h-3.5 w-3.5" strokeWidth={3} />
-                    </div>
-                </div>
-
-                <div className="rounded-3xl border border-slate-800/80 bg-[#10141D] p-6 shadow-lg">
-                    <div className="mb-5 flex items-end justify-between gap-4">
-                        <div>
-                            <p className="mb-1 text-[13px] font-medium text-[#9D9DA4]">7대 보장 충족률</p>
-                            <div className="flex items-baseline gap-1">
-                                <h3 className="text-[30px] font-black tracking-tight text-white">{score}</h3>
-                                <span className="text-[26px] font-black text-[#F2BEF7]">%</span>
-                            </div>
-                        </div>
-                        <span className="pb-1 text-[11px] font-black uppercase tracking-widest text-[#F6CD3C]">
-                            Coverage Score
-                        </span>
-                    </div>
-
-                    <div className="relative mb-5 h-3.5 w-full overflow-hidden rounded-full bg-[#1C212E]">
-                        <div
-                            className="absolute left-0 top-0 h-full rounded-full"
-                            style={{
-                                width: `${Math.max(0, Math.min(score, 100))}%`,
-                                background: 'linear-gradient(90deg, #82D8FC 0%, #F2BEF7 50%, #F6CD3C 100%)',
-                            }}
-                        />
-                    </div>
-
-                    <div className="mb-6 flex gap-3 rounded-2xl border border-[#2B233A] bg-[#191523] p-4 text-white">
-                        <Sparkles className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#F2BEF7]" />
-                        <div>
-                            <p className="text-[13px] leading-snug text-[#BBBBCA]">
-                                {coveragePercentile?.message || scoreMessage(score)}
-                            </p>
-                            {diagnosisReport?.description ? (
-                                <p className="mt-2 text-[12px] text-slate-400">{diagnosisReport.description}</p>
-                            ) : null}
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        {(diagnosisReport?.diagnoses || []).map((item) => {
-                            const isInsured = item.insured;
-
-                            return (
-                                <div
-                                    key={item.categoryCode}
-                                    className="rounded-2xl border border-slate-800 bg-[#151A24] px-4 py-4"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span
-                                                    className={`h-2.5 w-2.5 rounded-full ${
-                                                        isInsured ? 'bg-[#79E79C]' : 'bg-[#F36B7F]'
-                                                    }`}
-                                                />
-                                                <p className="text-[15px] font-semibold text-white">{item.categoryName}</p>
-                                                <span
-                                                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                                                        isInsured
-                                                            ? 'bg-[#1E2D24] text-[#8AE7A3]'
-                                                            : 'bg-[#351923] text-[#FF9CAC]'
-                                                    }`}
-                                                >
-                                                    {item.status}
-                                                </span>
-                                            </div>
-                                            {item.coverageNames?.length ? (
-                                                <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
-                                                    보유 보장: {item.coverageNames.join(', ')}
-                                                </p>
-                                            ) : null}
-                                        </div>
-                                        {isInsured ? <ShieldCheck className="h-5 w-5 text-[#82D8FC]" /> : null}
-                                    </div>
-
-                                    {!isInsured && item.recommendedProduct ? (
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                handleRecommendedProductClick(item.recommendedProduct.productSourceId)
-                                            }
-                                            className="mt-3 block w-full rounded-xl border border-dashed border-slate-700 bg-[#10141D] px-3 py-3 text-left transition-colors hover:border-[#82D8FC]/60 hover:bg-[#121A28]"
-                                        >
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="min-w-0">
-                                                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#82D8FC]">
-                                                        추천 상품
-                                                    </p>
-                                                    <p className="mt-1 text-[13px] font-semibold leading-relaxed text-white">
-                                                        {item.recommendedProduct.productName}
-                                                    </p>
-                                                    <p className="mt-1 text-[12px] text-slate-400">
-                                                        {item.recommendedProduct.companyName} ·{' '}
-                                                        {formatPrice(item.recommendedProduct.monthlyPrice)}원/월
-                                                    </p>
-                                                </div>
-                                                <span className="shrink-0 rounded-full bg-[#1B2230] px-3 py-1 text-[11px] font-bold text-[#82D8FC]">
-                                                    상세보기
-                                                </span>
-                                            </div>
-                                        </button>
-                                    ) : null}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+        <section className="mb-7">
+            <div className="mb-4 flex items-center gap-2 text-slate-100">
+                <CircleAlert className="h-5 w-5 text-slate-300" />
+                <h3 className="text-[17px] font-semibold">정밀 진단 리포트</h3>
             </div>
 
-            <DashboardProductDetailModal
-                isOpen={isDetailOpen}
-                onClose={handleCloseDetail}
-                product={selectedProduct}
-                isLoading={isDetailLoading}
-                errorMessage={detailErrorMessage}
-            />
-        </>
+            <button
+                type="button"
+                onClick={() => navigate('/dashboard/diagnosis-report', { state: { diagnosisReport } })}
+                className="w-full rounded-[30px] border border-slate-800 bg-[#161B26] px-6 py-7 text-left shadow-xl transition hover:border-slate-700"
+            >
+                <div className="mb-3 flex justify-end">
+                    <span className="inline-flex items-center rounded-full bg-[#1F2736] px-2.5 py-1 text-[11px] font-semibold text-[#82D8FC]">상세보기</span>
+                </div>
+                <div className="flex items-center gap-5">
+                    <div className="relative h-32 w-32 shrink-0">
+                        <svg className="h-32 w-32 -rotate-90" viewBox="0 0 96 96" aria-hidden="true">
+                            <defs>
+                                <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="#82D8FC" />
+                                    <stop offset="56%" stopColor="#D8B7EE" />
+                                    <stop offset="100%" stopColor="#F2CE49" />
+                                </linearGradient>
+                            </defs>
+                            <circle
+                                cx={radius}
+                                cy={radius}
+                                r={normalizedRadius}
+                                fill="none"
+                                stroke="#1C2640"
+                                strokeWidth={stroke}
+                            />
+                            <circle
+                                cx={radius}
+                                cy={radius}
+                                r={normalizedRadius}
+                                fill="none"
+                                stroke={`url(#${gradientId})`}
+                                strokeWidth={stroke}
+                                strokeDasharray={circumference}
+                                strokeDashoffset={strokeDashoffset}
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center text-[19px] font-semibold text-[#DDE4F2]">
+                            {score}%
+                        </div>
+                    </div>
+
+                    <div className="min-w-0">
+                        <p className="text-[15px] leading-relaxed text-slate-300">
+                            현재 <span className="font-semibold text-[#82D8FC]">{total}개 중 {covered}개</span>의 보장 카테고리가 안전하게 보호되고 있습니다.
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {coveredBadges.length ? (
+                                coveredBadges.map((badge) => (
+                                    <span
+                                        key={badge}
+                                        className="rounded-xl bg-[#1F2736] px-3 py-1.5 text-[13px] font-medium text-[#82D8FC]"
+                                    >
+                                        {badge}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="rounded-xl bg-[#1F2736] px-3 py-1.5 text-[13px] font-medium text-slate-300">
+                                    보호 중인 항목이 없습니다
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </button>
+        </section>
     );
 };
 

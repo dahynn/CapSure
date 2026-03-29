@@ -98,7 +98,7 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
                     </button>
                 </div>
 
-                <div className="overflow-y-auto px-5 py-5">
+                <div className="hide-scrollbar overflow-y-auto px-5 py-5">
                     {isLoading ? (
                         <div className="rounded-2xl border border-slate-800 bg-[#10141D] px-4 py-12 text-center text-sm text-slate-300">
                             상품 상세 정보를 불러오는 중입니다.
@@ -156,7 +156,7 @@ const DashboardProductDetailModal = ({ isOpen, onClose, product, isLoading, erro
                                 />
                                 <FieldBlock
                                     label="보험금 정보"
-                                    value={product.payoutAmount || product.joinAmount || '보장 금액 정보 없음'}
+                                    value={product.joinAmount || product.payoutAmount || '보장 금액 정보 없음'}
                                     tone="accent"
                                 />
                                 <FieldBlock label="상품 요약" value={product.productSummary} />

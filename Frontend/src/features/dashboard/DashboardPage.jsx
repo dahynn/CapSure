@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import DashboardHeader from './components/DashboardHeader';
 import ActiveSubscription from './components/ActiveSubscription';
 import CoverageAnalysis from './components/CoverageAnalysis';
 import ScheduleSummary from './components/ScheduleSummary';
@@ -103,7 +102,7 @@ const DashboardPage = () => {
     if (showTransitionLoading) {
         return (
             <PageTransitionLoading
-                message="대시보드를 불러오는 중이에요"
+                message="대시보드로 이동합니다."
                 backgroundClassName="bg-[#020715]"
                 openDelayMs={0}
                 textDelayMs={120}
@@ -113,9 +112,7 @@ const DashboardPage = () => {
     }
 
     return (
-        <div className="mx-auto min-h-screen w-full max-w-[560px] animate-in px-8 py-8 transition-all fade-in duration-500 md:px-12 md:py-10">
-            <DashboardHeader userName={dashboardData.userName} />
-
+        <div className="mx-auto min-h-screen w-full max-w-[560px] animate-in px-6 pt-6 pb-10 transition-all fade-in duration-500 md:px-8 md:pt-7">
             {errorMessage ? (
                 <div className="mb-8 rounded-3xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-100">
                     {errorMessage}

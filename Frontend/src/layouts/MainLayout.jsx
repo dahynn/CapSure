@@ -1,9 +1,6 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { UserCircle, ShieldAlert, LogOut, History, User, Package, Home, Pill, LayoutDashboard, Search } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-
-import SessionTimer from '@/features/auth/components/SessionTimer';
+import { User, Home, Pill, LayoutDashboard, Search } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import capsureLogoImg from '@/assets/capsure_logo.png';
 
@@ -23,7 +20,6 @@ const MainLayout = () => {
                     className="sticky top-0 z-50 w-full flex justify-center border-b border-slate-800/50"
                     style={{ backgroundColor: 'var(--color-bg)' }}
                 >
-                    <div className="hidden"><SessionTimer /></div>
                     <div className="w-full max-w-5xl px-6 py-4 flex items-center justify-between">
                         {/* 왼쪽 로고 영역 */}
                         <div

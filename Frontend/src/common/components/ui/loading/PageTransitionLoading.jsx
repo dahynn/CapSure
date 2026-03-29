@@ -17,14 +17,17 @@ const PageTransitionLoading = ({
     React.useEffect(() => {
         const measure = () => {
             const textWidth = textRef.current?.scrollWidth ?? 0;
-            const rawWidth = 12 + 36 + 12 + textWidth + 14;
-            const maxWidth = Math.max(240, window.innerWidth - 48);
+            const rawWidth = 12 + 36 + 12 + textWidth + 22;
+            const maxWidth = Math.max(264, window.innerWidth - 24);
             const clamped = Math.min(rawWidth, maxWidth);
             setTargetWidth(Math.ceil(clamped));
         };
 
         measure();
         window.addEventListener('resize', measure);
+        if (document.fonts?.ready) {
+            document.fonts.ready.then(measure).catch(() => {});
+        }
 
         return () => {
             window.removeEventListener('resize', measure);

@@ -16,6 +16,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getPaymentHistory, getCurrentPaymentMethod, getMyCapsules, registerPaymentMethod } from './api/mypage.api';
 import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
+import { authApi } from '@/features/auth/api/auth.api';
 
 const MyPage = ({ initialView = 'main' }) => {
     const navigate = useNavigate();
@@ -29,6 +30,7 @@ const MyPage = ({ initialView = 'main' }) => {
     const [paymentError, setPaymentError] = useState('');
     const [capsules, setCapsules] = useState([]);
     const [capsulesLoading, setCapsulesLoading] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [paymentForm, setPaymentForm] = useState({
         provider: 'TOSS',
         methodType: 'BANK_ACCOUNT',
@@ -216,6 +218,22 @@ const MyPage = ({ initialView = 'main' }) => {
         }
     };
 
+    const handleLogout = async () => {
+        if (isLoggingOut) {
+            return;
+        }
+
+        setIsLoggingOut(true);
+        try {
+            await authApi.logout();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        } finally {
+            navigate('/login', { replace: true });
+            setIsLoggingOut(false);
+        }
+    };
+
     const renderMain = () => (
         <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-12">
             {/* Header */}
@@ -292,9 +310,13 @@ const MyPage = ({ initialView = 'main' }) => {
 
             {/* Logout Button */}
             <div className="mt-12 mb-8 flex justify-center">
-                <button className="flex items-center gap-2 text-[#9D9DA4] hover:text-white transition-colors py-2 px-4 rounded-lg">
+                <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="flex items-center gap-2 text-[#9D9DA4] hover:text-white transition-colors py-2 px-4 rounded-lg disabled:opacity-60"
+                >
                     <LogOut className="w-5 h-5" />
-                    <span className="font-medium">로그아웃</span>
+                    <span className="font-medium">{isLoggingOut ? '로그아웃 중...' : '로그아웃'}</span>
                 </button>
             </div>
         </div>

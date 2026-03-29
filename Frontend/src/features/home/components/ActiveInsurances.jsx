@@ -8,8 +8,15 @@ const ActiveInsurances = ({ activeInsurances }) => {
 
     return (
         <section className="animate-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-both">
-            <div className="mb-6 px-1">
+            <div className="mb-6 px-1 flex items-center justify-between">
                 <h2 className="text-[22px] font-bold text-white tracking-tight">현재 진행 중인 보험</h2>
+                <button
+                    type="button"
+                    onClick={() => navigate('/home/active-insurances')}
+                    className="text-sm font-bold text-[#82D8FC] hover:brightness-110 transition"
+                >
+                    전체 보기
+                </button>
             </div>
 
             <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-6 snap-x snap-mandatory w-full">

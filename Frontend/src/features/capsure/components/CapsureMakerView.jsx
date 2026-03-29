@@ -12,7 +12,6 @@ import PageTransitionLoading from '@/common/components/ui/loading/PageTransition
 const DEFAULT_PAGE_SIZE = 12;
 
 const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveItem, onConfirm, onViewDetail }) => {
-    const MIN_TRANSITION_VISIBLE_MS = 760;
     const navigate = useNavigate();
     const location = useLocation();
     
@@ -20,8 +19,6 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     const [activeCategories, setActiveCategories] = useState(['전체']);
     const [sortBy, setSortBy] = useState('popular');
     const [products, setProducts] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [showTransitionLoading, setShowTransitionLoading] = useState(false);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const [page, setPage] = useState(0);
     const [size] = useState(DEFAULT_PAGE_SIZE);
@@ -29,11 +26,9 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
     const [totalElements, setTotalElements] = useState(0);
     const [hasNext, setHasNext] = useState(false);
     const [hasPrevious, setHasPrevious] = useState(false);
-    const transitionShownAtRef = React.useRef(0);
 
     // Fetch Products from Backend
     const fetchProducts = async () => {
-        setIsLoading(true);
         try {
             // Build query params
             const params = new URLSearchParams();
@@ -71,7 +66,6 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
             setHasNext(false);
             setHasPrevious(false);
         } finally {
-            setIsLoading(false);
         }
     };
 
@@ -101,33 +95,6 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
             window.clearTimeout(previewTimer);
         };
     }, [location.search]);
-
-    React.useEffect(() => {
-        let openTimer;
-        let closeTimer;
-
-        if (isLoading) {
-            openTimer = window.setTimeout(() => {
-                transitionShownAtRef.current = Date.now();
-                setShowTransitionLoading(true);
-            }, 40);
-        } else if (showTransitionLoading) {
-            const elapsed = Date.now() - transitionShownAtRef.current;
-            const remaining = Math.max(0, MIN_TRANSITION_VISIBLE_MS - elapsed);
-            closeTimer = window.setTimeout(() => {
-                setShowTransitionLoading(false);
-            }, remaining);
-        }
-
-        return () => {
-            if (openTimer) {
-                window.clearTimeout(openTimer);
-            }
-            if (closeTimer) {
-                window.clearTimeout(closeTimer);
-            }
-        };
-    }, [isLoading, showTransitionLoading]);
 
     const handleCategoryClick = (cat) => {
         setPage(0);
@@ -163,7 +130,7 @@ const CapsureMakerView = ({ totalBudget, selectedProducts, onAddItem, onRemoveIt
         return 0;
     });
 
-    if (isPreviewLoading || showTransitionLoading) {
+    if (isPreviewLoading) {
         return (
             <PageTransitionLoading
                 message="보험 리스트를 불러오는 중이에요"

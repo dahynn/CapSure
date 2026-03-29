@@ -5,6 +5,7 @@ import AuthPage from '@/features/auth/AuthPage';
 import LoginPage from '@/features/auth/components/LoginPage';
 import SignupPage from '@/features/auth/components/SignupPage';
 import HomePage from '@/features/home/HomePage';
+import ActiveInsurancesPage from '@/features/home/ActiveInsurancesPage';
 import SearchPage from '@/features/search/SearchPage';
 
 // Refactored Capsure Feature Routes
@@ -26,6 +27,7 @@ import OnboardingPage from '@/features/onboarding/components/OnboardingPage';
 
 // Dashboard Feature
 import DashboardPage from '@/features/dashboard/DashboardPage';
+import DiagnosisReportPage from '@/features/dashboard/DiagnosisReportPage';
 
 const AppRouter = () => {
   return (
@@ -42,6 +44,7 @@ const AppRouter = () => {
 
         <Route element={<MainLayout />}>
           <Route path="/home" element={<HomePage />} />
+          <Route path="/home/active-insurances" element={<ActiveInsurancesPage />} />
 
           {/* Capsure Insurance Flow (Context Provider Wrapped) */}
           <Route path="/capsure-insurance" element={<CapsureFlowLayout />}>
@@ -55,6 +58,7 @@ const AppRouter = () => {
 
           {/* Dashboard Route */}
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/dashboard/diagnosis-report" element={<DiagnosisReportPage />} />
 
           <Route path="/my-capsure" element={<Navigate to="/mypage/capsure" replace />} />
 
