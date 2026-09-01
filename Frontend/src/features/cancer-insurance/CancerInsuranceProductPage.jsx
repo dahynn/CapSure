@@ -55,6 +55,9 @@ const CancerInsuranceProductPage = () => {
         setTerms,
         quote,
         setQuote,
+        setApplication,
+        setPayment,
+        setPolicy,
     } = useCancerInsurance();
     const [selectedCoverageIds, setSelectedCoverageIds] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -147,8 +150,16 @@ const CancerInsuranceProductPage = () => {
                 product.product.productVersionId,
                 selectedCoverageIds,
             );
+            setApplication(null);
+            setPayment(null);
+            setPolicy(null);
             setQuote(issued);
-            updateFlowIds({ quoteId: issued.quoteId });
+            updateFlowIds({
+                quoteId: issued.quoteId,
+                applicationId: null,
+                paymentOrderId: null,
+                policyId: null,
+            });
             navigate('/cancer-insurance/application');
         } catch (requestError) {
             if ([401, 403].includes(requestError.response?.status)) {
@@ -164,6 +175,9 @@ const CancerInsuranceProductPage = () => {
         navigate,
         product,
         selectedCoverageIds,
+        setApplication,
+        setPayment,
+        setPolicy,
         setQuote,
         submitting,
         updateFlowIds,
