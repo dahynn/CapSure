@@ -2,7 +2,9 @@ package com.capsule.insurance.policy.infra;
 
 import com.capsule.insurance.policy.application.port.PolicyRepository;
 import com.capsule.insurance.policy.domain.InsurancePolicy;
+import com.capsule.insurance.policy.domain.PolicySnapshot;
 import com.capsule.insurance.quote.domain.QuoteSnapshot;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
@@ -99,6 +101,10 @@ public class JdbcPolicyRepository implements PolicyRepository {
         if ("ACTIVE".equals(context.policyStatus())) {
             return findById(context.policyId()).orElseThrow();
         }
+        PolicySnapshot policySnapshot = new PolicySnapshot(
+                context.quoteSnapshot(),
+                loadClaimRuleSnapshots(context.quoteSnapshot())
+        );
 
         jdbcTemplate.update("""
                 INSERT INTO public.ins_policy_version (
@@ -114,7 +120,7 @@ public class JdbcPolicyRepository implements PolicyRepository {
                 context.policyId(),
                 context.productVersionId(),
                 context.termsDocumentId(),
-                toJson(context.snapshot())
+                toJson(policySnapshot)
         );
         PolicyVersionKey version = jdbcTemplate.query("""
                 SELECT policy_version_id, valid_from
@@ -126,7 +132,7 @@ public class JdbcPolicyRepository implements PolicyRepository {
                 resultSet.getTimestamp("valid_from").toInstant()
         ), context.policyId()).stream().findFirst().orElseThrow();
 
-        for (QuoteSnapshot.CoverageSnapshot coverage : context.snapshot().coverages()) {
+        for (QuoteSnapshot.CoverageSnapshot coverage : context.quoteSnapshot().coverages()) {
             Instant coverageStartAt = version.validFrom()
                     .plus(coverage.waitingPeriodDays(), ChronoUnit.DAYS);
             jdbcTemplate.update("""
@@ -301,7 +307,7 @@ public class JdbcPolicyRepository implements PolicyRepository {
                 resultSet.getString("policy_status"),
                 resultSet.getLong("product_version_id"),
                 resultSet.getLong("terms_document_id"),
-                fromJson(resultSet.getString("snapshot_json"))
+                quoteFromJson(resultSet.getString("snapshot_json"))
         );
     }
 
@@ -313,11 +319,65 @@ public class JdbcPolicyRepository implements PolicyRepository {
         }
     }
 
-    private QuoteSnapshot fromJson(String json) {
+    private PolicySnapshot fromJson(String json) {
+        try {
+            return objectMapper.readValue(json, PolicySnapshot.class);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("계약 snapshot JSON을 역직렬화하지 못했습니다.", exception);
+        }
+    }
+
+    private QuoteSnapshot quoteFromJson(String json) {
         try {
             return objectMapper.readValue(json, QuoteSnapshot.class);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("계약 snapshot JSON을 역직렬화하지 못했습니다.", exception);
+            throw new IllegalStateException("견적 snapshot JSON을 역직렬화하지 못했습니다.", exception);
+        }
+    }
+
+    private List<PolicySnapshot.ClaimRuleSnapshot> loadClaimRuleSnapshots(QuoteSnapshot quoteSnapshot) {
+        return quoteSnapshot.coverages().stream()
+                .map(coverage -> jdbcTemplate.query("""
+                        SELECT rule.rule_version,
+                               rule.rule_json::TEXT AS rule_json,
+                               rule.terms_clause_id AS eligibility_clause_id,
+                               missing_clause.terms_clause_id AS missing_evidence_clause_id,
+                               denial_clause.terms_clause_id AS denial_clause_id
+                        FROM public.ins_coverage_rule rule
+                        JOIN public.ins_terms_clause eligibility_clause
+                          ON eligibility_clause.terms_clause_id = rule.terms_clause_id
+                        JOIN public.ins_terms_clause missing_clause
+                          ON missing_clause.terms_document_id = eligibility_clause.terms_document_id
+                         AND missing_clause.clause_code = 'ARTICLE-13'
+                        JOIN public.ins_terms_clause denial_clause
+                          ON denial_clause.terms_document_id = eligibility_clause.terms_document_id
+                         AND denial_clause.clause_code = 'ARTICLE-14'
+                        WHERE rule.product_coverage_id = ?
+                          AND rule.rule_type = 'CLAIM_ELIGIBILITY'
+                          AND rule.is_active = TRUE
+                        ORDER BY rule.priority DESC, rule.coverage_rule_id DESC
+                        LIMIT 1
+                        """, (resultSet, rowNumber) -> {
+                    ClaimRuleData rule = claimRuleFromJson(resultSet.getString("rule_json"));
+                    return new PolicySnapshot.ClaimRuleSnapshot(
+                            coverage.productCoverageId(),
+                            resultSet.getString("rule_version"),
+                            rule.diagnosisCategories(),
+                            rule.requiredEvidence(),
+                            rule.firstDiagnosisOnly(),
+                            resultSet.getLong("eligibility_clause_id"),
+                            resultSet.getLong("missing_evidence_clause_id"),
+                            resultSet.getLong("denial_clause_id")
+                    );
+                }, coverage.productCoverageId()).stream().findFirst().orElseThrow())
+                .toList();
+    }
+
+    private ClaimRuleData claimRuleFromJson(String json) {
+        try {
+            return objectMapper.readValue(json, ClaimRuleData.class);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("지급심사 규칙 snapshot을 역직렬화하지 못했습니다.", exception);
         }
     }
 
@@ -332,10 +392,18 @@ public class JdbcPolicyRepository implements PolicyRepository {
             String policyStatus,
             Long productVersionId,
             Long termsDocumentId,
-            QuoteSnapshot snapshot
+            QuoteSnapshot quoteSnapshot
     ) {
     }
 
     private record PolicyVersionKey(Long policyVersionId, Instant validFrom) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ClaimRuleData(
+            List<String> diagnosisCategories,
+            List<String> requiredEvidence,
+            boolean firstDiagnosisOnly
+    ) {
     }
 }

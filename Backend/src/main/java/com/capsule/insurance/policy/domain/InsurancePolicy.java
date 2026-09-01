@@ -1,6 +1,5 @@
 package com.capsule.insurance.policy.domain;
 
-import com.capsule.insurance.quote.domain.QuoteSnapshot;
 import java.time.Instant;
 import java.util.List;
 
@@ -25,7 +24,7 @@ public record InsurancePolicy(
             Long termsDocumentId,
             Instant validFrom,
             Instant validTo,
-            QuoteSnapshot snapshot,
+            PolicySnapshot snapshot,
             List<PolicyCoverage> coverages
     ) {
         public PolicyVersion {

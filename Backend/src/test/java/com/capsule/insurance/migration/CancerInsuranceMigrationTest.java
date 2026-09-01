@@ -48,7 +48,7 @@ class CancerInsuranceMigrationTest {
                 .load();
 
         MigrateResult result = flyway.migrate();
-        assertThat(result.migrationsExecuted).isEqualTo(4);
+        assertThat(result.migrationsExecuted).isEqualTo(5);
     }
 
     @Test
