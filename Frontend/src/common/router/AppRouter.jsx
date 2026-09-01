@@ -32,6 +32,7 @@ import DiagnosisReportPage from '@/features/dashboard/DiagnosisReportPage';
 // Cancer Insurance Financial Process
 import CancerInsuranceFlowLayout from '@/features/cancer-insurance/CancerInsuranceFlowLayout';
 import CancerInsuranceProductPage from '@/features/cancer-insurance/CancerInsuranceProductPage';
+import CancerInsuranceApplicationPage from '@/features/cancer-insurance/CancerInsuranceApplicationPage';
 
 const AppRouter = () => {
   return (
@@ -66,6 +67,7 @@ const AppRouter = () => {
 
           <Route path="/cancer-insurance" element={<CancerInsuranceFlowLayout />}>
             <Route index element={<CancerInsuranceProductPage />} />
+            <Route path="application" element={<CancerInsuranceApplicationPage />} />
           </Route>
 
           <Route path="/my-capsure" element={<Navigate to="/mypage/capsure" replace />} />

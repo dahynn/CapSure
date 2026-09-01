@@ -30,3 +30,35 @@ export const issueCancerQuote = async (productVersionId, selectedProductCoverage
         selectedProductCoverageIds,
     }))
 );
+
+export const getCancerQuote = async (quoteId) => (
+    unwrap(await httpClient.get(`/api/v1/quotes/${quoteId}`))
+);
+
+export const createCancerApplication = async (quoteId) => (
+    unwrap(await httpClient.post('/api/v1/applications', { quoteId }))
+);
+
+export const replaceCancerDisclosures = async (applicationId, disclosures) => (
+    unwrap(await httpClient.put(`/api/v1/applications/${applicationId}/disclosures`, disclosures))
+);
+
+export const recordCancerConsent = async (applicationId, consentType, documentHash) => (
+    unwrap(await httpClient.post(`/api/v1/applications/${applicationId}/consents`, {
+        consentType,
+        documentHash,
+        agreed: true,
+    }))
+);
+
+export const submitCancerApplication = async (applicationId, idempotencyKey) => (
+    unwrap(await httpClient.post(
+        `/api/v1/applications/${applicationId}/submit`,
+        undefined,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
+    ))
+);
+
+export const getCancerApplication = async (applicationId) => (
+    unwrap(await httpClient.get(`/api/v1/applications/${applicationId}`))
+);
