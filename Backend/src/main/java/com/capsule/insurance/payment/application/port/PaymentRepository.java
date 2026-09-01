@@ -36,6 +36,8 @@ public interface PaymentRepository {
 
     Optional<PaymentAttempt> findAttemptByIdempotencyKey(String idempotencyKey);
 
+    Optional<PaymentAttempt> findAttemptByProviderPaymentKey(String provider, String providerPaymentKey);
+
     Optional<PaymentAttempt> findLatestAttempt(Long paymentOrderId);
 
     List<PaymentAttempt> findAttempts(Long paymentOrderId);

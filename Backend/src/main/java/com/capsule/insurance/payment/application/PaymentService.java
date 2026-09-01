@@ -170,6 +170,15 @@ public class PaymentService {
                         "만료된 초회 보험료 주문입니다."
                 );
             }
+            PaymentAttempt providerKeyOwner = paymentRepository
+                    .findAttemptByProviderPaymentKey(PROVIDER, request.providerPaymentKey())
+                    .orElse(null);
+            if (providerKeyOwner != null) {
+                throw new BusinessException(
+                        ErrorCode.IDEMPOTENCY_CONFLICT,
+                        "이미 다른 승인 시도에 사용된 provider payment key입니다."
+                );
+            }
 
             PremiumPaymentGateway.ConfirmCommand command = new PremiumPaymentGateway.ConfirmCommand(
                     order.orderNo(),
@@ -237,6 +246,22 @@ public class PaymentService {
                         reconciliationResult,
                         toJson(result)
                 )
+        );
+        return toResponse(completed);
+    }
+
+    public PaymentOrderResponse applyProviderNotification(
+            String providerPaymentKey,
+            GatewayPaymentResult result
+    ) {
+        PaymentAttempt attempt = paymentRepository
+                .findAttemptByProviderPaymentKey(PROVIDER, providerPaymentKey)
+                .orElseThrow(() -> notFound("webhook 대상 결제 시도를 찾을 수 없습니다."));
+        PaymentOrder completed = finalizeResult(
+                attempt.paymentOrderId(),
+                attempt.paymentAttemptId(),
+                result,
+                null
         );
         return toResponse(completed);
     }

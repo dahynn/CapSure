@@ -17,6 +17,9 @@ import com.capsule.insurance.payment.adapter.FakePremiumPaymentGateway;
 import com.capsule.insurance.payment.application.PaymentService;
 import com.capsule.insurance.payment.dto.PaymentOrderResponse;
 import com.capsule.insurance.payment.infra.JdbcPaymentRepository;
+import com.capsule.insurance.payment.webhook.api.FakePaymentWebhookOperationsController;
+import com.capsule.insurance.payment.webhook.application.PaymentWebhookService;
+import com.capsule.insurance.payment.webhook.infra.JdbcPaymentWebhookRepository;
 import com.capsule.insurance.policy.api.PolicyController;
 import com.capsule.insurance.policy.application.PolicyService;
 import com.capsule.insurance.policy.application.port.PolicyRepository;
@@ -76,6 +79,7 @@ class PaymentPolicyIntegrationTest {
     private static FakePremiumPaymentGateway paymentGateway;
     private static PaymentService paymentService;
     private static MockMvc mockMvc;
+    private static MockMvc webhookMockMvc;
     private static Long productVersionId;
     private static List<Long> productCoverageIds;
     private static List<Long> userIds;
@@ -132,6 +136,16 @@ class PaymentPolicyIntegrationTest {
         paymentGateway = new FakePremiumPaymentGateway();
         paymentService = newPaymentService(policyRepository);
         mockMvc = buildMockMvc(paymentService, policyRepository);
+        PaymentWebhookService webhookService = new PaymentWebhookService(
+                new JdbcPaymentWebhookRepository(jdbcTemplate),
+                paymentService,
+                OBJECT_MAPPER,
+                new DataSourceTransactionManager(dataSource)
+        );
+        webhookMockMvc = MockMvcBuilders
+                .standaloneSetup(new FakePaymentWebhookOperationsController(webhookService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -308,6 +322,61 @@ class PaymentPolicyIntegrationTest {
         assertThat(count("ops_reconciliation", "target_id", orderId.toString())).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("동일 webhook 100회는 inbox와 결제·계약 상태를 한 번만 전이시키고 payload 변조를 거절한다")
+    void deduplicatesOneHundredWebhookDeliveries() throws Exception {
+        Long userId = userIds.get(5);
+        JsonNode order = createOrder(userId, approveApplication(userId), "order-webhook");
+        Long orderId = order.path("paymentOrderId").asLong();
+        Long policyId = order.path("policyId").asLong();
+        int invocationsBefore = paymentGateway.confirmationInvocationCount();
+
+        mockMvc.perform(post("/api/v1/payments/{paymentOrderId}/confirm", orderId)
+                        .principal(authentication(userId))
+                        .header("Idempotency-Key", "confirm-webhook-timeout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmRequest("fake-timeout-webhook", "29900.00")))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.status").value("UNKNOWN"));
+
+        Long inboxId = null;
+        for (int delivery = 0; delivery < 100; delivery++) {
+            MvcResult result = webhookMockMvc.perform(post("/api/v1/ops/webhooks/fake/payments")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(webhookRequest("fake-event-100", "fake-timeout-webhook", "PAID")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.processingStatus").value("PROCESSED"))
+                    .andExpect(jsonPath("$.data.duplicate").value(delivery > 0))
+                    .andReturn();
+            Long currentInboxId = OBJECT_MAPPER.readTree(result.getResponse().getContentAsByteArray())
+                    .path("data").path("paymentWebhookEventId").asLong();
+            if (inboxId == null) {
+                inboxId = currentInboxId;
+            }
+            assertThat(currentInboxId).isEqualTo(inboxId);
+        }
+
+        assertThat(paymentGateway.confirmationInvocationCount()).isEqualTo(invocationsBefore + 1);
+        assertThat(paymentStatus(orderId)).isEqualTo("PAID");
+        assertThat(attemptStatus(orderId)).isEqualTo("PAID");
+        assertThat(policyStatus(policyId)).isEqualTo("ACTIVE");
+        assertThat(count("pay_webhook_event", "provider_event_id", "fake-event-100")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT payload_hash
+                FROM public.pay_webhook_event
+                WHERE provider = 'FAKE'
+                  AND provider_event_id = 'fake-event-100'
+                """, String.class)).matches("[0-9a-f]{64}");
+        assertThat(count("ins_policy_version", "policy_id", policyId)).isEqualTo(1);
+        assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
+
+        webhookMockMvc.perform(post("/api/v1/ops/webhooks/fake/payments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(webhookRequest("fake-event-100", "fake-timeout-webhook", "FAILED")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("IDEMPOTENCY_CONFLICT"));
+    }
+
     private static PaymentService newPaymentService(PolicyRepository selectedPolicyRepository) {
         return new PaymentService(
                 new JdbcPaymentRepository(jdbcTemplate),
@@ -401,6 +470,19 @@ class PaymentPolicyIntegrationTest {
         return OBJECT_MAPPER.writeValueAsString(Map.of(
                 "providerPaymentKey", providerPaymentKey,
                 "amount", amount
+        ));
+    }
+
+    private static String webhookRequest(
+            String providerEventId,
+            String providerPaymentKey,
+            String paymentStatus
+    ) throws Exception {
+        return OBJECT_MAPPER.writeValueAsString(Map.of(
+                "providerEventId", providerEventId,
+                "providerPaymentKey", providerPaymentKey,
+                "eventType", "PAYMENT_STATUS_CHANGED",
+                "status", paymentStatus
         ));
     }
 

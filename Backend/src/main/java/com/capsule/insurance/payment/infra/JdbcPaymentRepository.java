@@ -183,6 +183,19 @@ public class JdbcPaymentRepository implements PaymentRepository {
     }
 
     @Override
+    public Optional<PaymentAttempt> findAttemptByProviderPaymentKey(
+            String provider,
+            String providerPaymentKey
+    ) {
+        return jdbcTemplate.query(
+                ATTEMPT_SELECT + " WHERE provider = ? AND provider_payment_key = ?",
+                this::mapAttempt,
+                provider,
+                providerPaymentKey
+        ).stream().findFirst();
+    }
+
+    @Override
     public Optional<PaymentAttempt> findLatestAttempt(Long paymentOrderId) {
         return jdbcTemplate.query(
                 ATTEMPT_SELECT + """
