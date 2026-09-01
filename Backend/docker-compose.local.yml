@@ -4,23 +4,22 @@ services:
     container_name: capsule-postgres-local
     restart: unless-stopped
     environment:
-      POSTGRES_DB: capsure
-      POSTGRES_USER: capsure
-      POSTGRES_PASSWORD: TkvlA308@
+      POSTGRES_DB: ${CAPSURE_POSTGRES_DB:-capsure}
+      POSTGRES_USER: ${CAPSURE_POSTGRES_USER:-capsure}
+      POSTGRES_PASSWORD: ${CAPSURE_POSTGRES_PASSWORD:-capsure}
       TZ: Asia/Seoul
     ports:
-      - "5432:5432"
+      - "${CAPSURE_POSTGRES_PORT:-5433}:5432"
     volumes:
       - capsule-postgres-data:/var/lib/postgresql/data
       - ./src/main/resources/db/schema/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
       - ./src/main/resources/db/schema/product_source.sql:/docker-entrypoint-initdb.d/20-product_source.sql:ro
       - ./src/main/resources/db/seed/seed.sql:/docker-entrypoint-initdb.d/30-seed.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U capsure -d capsure"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
 
 volumes:
   capsule-postgres-data:
-

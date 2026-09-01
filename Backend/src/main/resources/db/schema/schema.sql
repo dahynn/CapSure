@@ -352,8 +352,6 @@ CREATE TABLE public.subscription_item (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_subscription_item_subscription
         FOREIGN KEY (subscription_id) REFERENCES public.subscription (subscription_id) ON DELETE CASCADE,
-    CONSTRAINT fk_subscription_item_product
-        FOREIGN KEY (product_source_id) REFERENCES insurance.product_source (product_source_id),
     CONSTRAINT uk_subscription_item_version
         UNIQUE (subscription_id, product_source_id, plan_version),
     CONSTRAINT chk_subscription_item_amount_non_negative
@@ -777,3 +775,9 @@ CREATE INDEX ix_product_source_raw_row_jsonb
 CREATE TRIGGER trg_product_source_set_updated_at
 BEFORE UPDATE ON insurance.product_source
 FOR EACH ROW EXECUTE FUNCTION insurance.set_updated_at();
+
+-- product_source is created after the public subscription tables in this bootstrap file.
+-- Add the cross-schema foreign key only after both tables exist.
+ALTER TABLE public.subscription_item
+    ADD CONSTRAINT fk_subscription_item_product
+    FOREIGN KEY (product_source_id) REFERENCES insurance.product_source (product_source_id);

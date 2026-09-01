@@ -1,0 +1,57 @@
+{
+  "sourceName": "demo-cancer-catalog-import-v1",
+  "rows": [
+    {
+      "sourceKey": "DEMO-CANCER-1.0.0-GENERAL-CANCER",
+      "productCode": "CAPSURE-DEMO-CANCER",
+      "productVersion": "1.0.0",
+      "coverageCode": "DEMO_GENERAL_CANCER_DIAGNOSIS",
+      "insuredAmount": 20000000.00,
+      "currencyCode": "KRW",
+      "waitingPeriodDays": 90,
+      "reductionPeriodDays": 365,
+      "reductionRate": 0.5000,
+      "coverageStartRule": "AFTER_WAITING_PERIOD",
+      "displayOrder": 1
+    },
+    {
+      "sourceKey": "DEMO-CANCER-1.0.0-MINOR-CANCER",
+      "productCode": "CAPSURE-DEMO-CANCER",
+      "productVersion": "1.0.0",
+      "coverageCode": "DEMO_MINOR_CANCER_DIAGNOSIS",
+      "insuredAmount": 4000000.00,
+      "currencyCode": "KRW",
+      "waitingPeriodDays": 90,
+      "reductionPeriodDays": 365,
+      "reductionRate": 0.5000,
+      "coverageStartRule": "AFTER_WAITING_PERIOD",
+      "displayOrder": 2
+    },
+    {
+      "sourceKey": "DEMO-CANCER-1.0.0-CANCER-SURGERY",
+      "productCode": "CAPSURE-DEMO-CANCER",
+      "productVersion": "1.0.0",
+      "coverageCode": "DEMO_CANCER_SURGERY",
+      "insuredAmount": 1000000.00,
+      "currencyCode": "KRW",
+      "waitingPeriodDays": 0,
+      "reductionPeriodDays": 0,
+      "reductionRate": 1.0000,
+      "coverageStartRule": "POLICY_ACTIVATED_AT",
+      "displayOrder": 3
+    },
+    {
+      "sourceKey": "DEMO-CANCER-1.0.0-UNKNOWN-COVERAGE",
+      "productCode": "CAPSURE-DEMO-CANCER",
+      "productVersion": "1.0.0",
+      "coverageCode": "DEMO_UNKNOWN_COVERAGE",
+      "insuredAmount": 500000.00,
+      "currencyCode": "KRW",
+      "waitingPeriodDays": 0,
+      "reductionPeriodDays": 0,
+      "reductionRate": 1.0000,
+      "coverageStartRule": "POLICY_ACTIVATED_AT",
+      "displayOrder": 4
+    }
+  ]
+}
