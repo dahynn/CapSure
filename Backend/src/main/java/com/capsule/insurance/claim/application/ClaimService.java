@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -37,6 +38,7 @@ public class ClaimService {
     private final TransactionTemplate transactionTemplate;
     private final Clock clock;
 
+    @Autowired
     public ClaimService(
             ClaimRepository claimRepository,
             PlatformTransactionManager transactionManager

@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,7 @@ public class QuoteService {
     private final QuoteRepository quoteRepository;
     private final Clock clock;
 
+    @Autowired
     public QuoteService(
             CancerProductQueryRepository productRepository,
             QuoteRepository quoteRepository

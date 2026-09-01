@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -38,6 +39,7 @@ public class PaymentService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
+    @Autowired
     public PaymentService(
             PaymentRepository paymentRepository,
             PolicyRepository policyRepository,
