@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/ops/**").hasRole("ADMIN")
                         .requestMatchers(
                                 "/auth/**",
                                 "/insurers/**",
