@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+const backendApiTarget = process.env.CAPSURE_API_TARGET || 'http://localhost:8080';
+
 export default defineConfig({
     plugins: [react()],
     resolve: {
@@ -11,14 +13,14 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            '/auth': 'http://localhost:8080',
-            '/subscriptions': 'http://localhost:8080',
-            '/analysis': 'http://localhost:8080',
-            '/insurers': 'http://localhost:8080',
-            '/dashboard': 'http://localhost:8080',
-            '/mydata': 'http://localhost:8080',
-            '/api': 'http://localhost:8080',
-            '/actuator': 'http://localhost:8080',
+            '/auth': backendApiTarget,
+            '/subscriptions': backendApiTarget,
+            '/analysis': backendApiTarget,
+            '/insurers': backendApiTarget,
+            '/dashboard': backendApiTarget,
+            '/mydata': backendApiTarget,
+            '/api': backendApiTarget,
+            '/actuator': backendApiTarget,
         }
     }
 });

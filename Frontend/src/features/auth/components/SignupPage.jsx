@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth.api';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -70,6 +70,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, dropUp }) => {
 
 const SignupPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [view, setView] = useState('signup'); // signup, signup-success
 
     const [signupForm, setSignupForm] = useState({
@@ -121,7 +122,7 @@ const SignupPage = () => {
             });
             setView('signup-success');
             setTimeout(() => {
-                navigate('/login');
+                navigate('/login', { replace: true, state: location.state });
             }, 1500);
         } catch (err) {
             setError('회원가입에 실패했습니다.');
@@ -326,7 +327,7 @@ const SignupPage = () => {
                             이미 계정이 있으신가요?{' '}
                             <button
                                 type="button"
-                                onClick={() => navigate('/login')}
+                                onClick={() => navigate('/login', { state: location.state })}
                                 className="font-bold transition-opacity hover:opacity-70"
                                 style={{ color: 'var(--color-brand-blue)' }}
                             >

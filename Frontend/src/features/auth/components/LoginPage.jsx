@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth.api';
 import { Eye, EyeOff } from 'lucide-react';
 import logo from '@/assets/logo.png';
@@ -7,6 +7,7 @@ import capsureLogo from '@/assets/capsure_logo.png';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +22,26 @@ const LoginPage = () => {
     try {
       await authApi.login(loginForm);
       const { isFirstLogin } = await authApi.checkFirstLogin();
-      navigate(isFirstLogin ? '/onboarding' : '/home');
+      const requestedReturnTo = location.state?.returnTo;
+      const returnTo = typeof requestedReturnTo === 'string'
+        && requestedReturnTo.startsWith('/')
+        && !requestedReturnTo.startsWith('//')
+        ? requestedReturnTo
+        : null;
+      const returnState = location.state?.returnState || null;
+
+      if (isFirstLogin) {
+        navigate('/onboarding', {
+          replace: true,
+          state: returnTo ? { returnTo, returnState } : null,
+        });
+        return;
+      }
+
+      navigate(returnTo || '/home', {
+        replace: true,
+        state: returnTo ? returnState : null,
+      });
     } catch {
       setError('이메일 또는 비밀번호를 확인해주세요.');
     } finally {
@@ -121,7 +141,7 @@ const LoginPage = () => {
         <p className="mt-6 text-sm" style={{ color: 'var(--color-brand-gray)' }}>
           계정이 없으신가요?{' '}
           <button
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/signup', { state: location.state })}
             className="font-bold transition-opacity hover:opacity-70"
             style={{ color: 'var(--color-brand-blue)' }}
           >

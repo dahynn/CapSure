@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     AlertCircle,
     CalendarClock,
@@ -28,6 +28,10 @@ const currency = new Intl.NumberFormat('ko-KR');
 
 const formatWon = (value) => `${currency.format(Number(value || 0))}원`;
 
+const hasAccessToken = () => Boolean(
+    localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
+);
+
 const conditionText = (coverage) => {
     const parts = [];
     if (coverage.waitingPeriodDays > 0) {
@@ -41,6 +45,7 @@ const conditionText = (coverage) => {
 
 const CancerInsuranceProductPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const {
         flowIds,
         updateFlowIds,
@@ -57,6 +62,7 @@ const CancerInsuranceProductPage = () => {
     const [error, setError] = useState('');
     const [clause, setClause] = useState(null);
     const [clauseLoading, setClauseLoading] = useState(false);
+    const resumeAttemptedRef = useRef(false);
 
     const loadProduct = async () => {
         setLoading(true);
@@ -115,10 +121,25 @@ const CancerInsuranceProductPage = () => {
         }
     };
 
-    const handleQuote = async () => {
+    const moveToLogin = useCallback(() => {
+        navigate('/login', {
+            state: {
+                returnTo: '/cancer-insurance',
+                returnState: { resumeCancerQuote: true },
+            },
+        });
+    }, [navigate]);
+
+    const handleQuote = useCallback(async () => {
         if (!product || selectedCoverageIds.length === 0 || submitting) {
             return;
         }
+
+        if (!hasAccessToken()) {
+            moveToLogin();
+            return;
+        }
+
         setSubmitting(true);
         setError('');
         try {
@@ -130,11 +151,49 @@ const CancerInsuranceProductPage = () => {
             updateFlowIds({ quoteId: issued.quoteId });
             navigate('/cancer-insurance/application');
         } catch (requestError) {
+            if ([401, 403].includes(requestError.response?.status)) {
+                moveToLogin();
+                return;
+            }
             setError(requestError.message || '견적을 만들지 못했습니다.');
         } finally {
             setSubmitting(false);
         }
-    };
+    }, [
+        moveToLogin,
+        navigate,
+        product,
+        selectedCoverageIds,
+        setQuote,
+        submitting,
+        updateFlowIds,
+    ]);
+
+    useEffect(() => {
+        const shouldResume = location.state?.resumeCancerQuote === true;
+        if (
+            !shouldResume
+            || resumeAttemptedRef.current
+            || loading
+            || !product
+            || selectedCoverageIds.length === 0
+            || submitting
+        ) {
+            return;
+        }
+
+        resumeAttemptedRef.current = true;
+        navigate('/cancer-insurance', { replace: true, state: null });
+        handleQuote();
+    }, [
+        handleQuote,
+        loading,
+        location.state,
+        navigate,
+        product,
+        selectedCoverageIds.length,
+        submitting,
+    ]);
 
     if (loading) {
         return (
@@ -307,7 +366,9 @@ const CancerInsuranceProductPage = () => {
                     className="text-base font-black"
                 >
                     {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
-                    {submitting ? '견적을 고정하고 있어요' : `${formatWon(summary.baseMonthlyPremium)}으로 견적 받기`}
+                    {submitting
+                        ? '견적을 고정하고 있어요'
+                        : `${hasAccessToken() ? '' : '로그인하고 '}${formatWon(summary.baseMonthlyPremium)}으로 견적 받기`}
                 </AppButton>
                 {quote?.quoteNo && (
                     <p className="mt-2 text-center text-[11px] text-slate-600">최근 견적 {quote.quoteNo}</p>

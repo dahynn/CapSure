@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 
 import DigitalSealStep from './steps/DigitalSealStep';
@@ -22,6 +22,7 @@ const ONBOARDING_CATEGORY_CODE_BY_ID = {
 
 const OnboardingPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     
     // 현재 진행 단계 (1 ~ 3)
     const [currentStep, setCurrentStep] = useState(1);
@@ -51,7 +52,16 @@ const OnboardingPage = () => {
         try {
             await authApi.saveOnboardingCategories(categoryCodes);
             localStorage.setItem('onboardingDone', 'true');
-            navigate('/home', { replace: true });
+            const requestedReturnTo = location.state?.returnTo;
+            const returnTo = typeof requestedReturnTo === 'string'
+                && requestedReturnTo.startsWith('/')
+                && !requestedReturnTo.startsWith('//')
+                ? requestedReturnTo
+                : '/home';
+            navigate(returnTo, {
+                replace: true,
+                state: location.state?.returnState || null,
+            });
         } catch (error) {
             console.error('온보딩 카테고리 저장 실패', error);
         }
