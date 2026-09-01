@@ -11,13 +11,20 @@ spring:
           model: ${OPENAI_MODEL:gpt-5.2}
           temperature: 0.2
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/capsule_insurance}
-    username: ${DB_USERNAME:capsule}
-    password: ${DB_PASSWORD:capsule}
+    url: ${DB_URL:jdbc:postgresql://localhost:${CAPSURE_POSTGRES_PORT:5433}/${CAPSURE_POSTGRES_DB:capsure}}
+    username: ${DB_USERNAME:capsure}
+    password: ${DB_PASSWORD:capsure}
     driver-class-name: org.postgresql.Driver
   sql:
     init:
       mode: never
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
+    clean-disabled: true
 
 mybatis:
   mapper-locations: classpath*:mapper/**/*.xml
