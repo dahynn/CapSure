@@ -29,6 +29,10 @@ import OnboardingPage from '@/features/onboarding/components/OnboardingPage';
 import DashboardPage from '@/features/dashboard/DashboardPage';
 import DiagnosisReportPage from '@/features/dashboard/DiagnosisReportPage';
 
+// Cancer Insurance Financial Process
+import CancerInsuranceFlowLayout from '@/features/cancer-insurance/CancerInsuranceFlowLayout';
+import CancerInsuranceProductPage from '@/features/cancer-insurance/CancerInsuranceProductPage';
+
 const AppRouter = () => {
   return (
     <BrowserRouter>
@@ -59,6 +63,10 @@ const AppRouter = () => {
           {/* Dashboard Route */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/dashboard/diagnosis-report" element={<DiagnosisReportPage />} />
+
+          <Route path="/cancer-insurance" element={<CancerInsuranceFlowLayout />}>
+            <Route index element={<CancerInsuranceProductPage />} />
+          </Route>
 
           <Route path="/my-capsure" element={<Navigate to="/mypage/capsure" replace />} />
 

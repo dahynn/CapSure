@@ -17,6 +17,7 @@ export default defineConfig({
             '/insurers': 'http://localhost:8080',
             '/dashboard': 'http://localhost:8080',
             '/mydata': 'http://localhost:8080',
+            '/api': 'http://localhost:8080',
             '/actuator': 'http://localhost:8080',
         }
     }

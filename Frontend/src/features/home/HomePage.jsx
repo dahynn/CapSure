@@ -6,6 +6,7 @@ import SubscribedCapsures from "./components/SubscribedCapsures";
 import ActiveInsurances from "./components/ActiveInsurances";
 import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
 import { getCategoryRecommendations, getHomeDashboard } from './api/home.api';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 
 const CATEGORY_LABEL_MAP = {
     DEATH: '사망',
@@ -157,6 +158,30 @@ const HomePage = () => {
     return (
         <div className="px-8 pt-8 pb-4 md:px-12 md:py-10 space-y-8 max-w-[560px] mx-auto w-full transition-all">
             <WelcomeHeader user={user} />
+            <button
+                type="button"
+                onClick={() => navigate('/cancer-insurance')}
+                className="group relative w-full overflow-hidden rounded-[28px] border border-[#82D8FC]/30 bg-gradient-to-br from-[#12223A] via-[#0B162A] to-[#17152B] p-6 text-left shadow-[0_18px_50px_rgba(0,0,0,0.28)] transition-all hover:-translate-y-0.5 hover:border-[#82D8FC]/60"
+            >
+                <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-[#82D8FC]/15 blur-3xl" />
+                <div className="relative flex items-start justify-between gap-4">
+                    <div>
+                        <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[#82D8FC]/25 bg-[#82D8FC]/10 px-3 py-1 text-[11px] font-bold text-[#82D8FC]">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            금융 프로세스 시뮬레이션
+                        </span>
+                        <h2 className="text-xl font-black tracking-[-0.03em] text-white">
+                            암보험, 가입부터 청구까지
+                        </h2>
+                        <p className="mt-2 max-w-[360px] text-sm leading-6 text-slate-400">
+                            담보와 약관을 확인하고 견적·청약·심사·결제를 직접 따라가 보세요.
+                        </p>
+                    </div>
+                    <span className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#82D8FC] text-[#020715] transition-transform group-hover:translate-x-1">
+                        <ArrowRight className="h-5 w-5" />
+                    </span>
+                </div>
+            </button>
             <CategoryRecommend
                 recommendations={categoryRecommendations}
                 onViewDetail={(productSourceId) => navigate(`/capsure-insurance/detail/${productSourceId}`)}
