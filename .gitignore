@@ -199,3 +199,6 @@ gradle-app.setting
 *.hprof
 
 AiGuideLine/
+
+# Local verification evidence
+/docs/evidence/
