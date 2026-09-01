@@ -33,6 +33,8 @@ import DiagnosisReportPage from '@/features/dashboard/DiagnosisReportPage';
 import CancerInsuranceFlowLayout from '@/features/cancer-insurance/CancerInsuranceFlowLayout';
 import CancerInsuranceProductPage from '@/features/cancer-insurance/CancerInsuranceProductPage';
 import CancerInsuranceApplicationPage from '@/features/cancer-insurance/CancerInsuranceApplicationPage';
+import CancerInsurancePaymentPage from '@/features/cancer-insurance/CancerInsurancePaymentPage';
+import CancerInsurancePolicyPage from '@/features/cancer-insurance/CancerInsurancePolicyPage';
 
 const AppRouter = () => {
   return (
@@ -68,6 +70,8 @@ const AppRouter = () => {
           <Route path="/cancer-insurance" element={<CancerInsuranceFlowLayout />}>
             <Route index element={<CancerInsuranceProductPage />} />
             <Route path="application" element={<CancerInsuranceApplicationPage />} />
+            <Route path="payment" element={<CancerInsurancePaymentPage />} />
+            <Route path="policy" element={<CancerInsurancePolicyPage />} />
           </Route>
 
           <Route path="/my-capsure" element={<Navigate to="/mypage/capsure" replace />} />
