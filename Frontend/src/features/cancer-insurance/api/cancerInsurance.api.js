@@ -91,3 +91,40 @@ export const getInitialPremiumPayment = async (paymentOrderId) => (
 export const getCancerPolicy = async (policyId) => (
     unwrap(await httpClient.get(`/api/v1/policies/${policyId}`))
 );
+
+export const createCancerClaim = async (
+    policyId,
+    policyCoverageId,
+    incidentAt,
+    diagnosisCategory,
+) => (
+    unwrap(await httpClient.post(`/api/v1/policies/${policyId}/claims`, {
+        policyCoverageId,
+        incidentAt,
+        diagnosisCategory,
+    }))
+);
+
+export const recordCancerClaimEvidence = async (claimId, evidence) => (
+    unwrap(await httpClient.put(`/api/v1/claims/${claimId}/evidence`, evidence))
+);
+
+export const submitCancerClaim = async (claimId, idempotencyKey) => (
+    unwrap(await httpClient.post(
+        `/api/v1/claims/${claimId}/submit`,
+        undefined,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
+    ))
+);
+
+export const getCancerClaim = async (claimId) => (
+    unwrap(await httpClient.get(`/api/v1/claims/${claimId}`))
+);
+
+export const payCancerClaim = async (claimId, idempotencyKey) => (
+    unwrap(await httpClient.post(
+        `/api/v1/claims/${claimId}/payments`,
+        undefined,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
+    ))
+);

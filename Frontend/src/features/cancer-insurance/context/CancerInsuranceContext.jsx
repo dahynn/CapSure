@@ -8,6 +8,8 @@ const EMPTY_FLOW_IDS = {
     applicationId: null,
     paymentOrderId: null,
     policyId: null,
+    claimId: null,
+    claimScenarioId: null,
 };
 
 const readStoredIds = () => {
@@ -44,6 +46,7 @@ export const CancerInsuranceProvider = ({ children }) => {
     const [application, setApplication] = useState(null);
     const [payment, setPayment] = useState(null);
     const [policy, setPolicy] = useState(null);
+    const [claim, setClaim] = useState(null);
     const [requestKeys, setRequestKeys] = useState({});
 
     useEffect(() => {
@@ -72,7 +75,17 @@ export const CancerInsuranceProvider = ({ children }) => {
         setApplication(null);
         setPayment(null);
         setPolicy(null);
+        setClaim(null);
         setRequestKeys({});
+    };
+
+    const resetClaim = () => {
+        setFlowIds((previous) => ({
+            ...previous,
+            claimId: null,
+            claimScenarioId: null,
+        }));
+        setClaim(null);
     };
 
     const value = useMemo(() => ({
@@ -90,9 +103,12 @@ export const CancerInsuranceProvider = ({ children }) => {
         setPayment,
         policy,
         setPolicy,
+        claim,
+        setClaim,
         getRequestKey,
+        resetClaim,
         resetFlow,
-    }), [flowIds, product, terms, quote, application, payment, policy, requestKeys]);
+    }), [flowIds, product, terms, quote, application, payment, policy, claim, requestKeys]);
 
     return (
         <CancerInsuranceContext.Provider value={value}>
