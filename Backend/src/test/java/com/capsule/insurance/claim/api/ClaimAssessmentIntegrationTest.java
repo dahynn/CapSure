@@ -238,6 +238,12 @@ class ClaimAssessmentIntegrationTest {
                   AND aggregate_id = ?
                   AND event_type = 'CLAIM_BENEFIT_PAID'
                 """, Integer.class, claimId.toString())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT payload_json ->> 'policyId'
+                FROM public.ops_outbox_event
+                WHERE event_type = 'CLAIM_BENEFIT_PAID'
+                  AND aggregate_id = ?
+                """, String.class, claimId.toString())).isEqualTo(policy.policyId().toString());
 
         mockMvc.perform(post("/api/v1/claims/{claimId}/payments", competingClaimId)
                         .principal(authentication(userId))

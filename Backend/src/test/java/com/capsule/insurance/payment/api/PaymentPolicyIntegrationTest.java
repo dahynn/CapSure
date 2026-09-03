@@ -228,6 +228,12 @@ class PaymentPolicyIntegrationTest {
                   AND aggregate_id = ?
                   AND event_type = 'POLICY_ACTIVATED'
                 """, Integer.class, policyId.toString())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM public.ops_outbox_event
+                WHERE event_type IN ('PAYMENT_PAID', 'POLICY_ACTIVATED')
+                  AND payload_json ->> 'policyId' = ?
+                """, Integer.class, policyId.toString())).isEqualTo(2);
 
         mockMvc.perform(get("/api/v1/policies/{policyId}", policyId)
                         .principal(authentication(userId)))

@@ -390,6 +390,11 @@ public class JdbcClaimRepository implements ClaimRepository {
                     payload_json
                 ) VALUES (?, 'CLAIM', ?, 'CLAIM_BENEFIT_PAID', jsonb_build_object(
                     'claimId', ?,
+                    'policyId', (
+                        SELECT policy_id
+                        FROM public.clm_claim
+                        WHERE claim_id = ?
+                    ),
                     'claimDecisionId', ?,
                     'amount', ?
                 ))
@@ -397,6 +402,7 @@ public class JdbcClaimRepository implements ClaimRepository {
                 """,
                 "CLAIM-PAID-" + claimId,
                 claimId.toString(),
+                claimId,
                 claimId,
                 claimDecisionId,
                 amount
