@@ -14,9 +14,11 @@ import com.capsule.insurance.application.infra.JdbcApplicationRepository;
 import com.capsule.insurance.catalog.infra.JdbcCancerProductQueryRepository;
 import com.capsule.insurance.common.exception.GlobalExceptionHandler;
 import com.capsule.insurance.payment.adapter.FakePremiumPaymentGateway;
+import com.capsule.insurance.payment.adapter.JournaledPremiumPaymentGateway;
 import com.capsule.insurance.payment.application.PaymentService;
 import com.capsule.insurance.payment.dto.PaymentOrderResponse;
 import com.capsule.insurance.payment.infra.JdbcPaymentRepository;
+import com.capsule.insurance.payment.infra.JdbcFinancialInterfaceJournalRepository;
 import com.capsule.insurance.payment.webhook.api.FakePaymentWebhookOperationsController;
 import com.capsule.insurance.payment.webhook.application.PaymentWebhookService;
 import com.capsule.insurance.payment.webhook.infra.JdbcPaymentWebhookRepository;
@@ -35,6 +37,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -326,6 +330,72 @@ class PaymentPolicyIntegrationTest {
         assertThat(count("ins_policy_version", "policy_id", policyId)).isEqualTo(1);
         assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
         assertThat(count("ops_reconciliation", "target_id", orderId.toString())).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("외부 결제 전문은 요청과 응답을 상관관계·멱등키로 함께 기록하고 중복 승인 호출은 남기지 않는다")
+    void journalsExternalPaymentRequestAndResponseWithoutDuplicateCall() throws Exception {
+        Long userId = userIds.get(5);
+        Long applicationId = approveApplication(userId);
+        FakePremiumPaymentGateway delegate = new FakePremiumPaymentGateway();
+        PaymentService journaledPaymentService = new PaymentService(
+                new JdbcPaymentRepository(jdbcTemplate),
+                policyRepository,
+                new JournaledPremiumPaymentGateway(
+                        delegate,
+                        new JdbcFinancialInterfaceJournalRepository(jdbcTemplate),
+                        OBJECT_MAPPER,
+                        Clock.systemUTC(),
+                        3,
+                        Duration.ofSeconds(30)
+                ),
+                new DataSourceTransactionManager(dataSource),
+                OBJECT_MAPPER
+        );
+        MockMvc journaledMockMvc = buildMockMvc(journaledPaymentService, policyRepository);
+        JsonNode order = createOrder(journaledMockMvc, userId, applicationId, "order-interface-journal");
+        Long orderId = order.path("paymentOrderId").asLong();
+        String orderNo = order.path("orderNo").asText();
+
+        MvcResult first = journaledMockMvc.perform(post("/api/v1/payments/{paymentOrderId}/confirm", orderId)
+                        .principal(authentication(userId))
+                        .header("Idempotency-Key", "confirm-interface-journal")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmRequest("fake-paid-interface-journal", "29900.00")))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(OBJECT_MAPPER.readTree(first.getResponse().getContentAsByteArray())
+                .path("data").path("status").asText()).isEqualTo("PAID");
+
+        journaledMockMvc.perform(post("/api/v1/payments/{paymentOrderId}/confirm", orderId)
+                        .principal(authentication(userId))
+                        .header("Idempotency-Key", "confirm-interface-journal")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmRequest("fake-paid-interface-journal", "29900.00")))
+                .andExpect(status().isOk());
+
+        assertThat(delegate.confirmationInvocationCount()).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM public.ifc_financial_message
+                WHERE business_key = ?
+                """, Integer.class, orderNo)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT direction || ':' || status
+                FROM public.ifc_financial_message
+                WHERE business_key = ?
+                ORDER BY financial_message_id
+                """, String.class, orderNo)).containsExactly(
+                "OUTBOUND_REQUEST:REQUESTED",
+                "INBOUND_RESPONSE:SUCCEEDED"
+        );
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM public.ifc_financial_message
+                WHERE business_key = ?
+                  AND idempotency_key = 'confirm-interface-journal'
+                  AND payload_hash ~ '^[0-9a-f]{64}$'
+                """, Integer.class, orderNo)).isEqualTo(2);
     }
 
     @Test
