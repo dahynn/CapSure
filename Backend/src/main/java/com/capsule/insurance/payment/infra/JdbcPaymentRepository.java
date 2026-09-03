@@ -299,12 +299,18 @@ public class JdbcPaymentRepository implements PaymentRepository {
                         payload_json
                     ) VALUES (?, 'PAYMENT_ORDER', ?, 'PAYMENT_PAID', jsonb_build_object(
                         'paymentOrderId', ?,
+                        'policyId', (
+                            SELECT policy_id
+                            FROM public.pay_order
+                            WHERE payment_order_id = ?
+                        ),
                         'status', 'PAID'
                     ))
                     ON CONFLICT (event_id) DO NOTHING
                     """,
                     "PAYMENT-PAID-" + paymentOrderId,
                     paymentOrderId.toString(),
+                    paymentOrderId,
                     paymentOrderId
             );
         }
