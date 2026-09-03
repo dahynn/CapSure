@@ -779,7 +779,10 @@ const CancerInsuranceOperationsPage = () => {
             />
             <div className="mt-2 flex items-start justify-between gap-3 text-[10px]">
               <p className={actionError ? 'text-rose-300' : 'text-slate-600'}>
-                {actionError || '로그인한 관리자와 복구 시간이 감사 원장에 기록됩니다.'}
+                {actionError ||
+                  (actionDialog.type === 'DLQ_REPLAY'
+                    ? '재투입 후 해당 이벤트 발행까지 확인하며 관리자와 복구 시간을 기록합니다.'
+                    : '로그인한 관리자와 결제 대사 완료 시간이 감사 원장에 기록됩니다.')}
               </p>
               <span className="shrink-0 text-slate-700">{actionReason.length}/500</span>
             </div>
