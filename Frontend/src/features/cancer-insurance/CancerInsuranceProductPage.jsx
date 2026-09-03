@@ -58,6 +58,7 @@ const CancerInsuranceProductPage = () => {
         setApplication,
         setPayment,
         setPolicy,
+        setClaim,
     } = useCancerInsurance();
     const [selectedCoverageIds, setSelectedCoverageIds] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -153,12 +154,15 @@ const CancerInsuranceProductPage = () => {
             setApplication(null);
             setPayment(null);
             setPolicy(null);
+            setClaim(null);
             setQuote(issued);
             updateFlowIds({
                 quoteId: issued.quoteId,
                 applicationId: null,
                 paymentOrderId: null,
                 policyId: null,
+                claimId: null,
+                claimScenarioId: null,
             });
             navigate('/cancer-insurance/application');
         } catch (requestError) {
@@ -176,6 +180,7 @@ const CancerInsuranceProductPage = () => {
         product,
         selectedCoverageIds,
         setApplication,
+        setClaim,
         setPayment,
         setPolicy,
         setQuote,

@@ -4,6 +4,7 @@ import {
     AlertCircle,
     CalendarClock,
     CheckCircle2,
+    ClipboardPlus,
     FileCheck2,
     FileKey2,
     Fingerprint,
@@ -50,6 +51,7 @@ const CancerInsurancePolicyPage = () => {
         flowIds,
         policy,
         setPolicy,
+        resetClaim,
         resetFlow,
     } = useCancerInsurance();
     const [loading, setLoading] = useState(Boolean(flowIds.policyId && !policy));
@@ -91,6 +93,11 @@ const CancerInsurancePolicyPage = () => {
     const restart = () => {
         resetFlow();
         navigate('/cancer-insurance', { replace: true });
+    };
+
+    const startClaim = () => {
+        resetClaim();
+        navigate('/cancer-insurance/claim');
     };
 
     if (!flowIds.policyId) {
@@ -241,6 +248,9 @@ const CancerInsurancePolicyPage = () => {
             </section>
 
             <div className="mt-8 space-y-3">
+                <AppButton onClick={startClaim}>
+                    <ClipboardPlus className="h-5 w-5" /> 보험금 청구 시뮬레이션
+                </AppButton>
                 <AppButton onClick={() => navigate('/home')}>
                     <Home className="h-5 w-5" /> 홈으로 돌아가기
                 </AppButton>
