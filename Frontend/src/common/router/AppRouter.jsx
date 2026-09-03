@@ -37,6 +37,7 @@ import CancerInsurancePaymentPage from '@/features/cancer-insurance/CancerInsura
 import CancerInsurancePolicyPage from '@/features/cancer-insurance/CancerInsurancePolicyPage';
 import CancerInsuranceClaimPage from '@/features/cancer-insurance/CancerInsuranceClaimPage';
 import CancerInsuranceClaimResultPage from '@/features/cancer-insurance/CancerInsuranceClaimResultPage';
+import CancerInsuranceOperationsPage from '@/features/cancer-insurance/CancerInsuranceOperationsPage';
 
 const AppRouter = () => {
   return (
@@ -77,6 +78,7 @@ const AppRouter = () => {
             <Route path="claim" element={<CancerInsuranceClaimPage />} />
             <Route path="claim/result" element={<CancerInsuranceClaimResultPage />} />
           </Route>
+          <Route path="/cancer-insurance/operations" element={<CancerInsuranceOperationsPage />} />
 
           <Route path="/my-capsure" element={<Navigate to="/mypage/capsure" replace />} />
 
