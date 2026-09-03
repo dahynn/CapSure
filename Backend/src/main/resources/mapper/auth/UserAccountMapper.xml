@@ -13,6 +13,7 @@
         <result property="birthDate" column="birth_date"/>
         <result property="gender" column="gender"/>
         <result property="userStatus" column="user_status"/>
+        <result property="accessRole" column="access_role"/>
         <result property="onboardingCompletedAt" column="onboarding_completed_at"/>
         <result property="withdrawnAt" column="withdrawn_at"/>
         <result property="createdAt" column="created_at"/>
@@ -30,6 +31,7 @@
             birth_date,
             gender,
             user_status,
+            access_role,
             onboarding_completed_at,
             withdrawn_at,
             created_at,
@@ -49,6 +51,7 @@
             birth_date,
             gender,
             user_status,
+            access_role,
             onboarding_completed_at,
             withdrawn_at,
             created_at,
@@ -65,9 +68,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="userId" keyColumn="user_id">
         INSERT INTO usr_user (
-            email, password_encrypted, name, phone, birth_date, gender, user_status, created_at, updated_at
+            email, password_encrypted, name, phone, birth_date, gender, user_status, access_role, created_at, updated_at
         ) VALUES (
-            #{email}, #{passwordEncrypted}, #{name}, #{phone}, #{birthDate}, #{gender}, #{userStatus}, NOW(), NOW()
+            #{email}, #{passwordEncrypted}, #{name}, #{phone}, #{birthDate}, #{gender}, #{userStatus}, #{accessRole}, NOW(), NOW()
         )
     </insert>
 

@@ -2,6 +2,7 @@ package com.capsule.insurance.auth.application;
 
 import com.capsule.insurance.auth.domain.UserAccount;
 import com.capsule.insurance.auth.domain.UserStatus;
+import com.capsule.insurance.auth.domain.AccessRole;
 import com.capsule.insurance.auth.domain.Gender;
 import com.capsule.insurance.auth.dto.AuthResult;
 import com.capsule.insurance.auth.dto.LoginRequest;
@@ -105,12 +106,13 @@ public class AuthService {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH, "비밀번호가 일치하지 않습니다.");
         }
 
-        String accessToken = jwtTokenProvider.createAccessToken(String.valueOf(user.getUserId()), user.getEmail(), "ROLE_USER");
+        String role = accessRoleOf(user).name();
+        String accessToken = jwtTokenProvider.createAccessToken(String.valueOf(user.getUserId()), user.getEmail(), role);
         String refreshToken = jwtTokenProvider.createRefreshToken(String.valueOf(user.getUserId()));
 
         refreshTokenRepository.save(String.valueOf(user.getUserId()), refreshToken);
 
-        return new AuthResult(accessToken, refreshToken, "Bearer", String.valueOf(user.getUserId()));
+        return new AuthResult(accessToken, refreshToken, "Bearer", String.valueOf(user.getUserId()), role);
     }
 
     public AuthResult refresh(TokenRefreshRequest request) {
@@ -132,12 +134,13 @@ public class AuthService {
             throw new BusinessException(ErrorCode.FORBIDDEN, "접근이 제한된 계정입니다.");
         }
 
-        String newAccessToken = jwtTokenProvider.createAccessToken(userId, user.getEmail(), "ROLE_USER");
+        String role = accessRoleOf(user).name();
+        String newAccessToken = jwtTokenProvider.createAccessToken(userId, user.getEmail(), role);
         String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
 
         refreshTokenRepository.save(userId, newRefreshToken);
 
-        return new AuthResult(newAccessToken, newRefreshToken, "Bearer", userId);
+        return new AuthResult(newAccessToken, newRefreshToken, "Bearer", userId, role);
     }
 
     public void signup(SignupRequest request) {
@@ -169,6 +172,7 @@ public class AuthService {
                 .birthDate(request.birthDate())
                 .gender(request.gender())
                 .userStatus(UserStatus.PENDING_ONBOARDING)
+                .accessRole(AccessRole.ROLE_USER)
                 .build();
                 
         userAccountMapper.insert(userAccount);
@@ -234,5 +238,9 @@ public class AuthService {
             }
         }
         return result;
+    }
+
+    private AccessRole accessRoleOf(UserAccount user) {
+        return user.getAccessRole() == null ? AccessRole.ROLE_USER : user.getAccessRole();
     }
 }

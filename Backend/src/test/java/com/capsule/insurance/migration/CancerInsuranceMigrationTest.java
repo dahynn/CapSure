@@ -48,7 +48,7 @@ class CancerInsuranceMigrationTest {
                 .load();
 
         MigrateResult result = flyway.migrate();
-        assertThat(result.migrationsExecuted).isEqualTo(7);
+        assertThat(result.migrationsExecuted).isEqualTo(8);
     }
 
     @Test
@@ -77,6 +77,14 @@ class CancerInsuranceMigrationTest {
                     'reconciliation_locked_by'
                   )
                 """)).isEqualTo(4);
+
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'usr_user'
+                  AND column_name = 'access_role'
+                """)).isEqualTo(1);
 
         assertThat(queryLong("""
                 SELECT COUNT(*)

@@ -4,6 +4,7 @@ public record AuthResult(
         String accessToken,
         String refreshToken,
         String tokenType,
-        String memberId
+        String memberId,
+        String role
 ) {
 }
