@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.capsule.insurance.operations.outbox.application.OutboxRelayService;
 import com.capsule.insurance.operations.outbox.dto.OutboxReplayResponse;
+import com.capsule.insurance.operations.outbox.dto.OutboxRelayRunResponse;
 import com.capsule.insurance.operations.reconciliation.application.PaymentReconciliationBatchService;
 import com.capsule.insurance.operations.reconciliation.domain.PaymentReconciliationRunOptions;
 import com.capsule.insurance.operations.reconciliation.dto.PaymentReconciliationExecutionResponse;
@@ -111,6 +112,16 @@ class OperationsRecoveryServiceIntegrationTest {
                         NOW,
                         NOW
                 ));
+        when(outboxRelayService.relayEvent("DLQ-AUDIT"))
+                .thenReturn(new OutboxRelayRunResponse(
+                        "OUTBOX-RECOVERY-1",
+                        1,
+                        1,
+                        0,
+                        0,
+                        NOW,
+                        NOW
+                ));
 
         DlqRecoveryResponse result = service.replayDlq(
                 "DLQ-AUDIT",
@@ -122,9 +133,11 @@ class OperationsRecoveryServiceIntegrationTest {
         assertThat(result.recovery().recoveryTimeMs()).isEqualTo(120000);
         assertThat(result.recovery().actionDurationMs()).isZero();
         assertThat(result.replay().replayStatus()).isEqualTo("REPLAYED");
+        assertThat(result.relay().publishedCount()).isEqualTo(1);
         assertThat(actionValue("actor_user_id")).isEqualTo(adminUserId.toString());
         assertThat(actionValue("reason")).isEqualTo("연계 복구 확인 후 재처리");
         assertThat(actionValue("result_json ->> 'outboxStatus'")).isEqualTo("PENDING");
+        assertThat(actionValue("result_json ->> 'publishedCount'")).isEqualTo("1");
     }
 
     @Test

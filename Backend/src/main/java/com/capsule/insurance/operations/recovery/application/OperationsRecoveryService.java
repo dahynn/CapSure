@@ -4,6 +4,7 @@ import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.operations.outbox.application.OutboxRelayService;
 import com.capsule.insurance.operations.outbox.dto.OutboxReplayResponse;
+import com.capsule.insurance.operations.outbox.dto.OutboxRelayRunResponse;
 import com.capsule.insurance.operations.reconciliation.application.PaymentReconciliationBatchService;
 import com.capsule.insurance.operations.reconciliation.domain.PaymentReconciliationRunOptions;
 import com.capsule.insurance.operations.reconciliation.dto.PaymentReconciliationExecutionResponse;
@@ -81,19 +82,29 @@ public class OperationsRecoveryService {
                     actorUserId,
                     reason.trim()
             );
+            OutboxRelayRunResponse relay = outboxRelayService.relayEvent(eventId);
+            if (relay.publishedCount() != 1) {
+                throw new BusinessException(
+                        ErrorCode.BUSINESS_RULE_VIOLATION,
+                        "DLQ 이벤트가 재발행되지 않아 복구를 완료하지 못했습니다."
+                );
+            }
             OperationsRecoveryAction completed = repository.succeed(
                     action.recoveryActionId(),
                     eventId,
                     toJson(Map.of(
                             "outboxStatus", replay.outboxStatus(),
                             "replayStatus", replay.replayStatus(),
-                            "attemptCount", replay.attemptCount()
+                            "attemptCount", replay.attemptCount(),
+                            "publishedCount", relay.publishedCount(),
+                            "relayWorkerId", relay.workerId()
                     )),
                     Instant.now(clock)
             );
             return new DlqRecoveryResponse(
                     OperationsRecoveryActionResponse.from(completed),
-                    replay
+                    replay,
+                    relay
             );
         } catch (RuntimeException exception) {
             repository.fail(

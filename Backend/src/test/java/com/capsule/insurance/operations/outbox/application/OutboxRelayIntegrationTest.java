@@ -218,7 +218,7 @@ class OutboxRelayIntegrationTest {
                 WHERE event_id = 'DLQ-RECOVERY'
                 """, String.class)).isEqualTo("연계 시스템 복구 확인 후 수동 재처리");
 
-        OutboxRelayRunResponse recovered = service(projector).relay(1);
+        OutboxRelayRunResponse recovered = service(projector).relayEvent("DLQ-RECOVERY");
         assertThat(recovered.publishedCount()).isEqualTo(1);
         assertThat(status("DLQ-RECOVERY")).isEqualTo("PUBLISHED");
         assertThat(attemptCount("DLQ-RECOVERY")).isEqualTo(1);
