@@ -48,7 +48,7 @@ class CancerInsuranceMigrationTest {
                 .load();
 
         MigrateResult result = flyway.migrate();
-        assertThat(result.migrationsExecuted).isEqualTo(6);
+        assertThat(result.migrationsExecuted).isEqualTo(7);
     }
 
     @Test
@@ -64,6 +64,29 @@ class CancerInsuranceMigrationTest {
                     'ops_financial_event_audit'
                   )
                 """)).isEqualTo(10);
+
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'pay_order'
+                  AND column_name IN (
+                    'reconciliation_attempt_count',
+                    'reconciliation_available_at',
+                    'reconciliation_locked_at',
+                    'reconciliation_locked_by'
+                  )
+                """)).isEqualTo(4);
+
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'ops_job_execution'
+                  AND column_name IN (
+                    'processed_count', 'resolved_count', 'still_unknown_count', 'failed_count'
+                  )
+                """)).isEqualTo(4);
     }
 
     @Test
