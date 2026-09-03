@@ -9,8 +9,10 @@ public record OperationsDashboardResponse(
         Instant refreshedAt,
         OperationsDashboardSnapshot.OutboxMetrics outbox,
         OperationsDashboardSnapshot.ReconciliationMetrics reconciliation,
+        OperationsDashboardSnapshot.RecoveryMetrics recovery,
         List<OperationsDashboardSnapshot.JobExecutionItem> recentJobs,
         List<OperationsDashboardSnapshot.DeadLetterItem> deadLetters,
-        List<OperationsDashboardSnapshot.ReconciliationItem> recentReconciliations
+        List<OperationsDashboardSnapshot.ReconciliationItem> recentReconciliations,
+        List<OperationsDashboardSnapshot.RecoveryActionItem> recentRecoveryActions
 ) {
 }

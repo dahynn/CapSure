@@ -101,11 +101,19 @@ class OperationsDashboardIntegrationTest {
                 .andExpect(jsonPath("$.data.reconciliation.resolvedCount").value(9))
                 .andExpect(jsonPath("$.data.reconciliation.stillUnknownCount").value(1))
                 .andExpect(jsonPath("$.data.reconciliation.failedCount").value(2))
+                .andExpect(jsonPath("$.data.recovery.totalActionCount").value(2))
+                .andExpect(jsonPath("$.data.recovery.succeededActionCount").value(1))
+                .andExpect(jsonPath("$.data.recovery.failedActionCount").value(1))
+                .andExpect(jsonPath("$.data.recovery.averageRecoveryTimeMs").value(90000))
+                .andExpect(jsonPath("$.data.recovery.latestRecoveryTimeMs").value(90000))
                 .andExpect(jsonPath("$.data.recentJobs.length()").value(2))
                 .andExpect(jsonPath("$.data.deadLetters.length()").value(1))
                 .andExpect(jsonPath("$.data.deadLetters[0].eventId").value("event-dead"))
                 .andExpect(jsonPath("$.data.recentReconciliations.length()").value(2))
-                .andExpect(jsonPath("$.data.recentReconciliations[0].result").value("FAILED"));
+                .andExpect(jsonPath("$.data.recentReconciliations[0].result").value("FAILED"))
+                .andExpect(jsonPath("$.data.recentRecoveryActions.length()").value(2))
+                .andExpect(jsonPath("$.data.recentRecoveryActions[0].status").value("FAILED"))
+                .andExpect(jsonPath("$.data.recentRecoveryActions[1].actorName").value("운영자"));
     }
 
     @Test
@@ -116,9 +124,11 @@ class OperationsDashboardIntegrationTest {
                 .andExpect(jsonPath("$.data.overallStatus").value("HEALTHY"))
                 .andExpect(jsonPath("$.data.outbox.pendingCount").value(0))
                 .andExpect(jsonPath("$.data.reconciliation.waitingOrderCount").value(0))
+                .andExpect(jsonPath("$.data.recovery.totalActionCount").value(0))
                 .andExpect(jsonPath("$.data.recentJobs").isEmpty())
                 .andExpect(jsonPath("$.data.deadLetters").isEmpty())
-                .andExpect(jsonPath("$.data.recentReconciliations").isEmpty());
+                .andExpect(jsonPath("$.data.recentReconciliations").isEmpty())
+                .andExpect(jsonPath("$.data.recentRecoveryActions").isEmpty());
     }
 
     @Test
@@ -221,6 +231,21 @@ class OperationsDashboardIntegrationTest {
                     reconciliation_locked_by = 'OPS-WORKER'
                 WHERE order_no = 'PAY-OPS-LOCKED'
                 """);
+        jdbcTemplate.update("""
+                INSERT INTO public.ops_recovery_action (
+                    action_type, target_type, target_id, actor_user_id, reason, status,
+                    detected_at, started_at, completed_at,
+                    action_duration_ms, recovery_time_ms, result_json, error_reason
+                ) VALUES
+                    ('DLQ_REPLAY', 'OUTBOX_EVENT', 'event-dead', ?,
+                     '연계 복구 확인', 'SUCCEEDED',
+                     NOW() - INTERVAL '2 minutes', NOW() - INTERVAL '90 seconds',
+                     NOW() - INTERVAL '30 seconds', 60000, 90000, '{}'::JSONB, NULL),
+                    ('PAYMENT_RECONCILIATION', 'PAYMENT_RECONCILIATION_JOB', NULL, ?,
+                     '미확정 결제 수동 확인', 'FAILED',
+                     NOW() - INTERVAL '20 seconds', NOW() - INTERVAL '10 seconds',
+                     NOW(), 10000, 20000, '{}'::JSONB, 'PG inquiry failed')
+                """, userId, userId);
     }
 
     private void seedReconciliations() {

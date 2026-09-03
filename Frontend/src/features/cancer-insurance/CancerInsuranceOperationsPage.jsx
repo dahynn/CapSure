@@ -11,13 +11,21 @@ import {
   FileWarning,
   Loader2,
   LockKeyhole,
+  Play,
   RefreshCw,
+  RotateCcw,
   ServerCog,
   ShieldAlert,
   TimerReset,
+  Wrench,
   Workflow,
+  X,
 } from 'lucide-react';
-import { getOperationsDashboard } from './api/operations.api';
+import {
+  getOperationsDashboard,
+  replayDeadLetter,
+  runPaymentReconciliation,
+} from './api/operations.api';
 
 const integer = new Intl.NumberFormat('ko-KR');
 
@@ -61,6 +69,7 @@ const STATUS_COLORS = {
   STOPPED: 'bg-amber-300/10 text-amber-100',
   PENDING: 'bg-amber-300/10 text-amber-100',
   REPLAYED: 'bg-emerald-400/10 text-emerald-200',
+  SUCCEEDED: 'bg-emerald-400/10 text-emerald-200',
   CORRECTED: 'bg-emerald-400/10 text-emerald-200',
   MATCHED: 'bg-sky-400/10 text-sky-200',
   STILL_UNKNOWN: 'bg-amber-300/10 text-amber-100',
@@ -86,6 +95,18 @@ const calculateDuration = (startedAt, finishedAt) => {
   const milliseconds = Math.max(0, end.getTime() - new Date(startedAt).getTime());
   if (milliseconds < 1000) return `${milliseconds}ms`;
   return `${(milliseconds / 1000).toFixed(milliseconds < 10000 ? 1 : 0)}초`;
+};
+
+const formatDurationMs = (value) => {
+  const milliseconds = Number(value || 0);
+  if (milliseconds < 1000) return `${integer.format(milliseconds)}ms`;
+  if (milliseconds < 60000) return `${(milliseconds / 1000).toFixed(1)}초`;
+  return `${Math.floor(milliseconds / 60000)}분 ${Math.round((milliseconds % 60000) / 1000)}초`;
+};
+
+const RECOVERY_LABELS = {
+  DLQ_REPLAY: 'DLQ 재처리',
+  PAYMENT_RECONCILIATION: '결제 대사',
 };
 
 const MetricCard = ({ icon: Icon, label, value, caption, tone = 'blue' }) => {
@@ -120,6 +141,11 @@ const CancerInsuranceOperationsPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [forbidden, setForbidden] = useState(false);
+  const [actionDialog, setActionDialog] = useState(null);
+  const [actionReason, setActionReason] = useState('');
+  const [actionPending, setActionPending] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionNotice, setActionNotice] = useState('');
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true);
@@ -138,6 +164,52 @@ const CancerInsuranceOperationsPage = () => {
       setRefreshing(false);
     }
   }, []);
+
+  const openActionDialog = (type, eventId = null) => {
+    setActionDialog({ type, eventId });
+    setActionReason('');
+    setActionError('');
+  };
+
+  const closeActionDialog = () => {
+    if (actionPending) return;
+    setActionDialog(null);
+    setActionReason('');
+    setActionError('');
+  };
+
+  const submitRecoveryAction = async (event) => {
+    event.preventDefault();
+    const reason = actionReason.trim();
+    if (!reason) {
+      setActionError('운영 조치 사유를 입력해주세요.');
+      return;
+    }
+
+    setActionPending(true);
+    setActionError('');
+    setActionNotice('');
+    try {
+      const result =
+        actionDialog.type === 'DLQ_REPLAY'
+          ? await replayDeadLetter(actionDialog.eventId, reason)
+          : await runPaymentReconciliation(reason);
+      const recovery = result.recovery;
+      const label = RECOVERY_LABELS[recovery.actionType] || '운영 조치';
+      setActionNotice(
+        `${label} 완료 · 조치 ${formatDurationMs(recovery.actionDurationMs)} · 복구 ${formatDurationMs(recovery.recoveryTimeMs)}`
+      );
+      setActionDialog(null);
+      setActionReason('');
+      await loadDashboard(true);
+    } catch (requestError) {
+      setActionError(
+        requestError.payload?.message || requestError.message || '운영 조치를 완료하지 못했습니다.'
+      );
+    } finally {
+      setActionPending(false);
+    }
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -242,6 +314,23 @@ const CancerInsuranceOperationsPage = () => {
       </header>
 
       <main className="space-y-6 px-6">
+        {actionNotice && (
+          <div className="flex items-start justify-between gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs text-emerald-100">
+            <span className="flex items-start gap-2 leading-5">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              {actionNotice}
+            </span>
+            <button
+              type="button"
+              onClick={() => setActionNotice('')}
+              className="rounded-full p-1 text-emerald-200/70 hover:bg-black/10"
+              aria-label="운영 조치 완료 알림 닫기"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
         <section className={`rounded-[28px] border p-5 ${status.className}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -261,6 +350,40 @@ const CancerInsuranceOperationsPage = () => {
           <div className="border-current/10 mt-5 border-t pt-4 text-[11px] opacity-70">
             기준 시각 {formatDateTime(dashboard.refreshedAt)}
           </div>
+        </section>
+
+        <section className="rounded-[26px] border border-[#82D8FC]/20 bg-[#82D8FC]/5 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold text-[#82D8FC]">OPERATIONS ACTION</p>
+              <h2 className="mt-1 text-lg font-black text-white">관리자 수동 조치</h2>
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                실행자와 사유, 감지 시각부터 복구까지 걸린 시간을 원장에 남깁니다.
+              </p>
+            </div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#82D8FC]/10 text-[#82D8FC]">
+              <Wrench className="h-5 w-5" />
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => openActionDialog('PAYMENT_RECONCILIATION')}
+            disabled={dashboard.reconciliation.dueOrderCount === 0}
+            className="mt-5 flex w-full items-center justify-between rounded-2xl bg-[#82D8FC] px-4 py-3.5 text-left text-sm font-black text-[#020715] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span className="flex items-center gap-2">
+              <Play className="h-4 w-4 fill-current" />
+              결제 대사 수동 실행
+            </span>
+            <span className="text-xs">
+              대상 {formatCount(dashboard.reconciliation.dueOrderCount)}건
+            </span>
+          </button>
+          {dashboard.reconciliation.dueOrderCount === 0 && (
+            <p className="mt-2 text-center text-[10px] text-slate-600">
+              현재 실행 가능한 미확정 결제가 없습니다.
+            </p>
+          )}
         </section>
 
         <section>
@@ -332,6 +455,104 @@ const CancerInsuranceOperationsPage = () => {
             <strong className="text-white">
               {formatCount(dashboard.reconciliation.lockedOrderCount)}건
             </strong>
+          </div>
+        </section>
+
+        <section className="rounded-[26px] border border-slate-800 bg-[#09111F] p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold text-emerald-300">RECOVERY TIME</p>
+              <h2 className="mt-1 text-lg font-black text-white">장애 복구 훈련 성과</h2>
+            </div>
+            <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-200">
+              평균 {formatDurationMs(dashboard.recovery.averageRecoveryTimeMs)}
+            </span>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+            {[
+              ['전체 조치', dashboard.recovery.totalActionCount, 'text-white'],
+              ['성공', dashboard.recovery.succeededActionCount, 'text-emerald-200'],
+              ['실패', dashboard.recovery.failedActionCount, 'text-rose-200'],
+            ].map(([label, value, className]) => (
+              <div key={label} className="rounded-2xl bg-slate-950/55 px-2 py-3">
+                <p className={`text-lg font-black ${className}`}>{formatCount(value)}</p>
+                <p className="mt-1 text-[10px] font-bold text-slate-600">{label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-800 px-4 py-3 text-xs">
+            <span className="flex items-center gap-2 text-slate-400">
+              <TimerReset className="h-3.5 w-3.5" /> 최근 복구 시간
+            </span>
+            <strong className="text-white">
+              {formatDurationMs(dashboard.recovery.latestRecoveryTimeMs)}
+            </strong>
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-emerald-300">RECOVERY AUDIT</p>
+              <h2 className="mt-1 text-lg font-black text-white">최근 관리자 조치</h2>
+            </div>
+            <span className="text-xs text-slate-600">
+              최근 {dashboard.recentRecoveryActions.length}건
+            </span>
+          </div>
+          <div className="space-y-3">
+            {dashboard.recentRecoveryActions.length === 0 ? (
+              <EmptyState>아직 기록된 수동 복구 조치가 없습니다.</EmptyState>
+            ) : (
+              dashboard.recentRecoveryActions.map((action) => (
+                <article
+                  key={action.recoveryActionId}
+                  className="rounded-2xl border border-slate-800 bg-[#09111F] p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-white">
+                        {RECOVERY_LABELS[action.actionType] || action.actionType}
+                      </p>
+                      <p className="mt-1 truncate text-[11px] text-slate-600">
+                        {action.actorName} · {action.targetId || '실행 준비'}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black ${STATUS_COLORS[action.status] || 'bg-slate-800 text-slate-300'}`}
+                    >
+                      {action.status}
+                    </span>
+                  </div>
+                  <p className="mt-3 rounded-xl bg-slate-950/55 px-3 py-2 text-xs leading-5 text-slate-300">
+                    {action.reason}
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="rounded-xl border border-slate-800 px-3 py-2 text-slate-500">
+                      조치 시간
+                      <strong className="mt-1 block text-xs text-white">
+                        {formatDurationMs(action.actionDurationMs)}
+                      </strong>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 px-3 py-2 text-slate-500">
+                      전체 복구 시간
+                      <strong className="mt-1 block text-xs text-emerald-200">
+                        {formatDurationMs(action.recoveryTimeMs)}
+                      </strong>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-[10px] text-slate-600">
+                    감지 {formatDateTime(action.detectedAt)} · 종료{' '}
+                    {formatDateTime(action.completedAt)}
+                  </p>
+                  {action.errorReason && (
+                    <p className="mt-3 rounded-xl bg-rose-400/10 px-3 py-2 text-[11px] leading-5 text-rose-200">
+                      {action.errorReason}
+                    </p>
+                  )}
+                </article>
+              ))
+            )}
           </div>
         </section>
 
@@ -440,6 +661,16 @@ const CancerInsuranceOperationsPage = () => {
                   <p className="mt-2 text-[10px] text-slate-600">
                     유입 {formatDateTime(item.createdAt)}
                   </p>
+                  {item.replayStatus === 'PENDING' && (
+                    <button
+                      type="button"
+                      onClick={() => openActionDialog('DLQ_REPLAY', item.eventId)}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2.5 text-xs font-black text-rose-100"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      사유를 남기고 재처리
+                    </button>
+                  )}
                 </article>
               ))
             )}
@@ -494,11 +725,85 @@ const CancerInsuranceOperationsPage = () => {
         <section className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
           <ServerCog className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
           <p className="text-xs leading-5 text-slate-500">
-            고객 화면과 분리된 관리자 조회 전용 화면입니다. 실제 운영에서는 알림·재처리 승인·권한
-            감사가 추가됩니다.
+            고객 화면과 분리된 관리자 운영 화면입니다. 모든 수동 조치는 실행자와 사유, 결과 및 복구
+            시간을 별도 원장에 기록합니다.
           </p>
         </section>
       </main>
+
+      {actionDialog && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-4 pb-5 backdrop-blur-sm">
+          <form
+            onSubmit={submitRecoveryAction}
+            className="w-full max-w-md rounded-[28px] border border-slate-700 bg-[#09111F] p-5 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-[#82D8FC]">AUDITED ACTION</p>
+                <h2 className="mt-1 text-xl font-black text-white">
+                  {RECOVERY_LABELS[actionDialog.type]}
+                </h2>
+                {actionDialog.eventId && (
+                  <p className="mt-1 max-w-[280px] truncate text-xs text-slate-500">
+                    {actionDialog.eventId}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={closeActionDialog}
+                disabled={actionPending}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-800"
+                aria-label="운영 조치 창 닫기"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <label
+              className="mt-5 block text-xs font-bold text-slate-300"
+              htmlFor="recovery-reason"
+            >
+              조치 사유
+            </label>
+            <textarea
+              id="recovery-reason"
+              value={actionReason}
+              onChange={(event) => setActionReason(event.target.value)}
+              maxLength={500}
+              rows={4}
+              autoFocus
+              disabled={actionPending}
+              placeholder="장애 원인 확인 내용과 수동 조치가 필요한 이유를 입력해주세요."
+              className="mt-2 w-full resize-none rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-700 focus:border-[#82D8FC] disabled:opacity-60"
+            />
+            <div className="mt-2 flex items-start justify-between gap-3 text-[10px]">
+              <p className={actionError ? 'text-rose-300' : 'text-slate-600'}>
+                {actionError ||
+                  (actionDialog.type === 'DLQ_REPLAY'
+                    ? '재투입 후 해당 이벤트 발행까지 확인하며 관리자와 복구 시간을 기록합니다.'
+                    : '로그인한 관리자와 결제 대사 완료 시간이 감사 원장에 기록됩니다.')}
+              </p>
+              <span className="shrink-0 text-slate-700">{actionReason.length}/500</span>
+            </div>
+
+            <button
+              type="submit"
+              disabled={actionPending || !actionReason.trim()}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#82D8FC] px-4 py-3.5 text-sm font-black text-[#020715] disabled:opacity-40"
+            >
+              {actionPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : actionDialog.type === 'DLQ_REPLAY' ? (
+                <RotateCcw className="h-4 w-4" />
+              ) : (
+                <Play className="h-4 w-4 fill-current" />
+              )}
+              {actionPending ? '처리하고 있습니다' : '사유를 남기고 실행'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

@@ -24,9 +24,11 @@ public class JdbcOperationsDashboardRepository implements OperationsDashboardRep
         return new OperationsDashboardSnapshot(
                 loadOutboxMetrics(),
                 loadReconciliationMetrics(),
+                loadRecoveryMetrics(),
                 loadRecentJobs(recentLimit),
                 loadDeadLetters(recentLimit),
-                loadRecentReconciliations(recentLimit)
+                loadRecentReconciliations(recentLimit),
+                loadRecentRecoveryActions(recentLimit)
         );
     }
 
@@ -148,6 +150,33 @@ public class JdbcOperationsDashboardRepository implements OperationsDashboardRep
         ), recentLimit);
     }
 
+    private OperationsDashboardSnapshot.RecoveryMetrics loadRecoveryMetrics() {
+        return jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) AS total_action_count,
+                       COUNT(*) FILTER (WHERE status = 'SUCCEEDED') AS succeeded_action_count,
+                       COUNT(*) FILTER (WHERE status = 'FAILED') AS failed_action_count,
+                       COALESCE(
+                           ROUND(AVG(recovery_time_ms) FILTER (WHERE status = 'SUCCEEDED')),
+                           0
+                       ) AS average_recovery_time_ms,
+                       COALESCE(
+                           (SELECT recovery_time_ms
+                            FROM public.ops_recovery_action
+                            WHERE status = 'SUCCEEDED'
+                            ORDER BY completed_at DESC, recovery_action_id DESC
+                            LIMIT 1),
+                           0
+                       ) AS latest_recovery_time_ms
+                FROM public.ops_recovery_action
+                """, (resultSet, rowNum) -> new OperationsDashboardSnapshot.RecoveryMetrics(
+                resultSet.getLong("total_action_count"),
+                resultSet.getLong("succeeded_action_count"),
+                resultSet.getLong("failed_action_count"),
+                resultSet.getLong("average_recovery_time_ms"),
+                resultSet.getLong("latest_recovery_time_ms")
+        ));
+    }
+
     private List<OperationsDashboardSnapshot.DeadLetterItem> loadDeadLetters(int recentLimit) {
         return jdbcTemplate.query("""
                 SELECT dead_letter_id,
@@ -198,8 +227,54 @@ public class JdbcOperationsDashboardRepository implements OperationsDashboardRep
         ), recentLimit);
     }
 
+    private List<OperationsDashboardSnapshot.RecoveryActionItem> loadRecentRecoveryActions(
+            int recentLimit
+    ) {
+        return jdbcTemplate.query("""
+                SELECT action.recovery_action_id,
+                       action.action_type,
+                       action.target_type,
+                       action.target_id,
+                       action.actor_user_id,
+                       actor.name AS actor_name,
+                       action.reason,
+                       action.status,
+                       action.detected_at,
+                       action.started_at,
+                       action.completed_at,
+                       action.action_duration_ms,
+                       action.recovery_time_ms,
+                       action.error_reason
+                FROM public.ops_recovery_action action
+                JOIN public.usr_user actor
+                  ON actor.user_id = action.actor_user_id
+                ORDER BY action.started_at DESC, action.recovery_action_id DESC
+                LIMIT ?
+                """, (resultSet, rowNum) -> new OperationsDashboardSnapshot.RecoveryActionItem(
+                resultSet.getLong("recovery_action_id"),
+                resultSet.getString("action_type"),
+                resultSet.getString("target_type"),
+                resultSet.getString("target_id"),
+                resultSet.getLong("actor_user_id"),
+                resultSet.getString("actor_name"),
+                resultSet.getString("reason"),
+                resultSet.getString("status"),
+                instantOrNull(resultSet, "detected_at"),
+                instantOrNull(resultSet, "started_at"),
+                instantOrNull(resultSet, "completed_at"),
+                longOrNull(resultSet, "action_duration_ms"),
+                longOrNull(resultSet, "recovery_time_ms"),
+                resultSet.getString("error_reason")
+        ), recentLimit);
+    }
+
     private static Instant instantOrNull(ResultSet resultSet, String column) throws SQLException {
         Timestamp timestamp = resultSet.getTimestamp(column);
         return timestamp == null ? null : timestamp.toInstant();
+    }
+
+    private static Long longOrNull(ResultSet resultSet, String column) throws SQLException {
+        long value = resultSet.getLong(column);
+        return resultSet.wasNull() ? null : value;
     }
 }

@@ -182,7 +182,7 @@ class PaymentReconciliationBatchServiceIntegrationTest {
         assertThat(countReconciliations(orderIds)).isEqualTo(12);
 
         MockMvc mockMvc = MockMvcBuilders
-                .standaloneSetup(new PaymentReconciliationOperationsController(service))
+                .standaloneSetup(new PaymentReconciliationOperationsController(service, null))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         mockMvc.perform(get(

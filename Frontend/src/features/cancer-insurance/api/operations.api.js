@@ -10,3 +10,28 @@ export const getOperationsDashboard = async (recentLimit = 8) => {
   }
   return payload.data;
 };
+
+export const replayDeadLetter = async (eventId, reason) => {
+  const response = await httpClient.post(
+    `/api/v1/ops/outbox/${encodeURIComponent(eventId)}/replay`,
+    { reason }
+  );
+  const payload = response?.data;
+  if (!payload?.success) {
+    throw new Error(payload?.message || 'DLQ 이벤트를 재처리하지 못했습니다.');
+  }
+  return payload.data;
+};
+
+export const runPaymentReconciliation = async (reason) => {
+  const response = await httpClient.post('/api/v1/ops/jobs/payment-reconciliation', {
+    reason,
+    chunkSize: 100,
+    staleAfterSeconds: 60,
+  });
+  const payload = response?.data;
+  if (!payload?.success) {
+    throw new Error(payload?.message || '결제 대사를 실행하지 못했습니다.');
+  }
+  return payload.data;
+};

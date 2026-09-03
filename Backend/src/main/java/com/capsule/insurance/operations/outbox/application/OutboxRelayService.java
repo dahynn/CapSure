@@ -69,6 +69,39 @@ public class OutboxRelayService {
                 )
         ));
 
+        return processClaimed(workerId, claimed, startedAt);
+    }
+
+    public OutboxRelayRunResponse relayEvent(String eventId) {
+        if (!StringUtils.hasText(eventId)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "eventId가 필요합니다.");
+        }
+        validateBatchSize(1);
+        Instant startedAt = Instant.now(clock);
+        String workerId = "OUTBOX-RECOVERY-" + UUID.randomUUID();
+        List<OutboxEvent> claimed = Objects.requireNonNull(transactionTemplate.execute(status ->
+                repository.claimAvailableByEventId(
+                        workerId,
+                        eventId,
+                        startedAt,
+                        startedAt.minus(LOCK_LEASE)
+                )
+        ));
+        if (claimed.isEmpty()) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_STATE_TRANSITION,
+                    "재발행할 수 있는 Outbox 이벤트가 없습니다."
+            );
+        }
+        return processClaimed(workerId, claimed, startedAt);
+    }
+
+    private OutboxRelayRunResponse processClaimed(
+            String workerId,
+            List<OutboxEvent> claimed,
+            Instant startedAt
+    ) {
+
         int published = 0;
         int retries = 0;
         int deadLetters = 0;

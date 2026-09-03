@@ -17,6 +17,13 @@ public interface OutboxRepository {
             Instant staleLockBefore
     );
 
+    List<OutboxEvent> claimAvailableByEventId(
+            String workerId,
+            String eventId,
+            Instant now,
+            Instant staleLockBefore
+    );
+
     void markPublished(Long outboxEventId, String workerId);
 
     void scheduleRetry(

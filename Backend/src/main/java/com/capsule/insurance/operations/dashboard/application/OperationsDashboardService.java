@@ -33,9 +33,11 @@ public class OperationsDashboardService {
                 Instant.now(),
                 snapshot.outbox(),
                 snapshot.reconciliation(),
+                snapshot.recovery(),
                 snapshot.recentJobs(),
                 snapshot.deadLetters(),
-                snapshot.recentReconciliations()
+                snapshot.recentReconciliations(),
+                snapshot.recentRecoveryActions()
         );
     }
 

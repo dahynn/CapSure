@@ -75,6 +75,55 @@ public class JdbcOutboxRepository implements OutboxRepository {
     }
 
     @Override
+    public List<OutboxEvent> claimAvailableByEventId(
+            String workerId,
+            String eventId,
+            Instant now,
+            Instant staleLockBefore
+    ) {
+        return jdbcTemplate.query("""
+                WITH candidate AS (
+                    SELECT outbox_event_id
+                    FROM public.ops_outbox_event
+                    WHERE event_id = ?
+                      AND available_at <= ?
+                      AND (
+                            status IN ('PENDING', 'FAILED')
+                            OR (status = 'PROCESSING' AND locked_at < ?)
+                      )
+                    FOR UPDATE SKIP LOCKED
+                )
+                UPDATE public.ops_outbox_event event
+                SET status = 'PROCESSING',
+                    attempt_count = event.attempt_count + 1,
+                    locked_at = ?,
+                    locked_by = ?,
+                    last_error = NULL
+                FROM candidate
+                WHERE event.outbox_event_id = candidate.outbox_event_id
+                RETURNING event.outbox_event_id,
+                          event.event_id,
+                          event.aggregate_type,
+                          event.aggregate_id,
+                          event.event_type,
+                          event.payload_json::TEXT AS payload_json,
+                          event.status,
+                          event.attempt_count,
+                          event.available_at,
+                          event.locked_at,
+                          event.locked_by,
+                          event.created_at
+                """,
+                this::mapEvent,
+                eventId,
+                Timestamp.from(now),
+                Timestamp.from(staleLockBefore),
+                Timestamp.from(now),
+                workerId
+        );
+    }
+
+    @Override
     public void markPublished(Long outboxEventId, String workerId) {
         int updated = jdbcTemplate.update("""
                 UPDATE public.ops_outbox_event
