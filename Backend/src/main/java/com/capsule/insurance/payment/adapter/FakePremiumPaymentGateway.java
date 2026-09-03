@@ -48,6 +48,13 @@ public class FakePremiumPaymentGateway implements PremiumPaymentGateway {
         );
     }
 
+    public void settleAsFailed(String providerPaymentKey, String errorCode) {
+        providerLedger.put(
+                providerPaymentKey,
+                GatewayPaymentResult.failed(providerPaymentKey, errorCode)
+        );
+    }
+
     public int confirmationInvocationCount() {
         return confirmationInvocations.get();
     }

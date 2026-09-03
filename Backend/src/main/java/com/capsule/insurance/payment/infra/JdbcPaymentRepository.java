@@ -257,7 +257,10 @@ public class JdbcPaymentRepository implements PaymentRepository {
     public void markApproving(Long paymentOrderId) {
         jdbcTemplate.update("""
                 UPDATE public.pay_order
-                SET status = 'APPROVING'
+                SET status = 'APPROVING',
+                    reconciliation_available_at = NOW(),
+                    reconciliation_locked_at = NULL,
+                    reconciliation_locked_by = NULL
                 WHERE payment_order_id = ?
                   AND status = 'CREATED'
                 """, paymentOrderId);
@@ -285,10 +288,14 @@ public class JdbcPaymentRepository implements PaymentRepository {
         jdbcTemplate.update("""
                 UPDATE public.pay_order
                 SET status = ?,
-                    paid_at = CASE WHEN ? = 'PAID' THEN NOW() ELSE NULL END
+                    paid_at = CASE WHEN ? = 'PAID' THEN NOW() ELSE NULL END,
+                    reconciliation_available_at = CASE
+                        WHEN ? = 'UNKNOWN' THEN NOW()
+                        ELSE reconciliation_available_at
+                    END
                 WHERE payment_order_id = ?
                   AND status IN ('APPROVING', 'UNKNOWN')
-                """, result.status(), result.status(), paymentOrderId);
+                """, result.status(), result.status(), result.status(), paymentOrderId);
         if ("PAID".equals(result.status())) {
             jdbcTemplate.update("""
                     INSERT INTO public.ops_outbox_event (
