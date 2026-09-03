@@ -6,9 +6,11 @@ import java.util.List;
 public record OperationsDashboardSnapshot(
         OutboxMetrics outbox,
         ReconciliationMetrics reconciliation,
+        RecoveryMetrics recovery,
         List<JobExecutionItem> recentJobs,
         List<DeadLetterItem> deadLetters,
-        List<ReconciliationItem> recentReconciliations
+        List<ReconciliationItem> recentReconciliations,
+        List<RecoveryActionItem> recentRecoveryActions
 ) {
 
     public record OutboxMetrics(
@@ -33,6 +35,15 @@ public record OperationsDashboardSnapshot(
             long resolvedCount,
             long stillUnknownCount,
             long failedCount
+    ) {
+    }
+
+    public record RecoveryMetrics(
+            long totalActionCount,
+            long succeededActionCount,
+            long failedActionCount,
+            long averageRecoveryTimeMs,
+            long latestRecoveryTimeMs
     ) {
     }
 
@@ -76,6 +87,24 @@ public record OperationsDashboardSnapshot(
             String providerStatus,
             String result,
             Instant executedAt
+    ) {
+    }
+
+    public record RecoveryActionItem(
+            long recoveryActionId,
+            String actionType,
+            String targetType,
+            String targetId,
+            long actorUserId,
+            String actorName,
+            String reason,
+            String status,
+            Instant detectedAt,
+            Instant startedAt,
+            Instant completedAt,
+            Long actionDurationMs,
+            Long recoveryTimeMs,
+            String errorReason
     ) {
     }
 }

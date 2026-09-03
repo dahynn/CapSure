@@ -4,9 +4,10 @@ import com.capsule.insurance.common.response.ApiResponse;
 import com.capsule.insurance.common.security.AuthenticatedUser;
 import com.capsule.insurance.operations.outbox.application.OutboxRelayService;
 import com.capsule.insurance.operations.outbox.dto.OutboxRelayRunResponse;
-import com.capsule.insurance.operations.outbox.dto.OutboxReplayResponse;
 import com.capsule.insurance.operations.outbox.dto.OutboxSummaryResponse;
 import com.capsule.insurance.operations.outbox.dto.ReplayOutboxRequest;
+import com.capsule.insurance.operations.recovery.application.OperationsRecoveryService;
+import com.capsule.insurance.operations.recovery.dto.DlqRecoveryResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,9 +23,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class OutboxOperationsController {
 
     private final OutboxRelayService relayService;
+    private final OperationsRecoveryService recoveryService;
 
-    public OutboxOperationsController(OutboxRelayService relayService) {
+    public OutboxOperationsController(
+            OutboxRelayService relayService,
+            OperationsRecoveryService recoveryService
+    ) {
         this.relayService = relayService;
+        this.recoveryService = recoveryService;
     }
 
     @PostMapping("/relay")
@@ -35,12 +41,12 @@ public class OutboxOperationsController {
     }
 
     @PostMapping("/{eventId}/replay")
-    public ApiResponse<OutboxReplayResponse> replay(
+    public ApiResponse<DlqRecoveryResponse> replay(
             @PathVariable String eventId,
             @Valid @RequestBody ReplayOutboxRequest request,
             Authentication authentication
     ) {
-        return ApiResponse.success(relayService.replay(
+        return ApiResponse.success(recoveryService.replayDlq(
                 eventId,
                 AuthenticatedUser.id(authentication),
                 request.reason()
