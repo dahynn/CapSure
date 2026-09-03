@@ -48,7 +48,7 @@ class CancerInsuranceMigrationTest {
                 .load();
 
         MigrateResult result = flyway.migrate();
-        assertThat(result.migrationsExecuted).isEqualTo(9);
+        assertThat(result.migrationsExecuted).isEqualTo(10);
     }
 
     @Test
@@ -61,9 +61,9 @@ class CancerInsuranceMigrationTest {
                   AND table_name IN (
                     'ins_product_version', 'ins_terms_document', 'ins_application', 'ins_policy',
                     'pay_order', 'clm_claim', 'clm_decision', 'ops_job_execution', 'ops_outbox_event',
-                    'ops_financial_event_audit', 'ops_recovery_action'
+                    'ops_financial_event_audit', 'ops_recovery_action', 'ifc_financial_message'
                   )
-                """)).isEqualTo(11);
+                """)).isEqualTo(12);
 
         assertThat(queryLong("""
                 SELECT COUNT(*)

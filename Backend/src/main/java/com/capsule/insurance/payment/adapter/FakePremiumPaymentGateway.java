@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("fakePremiumPaymentGateway")
 public class FakePremiumPaymentGateway implements PremiumPaymentGateway {
 
     private final Map<String, GatewayPaymentResult> providerLedger = new ConcurrentHashMap<>();
