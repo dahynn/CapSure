@@ -16,6 +16,9 @@ export const authApi = {
         if (data?.refreshToken) {
             localStorage.setItem('refreshToken', data.refreshToken);
         }
+        if (data?.role) {
+            localStorage.setItem('authRole', data.role);
+        }
         return data;
     },
 
@@ -68,8 +71,10 @@ export const authApi = {
         }
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('authRole');
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('authRole');
         return { success: true };
     },
 

@@ -22,6 +22,7 @@ public class UserAccount {
     private LocalDate birthDate;
     private Gender gender;
     private UserStatus userStatus;
+    private AccessRole accessRole;
     private Instant onboardingCompletedAt;
     private Instant withdrawnAt;
     private Instant createdAt;

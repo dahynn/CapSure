@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
     AlertCircle,
     CalendarClock,
+    ChartNoAxesCombined,
     Check,
     ChevronLeft,
     FileCheck2,
@@ -30,6 +31,11 @@ const formatWon = (value) => `${currency.format(Number(value || 0))}원`;
 
 const hasAccessToken = () => Boolean(
     localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
+);
+
+const hasAdminRole = () => (
+    localStorage.getItem('authRole') === 'ROLE_ADMIN'
+    || sessionStorage.getItem('authRole') === 'ROLE_ADMIN'
 );
 
 const conditionText = (coverage) => {
@@ -243,19 +249,30 @@ const CancerInsuranceProductPage = () => {
 
     return (
         <div className="pb-44">
-            <header className="flex items-center px-5 py-5">
-                <button
-                    type="button"
-                    onClick={() => navigate('/home')}
-                    className="-ml-2 rounded-full p-2 text-white transition-colors hover:bg-slate-800"
-                    aria-label="홈으로 돌아가기"
-                >
-                    <ChevronLeft className="h-6 w-6" />
-                </button>
-                <div className="ml-2">
-                    <p className="text-xs font-bold text-[#82D8FC]">STEP 1 · 상품과 약관</p>
-                    <h1 className="mt-0.5 text-xl font-black text-white">가입할 보장을 확인해요</h1>
+            <header className="flex items-center justify-between gap-3 px-5 py-5">
+                <div className="flex min-w-0 items-center">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/home')}
+                        className="-ml-2 rounded-full p-2 text-white transition-colors hover:bg-slate-800"
+                        aria-label="홈으로 돌아가기"
+                    >
+                        <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <div className="ml-2 min-w-0">
+                        <p className="text-xs font-bold text-[#82D8FC]">STEP 1 · 상품과 약관</p>
+                        <h1 className="mt-0.5 truncate text-xl font-black text-white">가입할 보장을 확인해요</h1>
+                    </div>
                 </div>
+                {hasAdminRole() && (
+                    <button
+                        type="button"
+                        onClick={() => navigate('/cancer-insurance/operations')}
+                        className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[#82D8FC]/25 bg-[#82D8FC]/10 px-3 py-2 text-[11px] font-black text-[#82D8FC]"
+                    >
+                        <ChartNoAxesCombined className="h-3.5 w-3.5" /> 운영 콘솔
+                    </button>
+                )}
             </header>
 
             <main className="space-y-6 px-6">

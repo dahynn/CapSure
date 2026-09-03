@@ -18,11 +18,13 @@ const getAuthHeaders = () => {
 const clearAuthStorage = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('authRole');
     sessionStorage.removeItem('accessToken');
     sessionStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('authRole');
 };
 
-const setAuthStorage = ({ accessToken, refreshToken }) => {
+const setAuthStorage = ({ accessToken, refreshToken, role }) => {
     const useSession = !hasLocalAuthToken() && hasSessionAuthToken();
     const targetStorage = useSession ? sessionStorage : localStorage;
     const mirrorStorage = useSession ? localStorage : sessionStorage;
@@ -34,6 +36,10 @@ const setAuthStorage = ({ accessToken, refreshToken }) => {
     if (refreshToken) {
         targetStorage.setItem('refreshToken', refreshToken);
         mirrorStorage.removeItem('refreshToken');
+    }
+    if (role) {
+        targetStorage.setItem('authRole', role);
+        mirrorStorage.removeItem('authRole');
     }
 };
 
@@ -67,6 +73,7 @@ const refreshAccessToken = async () => {
                 setAuthStorage({
                     accessToken: data.accessToken,
                     refreshToken: data.refreshToken,
+                    role: data.role,
                 });
                 return data.accessToken;
             })

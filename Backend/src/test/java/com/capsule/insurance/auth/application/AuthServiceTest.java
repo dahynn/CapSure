@@ -3,9 +3,14 @@ package com.capsule.insurance.auth.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
+import com.capsule.insurance.auth.domain.AccessRole;
 import com.capsule.insurance.auth.domain.Gender;
 import com.capsule.insurance.auth.domain.UserAccount;
+import com.capsule.insurance.auth.domain.UserStatus;
+import com.capsule.insurance.auth.dto.AuthResult;
+import com.capsule.insurance.auth.dto.LoginRequest;
 import com.capsule.insurance.auth.dto.UserProfileResponse;
 import com.capsule.insurance.auth.dto.UserProfileUpdateRequest;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
@@ -33,6 +38,8 @@ class AuthServiceTest {
     @Mock
     private EmailService emailService;
     @Mock
+    private SmsService smsService;
+    @Mock
     private JwtTokenProvider jwtTokenProvider;
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
@@ -41,6 +48,29 @@ class AuthServiceTest {
 
     @InjectMocks
     private AuthService authService;
+
+    @Test
+    @DisplayName("운영자 로그인은 DB에 저장된 관리자 역할로 토큰을 발급한다")
+    void login_IssuesAdminRoleToken() {
+        UserAccount admin = UserAccount.builder()
+                .userId(7L)
+                .email("demo@example.com")
+                .passwordEncrypted("encoded-password")
+                .userStatus(UserStatus.ACTIVE)
+                .accessRole(AccessRole.ROLE_ADMIN)
+                .build();
+        given(userAccountMapper.findByEmail("demo@example.com")).willReturn(admin);
+        given(passwordEncoder.matches("Passw0rd!", "encoded-password")).willReturn(true);
+        given(jwtTokenProvider.createAccessToken("7", "demo@example.com", "ROLE_ADMIN"))
+                .willReturn("admin-access-token");
+        given(jwtTokenProvider.createRefreshToken("7")).willReturn("admin-refresh-token");
+
+        AuthResult result = authService.login(new LoginRequest("demo@example.com", "Passw0rd!"));
+
+        assertThat(result.accessToken()).isEqualTo("admin-access-token");
+        assertThat(result.role()).isEqualTo("ROLE_ADMIN");
+        verify(refreshTokenRepository).save("7", "admin-refresh-token");
+    }
 
     @Test
     @DisplayName("정상적인 userId로 프로필을 조회하면 UserProfileResponse를 반환한다")

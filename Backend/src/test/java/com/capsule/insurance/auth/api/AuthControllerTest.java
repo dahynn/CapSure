@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.capsule.insurance.auth.application.AuthService;
+import com.capsule.insurance.auth.application.EmailService;
+import com.capsule.insurance.auth.application.SmsService;
 import com.capsule.insurance.auth.dto.AuthResult;
 import com.capsule.insurance.common.security.jwt.JwtAuthenticationFilter;
 import org.junit.jupiter.api.Test;
@@ -31,16 +33,28 @@ class AuthControllerTest {
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @MockitoBean
+    private EmailService emailService;
+
+    @MockitoBean
+    private SmsService smsService;
+
     @Test
     void loginReturnsApiResponse() throws Exception {
         given(authService.login(any()))
-                .willReturn(new AuthResult("stub-user-1", "stub-refresh-user-1", "Bearer", "demo-user"));
+                .willReturn(new AuthResult(
+                        "stub-user-1",
+                        "stub-refresh-user-1",
+                        "Bearer",
+                        "demo-user",
+                        "ROLE_USER"
+                ));
 
-        mockMvc.perform(post("/api/v1/auth/login")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "demo-user",
+                                  "email": "demo@example.com",
                                   "password": "password"
                                 }
                                 """))
