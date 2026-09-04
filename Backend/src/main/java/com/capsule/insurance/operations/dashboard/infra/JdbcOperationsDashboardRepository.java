@@ -25,10 +25,12 @@ public class JdbcOperationsDashboardRepository implements OperationsDashboardRep
                 loadOutboxMetrics(),
                 loadReconciliationMetrics(),
                 loadRecoveryMetrics(),
+                loadPaymentInterfaceMetrics(),
                 loadRecentJobs(recentLimit),
                 loadDeadLetters(recentLimit),
                 loadRecentReconciliations(recentLimit),
-                loadRecentRecoveryActions(recentLimit)
+                loadRecentRecoveryActions(recentLimit),
+                loadRecentPaymentInterfaceMessages(recentLimit)
         );
     }
 
@@ -177,6 +179,29 @@ public class JdbcOperationsDashboardRepository implements OperationsDashboardRep
         ));
     }
 
+    private OperationsDashboardSnapshot.PaymentInterfaceMetrics loadPaymentInterfaceMetrics() {
+        return jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) AS total_message_count,
+                       COUNT(*) FILTER (
+                           WHERE direction = 'INBOUND_RESPONSE' AND status = 'SUCCEEDED'
+                       ) AS succeeded_response_count,
+                       COUNT(*) FILTER (
+                           WHERE direction = 'INBOUND_RESPONSE' AND status = 'TIMEOUT'
+                       ) AS timeout_response_count,
+                       COUNT(*) FILTER (
+                           WHERE direction = 'INBOUND_RESPONSE' AND status = 'CIRCUIT_OPEN'
+                       ) AS circuit_open_response_count,
+                       MAX(occurred_at) AS latest_message_at
+                FROM public.ifc_financial_message
+                """, (resultSet, rowNum) -> new OperationsDashboardSnapshot.PaymentInterfaceMetrics(
+                resultSet.getLong("total_message_count"),
+                resultSet.getLong("succeeded_response_count"),
+                resultSet.getLong("timeout_response_count"),
+                resultSet.getLong("circuit_open_response_count"),
+                instantOrNull(resultSet, "latest_message_at")
+        ));
+    }
+
     private List<OperationsDashboardSnapshot.DeadLetterItem> loadDeadLetters(int recentLimit) {
         return jdbcTemplate.query("""
                 SELECT dead_letter_id,
@@ -265,6 +290,36 @@ public class JdbcOperationsDashboardRepository implements OperationsDashboardRep
                 longOrNull(resultSet, "action_duration_ms"),
                 longOrNull(resultSet, "recovery_time_ms"),
                 resultSet.getString("error_reason")
+        ), recentLimit);
+    }
+
+    private List<OperationsDashboardSnapshot.PaymentInterfaceMessageItem>
+            loadRecentPaymentInterfaceMessages(int recentLimit) {
+        return jdbcTemplate.query("""
+                SELECT financial_message_id,
+                       interface_name,
+                       message_type,
+                       direction,
+                       correlation_id,
+                       idempotency_key,
+                       business_key,
+                       status,
+                       error_code,
+                       occurred_at
+                FROM public.ifc_financial_message
+                ORDER BY occurred_at DESC, financial_message_id DESC
+                LIMIT ?
+                """, (resultSet, rowNum) -> new OperationsDashboardSnapshot.PaymentInterfaceMessageItem(
+                resultSet.getLong("financial_message_id"),
+                resultSet.getString("interface_name"),
+                resultSet.getString("message_type"),
+                resultSet.getString("direction"),
+                resultSet.getString("correlation_id"),
+                resultSet.getString("idempotency_key"),
+                resultSet.getString("business_key"),
+                resultSet.getString("status"),
+                resultSet.getString("error_code"),
+                instantOrNull(resultSet, "occurred_at")
         ), recentLimit);
     }
 

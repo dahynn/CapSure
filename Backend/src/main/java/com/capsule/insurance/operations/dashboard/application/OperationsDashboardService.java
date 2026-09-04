@@ -5,6 +5,7 @@ import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.operations.dashboard.application.port.OperationsDashboardRepository;
 import com.capsule.insurance.operations.dashboard.domain.OperationsDashboardSnapshot;
 import com.capsule.insurance.operations.dashboard.dto.OperationsDashboardResponse;
+import com.capsule.insurance.payment.application.port.PaymentInterfaceCircuitStatusProvider;
 import java.time.Instant;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +15,14 @@ public class OperationsDashboardService {
     private static final int MAX_RECENT_LIMIT = 50;
 
     private final OperationsDashboardRepository repository;
+    private final PaymentInterfaceCircuitStatusProvider paymentInterfaceCircuitStatusProvider;
 
-    public OperationsDashboardService(OperationsDashboardRepository repository) {
+    public OperationsDashboardService(
+            OperationsDashboardRepository repository,
+            PaymentInterfaceCircuitStatusProvider paymentInterfaceCircuitStatusProvider
+    ) {
         this.repository = repository;
+        this.paymentInterfaceCircuitStatusProvider = paymentInterfaceCircuitStatusProvider;
     }
 
     public OperationsDashboardResponse getDashboard(int recentLimit) {
@@ -34,10 +40,13 @@ public class OperationsDashboardService {
                 snapshot.outbox(),
                 snapshot.reconciliation(),
                 snapshot.recovery(),
+                snapshot.paymentInterface(),
+                paymentInterfaceCircuitStatusProvider.currentStatus(),
                 snapshot.recentJobs(),
                 snapshot.deadLetters(),
                 snapshot.recentReconciliations(),
-                snapshot.recentRecoveryActions()
+                snapshot.recentRecoveryActions(),
+                snapshot.recentPaymentInterfaceMessages()
         );
     }
 
@@ -45,7 +54,8 @@ public class OperationsDashboardService {
         OperationsDashboardSnapshot.OutboxMetrics outbox = snapshot.outbox();
         OperationsDashboardSnapshot.ReconciliationMetrics reconciliation = snapshot.reconciliation();
 
-        if (outbox.failedCount() > 0
+        if (paymentInterfaceCircuitStatusProvider.currentStatus().open()
+                || outbox.failedCount() > 0
                 || outbox.pendingDeadLetterCount() > 0
                 || reconciliation.failedLatestExecutionCount() > 0) {
             return "CRITICAL";

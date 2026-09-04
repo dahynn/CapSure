@@ -8,6 +8,7 @@ import com.capsule.insurance.common.exception.GlobalExceptionHandler;
 import com.capsule.insurance.operations.dashboard.api.OperationsDashboardController;
 import com.capsule.insurance.operations.dashboard.application.OperationsDashboardService;
 import com.capsule.insurance.operations.dashboard.infra.JdbcOperationsDashboardRepository;
+import com.capsule.insurance.payment.application.port.PaymentInterfaceCircuitStatusProvider;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -59,7 +60,10 @@ class OperationsDashboardIntegrationTest {
         );
         jdbcTemplate = new JdbcTemplate(dataSource);
         OperationsDashboardService service = new OperationsDashboardService(
-                new JdbcOperationsDashboardRepository(jdbcTemplate)
+                new JdbcOperationsDashboardRepository(jdbcTemplate),
+                () -> new PaymentInterfaceCircuitStatusProvider.CircuitStatus(
+                        "FAKE_PREMIUM_PAYMENT", false, 0, 3, null
+                )
         );
         mockMvc = MockMvcBuilders
                 .standaloneSetup(new OperationsDashboardController(service))
@@ -73,6 +77,7 @@ class OperationsDashboardIntegrationTest {
         jdbcTemplate.execute("TRUNCATE TABLE public.ops_job_execution RESTART IDENTITY CASCADE");
         jdbcTemplate.execute("TRUNCATE TABLE public.ops_outbox_event RESTART IDENTITY CASCADE");
         jdbcTemplate.execute("TRUNCATE TABLE public.ops_reconciliation RESTART IDENTITY");
+        jdbcTemplate.execute("TRUNCATE TABLE public.ifc_financial_message RESTART IDENTITY");
     }
 
     @Test
@@ -82,6 +87,7 @@ class OperationsDashboardIntegrationTest {
         seedJobLedgers();
         seedPaymentTargets();
         seedReconciliations();
+        seedPaymentInterfaceMessages();
 
         mockMvc.perform(get("/api/v1/ops/dashboard").param("recentLimit", "2"))
                 .andExpect(status().isOk())
@@ -106,6 +112,11 @@ class OperationsDashboardIntegrationTest {
                 .andExpect(jsonPath("$.data.recovery.failedActionCount").value(1))
                 .andExpect(jsonPath("$.data.recovery.averageRecoveryTimeMs").value(90000))
                 .andExpect(jsonPath("$.data.recovery.latestRecoveryTimeMs").value(90000))
+                .andExpect(jsonPath("$.data.paymentInterface.totalMessageCount").value(4))
+                .andExpect(jsonPath("$.data.paymentInterface.succeededResponseCount").value(1))
+                .andExpect(jsonPath("$.data.paymentInterface.timeoutResponseCount").value(1))
+                .andExpect(jsonPath("$.data.paymentInterface.circuitOpenResponseCount").value(1))
+                .andExpect(jsonPath("$.data.paymentInterfaceCircuit.open").value(false))
                 .andExpect(jsonPath("$.data.recentJobs.length()").value(2))
                 .andExpect(jsonPath("$.data.deadLetters.length()").value(1))
                 .andExpect(jsonPath("$.data.deadLetters[0].eventId").value("event-dead"))
@@ -113,7 +124,9 @@ class OperationsDashboardIntegrationTest {
                 .andExpect(jsonPath("$.data.recentReconciliations[0].result").value("FAILED"))
                 .andExpect(jsonPath("$.data.recentRecoveryActions.length()").value(2))
                 .andExpect(jsonPath("$.data.recentRecoveryActions[0].status").value("FAILED"))
-                .andExpect(jsonPath("$.data.recentRecoveryActions[1].actorName").value("운영자"));
+                .andExpect(jsonPath("$.data.recentRecoveryActions[1].actorName").value("운영자"))
+                .andExpect(jsonPath("$.data.recentPaymentInterfaceMessages.length()").value(2))
+                .andExpect(jsonPath("$.data.recentPaymentInterfaceMessages[0].status").value("CIRCUIT_OPEN"));
     }
 
     @Test
@@ -128,7 +141,8 @@ class OperationsDashboardIntegrationTest {
                 .andExpect(jsonPath("$.data.recentJobs").isEmpty())
                 .andExpect(jsonPath("$.data.deadLetters").isEmpty())
                 .andExpect(jsonPath("$.data.recentReconciliations").isEmpty())
-                .andExpect(jsonPath("$.data.recentRecoveryActions").isEmpty());
+                .andExpect(jsonPath("$.data.recentRecoveryActions").isEmpty())
+                .andExpect(jsonPath("$.data.recentPaymentInterfaceMessages").isEmpty());
     }
 
     @Test
@@ -256,6 +270,27 @@ class OperationsDashboardIntegrationTest {
                 ) VALUES
                     ('PAYMENT_ORDER', '1', 'FAKE', 'UNKNOWN', 'PAID', 'CORRECTED', '{}'::JSONB, NOW() - INTERVAL '1 minute'),
                     ('PAYMENT_ORDER', '2', 'FAKE', 'UNKNOWN', 'INQUIRY_ERROR', 'FAILED', '{}'::JSONB, NOW())
+                """);
+    }
+
+    private void seedPaymentInterfaceMessages() {
+        jdbcTemplate.update("""
+                INSERT INTO public.ifc_financial_message (
+                    interface_name, message_type, direction, correlation_id, idempotency_key,
+                    business_key, status, error_code, payload_json, payload_hash, occurred_at
+                ) VALUES
+                    ('FAKE_PREMIUM_PAYMENT', 'PREMIUM_PAYMENT_CONFIRM', 'OUTBOUND_REQUEST',
+                     'corr-1', 'idem-1', 'PAY-OPS-1', 'REQUESTED', NULL, '{}'::JSONB,
+                     repeat('a', 64), NOW() - INTERVAL '3 minutes'),
+                    ('FAKE_PREMIUM_PAYMENT', 'PREMIUM_PAYMENT_CONFIRM', 'INBOUND_RESPONSE',
+                     'corr-1', 'idem-1', 'PAY-OPS-1', 'SUCCEEDED', NULL, '{}'::JSONB,
+                     repeat('b', 64), NOW() - INTERVAL '2 minutes'),
+                    ('FAKE_PREMIUM_PAYMENT', 'PREMIUM_PAYMENT_CONFIRM', 'INBOUND_RESPONSE',
+                     'corr-2', 'idem-2', 'PAY-OPS-2', 'TIMEOUT', 'FAKE_GATEWAY_TIMEOUT', '{}'::JSONB,
+                     repeat('c', 64), NOW() - INTERVAL '1 minute'),
+                    ('FAKE_PREMIUM_PAYMENT', 'PREMIUM_PAYMENT_CONFIRM', 'INBOUND_RESPONSE',
+                     'corr-3', 'idem-3', 'PAY-OPS-3', 'CIRCUIT_OPEN', 'PAYMENT_INTERFACE_CIRCUIT_OPEN', '{}'::JSONB,
+                     repeat('d', 64), NOW())
                 """);
     }
 

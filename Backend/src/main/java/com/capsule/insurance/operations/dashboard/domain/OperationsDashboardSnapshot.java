@@ -7,10 +7,12 @@ public record OperationsDashboardSnapshot(
         OutboxMetrics outbox,
         ReconciliationMetrics reconciliation,
         RecoveryMetrics recovery,
+        PaymentInterfaceMetrics paymentInterface,
         List<JobExecutionItem> recentJobs,
         List<DeadLetterItem> deadLetters,
         List<ReconciliationItem> recentReconciliations,
-        List<RecoveryActionItem> recentRecoveryActions
+        List<RecoveryActionItem> recentRecoveryActions,
+        List<PaymentInterfaceMessageItem> recentPaymentInterfaceMessages
 ) {
 
     public record OutboxMetrics(
@@ -44,6 +46,15 @@ public record OperationsDashboardSnapshot(
             long failedActionCount,
             long averageRecoveryTimeMs,
             long latestRecoveryTimeMs
+    ) {
+    }
+
+    public record PaymentInterfaceMetrics(
+            long totalMessageCount,
+            long succeededResponseCount,
+            long timeoutResponseCount,
+            long circuitOpenResponseCount,
+            Instant latestMessageAt
     ) {
     }
 
@@ -105,6 +116,20 @@ public record OperationsDashboardSnapshot(
             Long actionDurationMs,
             Long recoveryTimeMs,
             String errorReason
+    ) {
+    }
+
+    public record PaymentInterfaceMessageItem(
+            long financialMessageId,
+            String interfaceName,
+            String messageType,
+            String direction,
+            String correlationId,
+            String idempotencyKey,
+            String businessKey,
+            String status,
+            String errorCode,
+            Instant occurredAt
     ) {
     }
 }
