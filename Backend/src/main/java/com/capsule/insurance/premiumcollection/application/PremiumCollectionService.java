@@ -12,9 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PremiumCollectionService {
     private final JdbcPremiumCollectionRepository repository;
+    private final PremiumDelinquencyService delinquency;
 
-    public PremiumCollectionService(JdbcPremiumCollectionRepository repository) {
+    public PremiumCollectionService(JdbcPremiumCollectionRepository repository, PremiumDelinquencyService delinquency) {
         this.repository = repository;
+        this.delinquency = delinquency;
     }
 
     @Transactional
@@ -24,12 +26,18 @@ public class PremiumCollectionService {
 
     @Transactional
     public PremiumCollectionSnapshot settleImmediately(InstantSettlementRequest request) {
-        return repository.settleImmediately(request, "COL-" + UUID.randomUUID());
+        delinquency.beforeSettlement(repository.policyIdForReceivable(request.premiumReceivableId()));
+        PremiumCollectionSnapshot result = repository.settleImmediately(request, "COL-" + UUID.randomUUID());
+        delinquency.afterSettlement(result.policyId());
+        return result;
     }
 
     @Transactional
     public PremiumCollectionSnapshot captureAutomaticDebit(Long instructionId, String providerTransactionKey) {
-        return repository.captureAutomaticDebit(instructionId, providerTransactionKey);
+        delinquency.beforeSettlement(repository.policyIdForInstruction(instructionId));
+        PremiumCollectionSnapshot result = repository.captureAutomaticDebit(instructionId, providerTransactionKey);
+        delinquency.afterSettlement(result.policyId());
+        return result;
     }
 
     @Transactional

@@ -52,7 +52,7 @@ public class JdbcClaimRepository implements ClaimRepository {
     }
 
     @Override
-    public boolean ownsActivePolicyCoverage(Long policyId, Long policyCoverageId, Long userId) {
+    public boolean ownsClaimablePolicyCoverage(Long policyId, Long policyCoverageId, Long userId, Instant incidentAt) {
         Integer count = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
                 FROM public.ins_policy policy
@@ -63,8 +63,9 @@ public class JdbcClaimRepository implements ClaimRepository {
                 WHERE policy.policy_id = ?
                   AND coverage.policy_coverage_id = ?
                   AND policy.policyholder_user_id = ?
-                  AND policy.status = 'ACTIVE'
-                """, Integer.class, policyId, policyCoverageId, userId);
+                  AND (policy.status IN ('ACTIVE', 'GRACE')
+                       OR (policy.status = 'LAPSED' AND ? < policy.lapsed_at))
+                """, Integer.class, policyId, policyCoverageId, userId, Timestamp.from(incidentAt));
         return count != null && count == 1;
     }
 
@@ -213,7 +214,7 @@ public class JdbcClaimRepository implements ClaimRepository {
                        coverage.insured_amount,
                        coverage.currency_code,
                        coverage.coverage_start_at,
-                       coverage.coverage_end_at,
+                       LEAST(coverage.coverage_end_at, policy.lapsed_at) AS coverage_end_at,
                        coverage.paid_benefit_count,
                        version.snapshot_json::TEXT AS snapshot_json
                 FROM public.clm_claim claim
@@ -224,6 +225,7 @@ public class JdbcClaimRepository implements ClaimRepository {
                 JOIN public.ins_policy_version version
                   ON version.policy_version_id = coverage.policy_version_id
                 WHERE claim.claim_id = ?
+                FOR SHARE OF policy
                 """, this::mapAssessmentContext, claimId).stream().findFirst().orElseThrow();
     }
 

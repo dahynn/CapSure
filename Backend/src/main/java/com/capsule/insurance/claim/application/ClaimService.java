@@ -70,12 +70,13 @@ public class ClaimService {
                         + "|" + request.diagnosisCategory()
         );
         InsuranceClaim claim = Objects.requireNonNull(transactionTemplate.execute(status -> {
-            if (!claimRepository.ownsActivePolicyCoverage(
+            if (!claimRepository.ownsClaimablePolicyCoverage(
                     policyId,
                     request.policyCoverageId(),
-                    userId
+                    userId,
+                    request.incidentAt()
             )) {
-                throw notFound("청구할 활성 계약 담보를 찾을 수 없습니다.");
+                throw notFound("사고 시점에 청구 가능한 계약 담보를 찾을 수 없습니다.");
             }
             InsuranceClaim existing = claimRepository
                     .findByCoverageAndFingerprint(request.policyCoverageId(), fingerprint)
@@ -202,6 +203,10 @@ public class ClaimService {
             }
             ClaimAssessmentContext context = claimRepository.findAssessmentContext(claimId);
             int paidBenefitCount = claimRepository.lockPaidBenefitCount(locked.policyCoverageId());
+            if (context.coverageEndAt() != null && !locked.incidentAt().isBefore(context.coverageEndAt())) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                        "보장 종료 시점 이후 사고는 가상 보험금을 지급할 수 없습니다.");
+            }
             if (context.firstDiagnosisOnly() && paidBenefitCount > 0) {
                 throw new BusinessException(
                         ErrorCode.BUSINESS_RULE_VIOLATION,
