@@ -341,6 +341,56 @@ class ClaimAssessmentIntegrationTest {
                 .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
     }
 
+    @Test
+    void graceClaimsRemainEligibleAndHistoricalClaimsSurviveLapse() throws Exception {
+        Long userId = userIds.get(5);
+        PolicyFixture policy = activatePolicy(userId, "grace-history");
+        setCoverageStart(policy.policyCoverageId(), Instant.now().minus(450, ChronoUnit.DAYS));
+        jdbcTemplate.update("UPDATE ins_policy SET status = 'GRACE' WHERE policy_id = ?", policy.policyId());
+        Instant incident = Instant.now().minus(3, ChronoUnit.DAYS);
+        Long claimId = createClaim(userId, policy, incident, "DEMO_GENERAL_CANCER");
+        recordRequiredEvidence(userId, claimId);
+        Instant lapse = Instant.now().minus(1, ChronoUnit.DAYS);
+        jdbcTemplate.update("UPDATE ins_policy SET status = 'LAPSED', lapsed_at = ? WHERE policy_id = ?",
+                java.sql.Timestamp.from(lapse), policy.policyId());
+        assertThat(submit(userId, claimId, "grace-historical-submit").path("status").asText()).isEqualTo("APPROVED");
+        createClaim(userId, policy, incident.minusSeconds(1), "DEMO_GENERAL_CANCER");
+        var repository = new JdbcClaimRepository(jdbcTemplate, OBJECT_MAPPER);
+        assertThat(repository.ownsClaimablePolicyCoverage(policy.policyId(), policy.policyCoverageId(), userId, lapse)).isFalse();
+        assertThat(repository.ownsClaimablePolicyCoverage(policy.policyId(), policy.policyCoverageId(), userId, lapse.plusSeconds(1))).isFalse();
+        assertThat(repository.ownsClaimablePolicyCoverage(policy.policyId(), policy.policyCoverageId(), userIds.get(0), incident)).isFalse();
+    }
+
+    @Test
+    void draftAssessmentUsesEffectiveLapseBoundary() throws Exception {
+        Long userId = userIds.get(5);
+        PolicyFixture policy = activatePolicy(userId, "lapse-draft");
+        setCoverageStart(policy.policyCoverageId(), Instant.now().minus(450, ChronoUnit.DAYS));
+        Instant incident = Instant.now().minus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+        Long claimId = createClaim(userId, policy, incident, "DEMO_GENERAL_CANCER");
+        jdbcTemplate.update("UPDATE ins_policy SET status = 'LAPSED', lapsed_at = ? WHERE policy_id = ?",
+                java.sql.Timestamp.from(incident), policy.policyId());
+        JsonNode decision = submit(userId, claimId, "lapse-draft-submit");
+        assertThat(decision.path("status").asText()).isEqualTo("DENIED");
+        assertThat(decision.path("decision").path("reasonCodes").get(0).asText()).isEqualTo("COVERAGE_ENDED");
+    }
+
+    @Test
+    void paymentRechecksLapseBoundaryEvenForPreviouslyApprovedDecision() throws Exception {
+        Long userId = userIds.get(5);
+        PolicyFixture policy = activatePolicy(userId, "lapse-approved");
+        setCoverageStart(policy.policyCoverageId(), Instant.now().minus(450, ChronoUnit.DAYS));
+        Instant incident = Instant.now().minus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+        Long claimId = createClaim(userId, policy, incident, "DEMO_GENERAL_CANCER");
+        recordRequiredEvidence(userId, claimId);
+        assertThat(submit(userId, claimId, "lapse-approved-submit").path("status").asText()).isEqualTo("APPROVED");
+        jdbcTemplate.update("UPDATE ins_policy SET status = 'LAPSED', lapsed_at = ? WHERE policy_id = ?",
+                java.sql.Timestamp.from(incident), policy.policyId());
+        mockMvc.perform(post("/api/v1/claims/{claimId}/payments", claimId)
+                        .principal(authentication(userId)).header("Idempotency-Key", "lapse-approved-pay"))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
     private static PolicyFixture activatePolicy(Long userId, String suffix) {
         Long quoteId = quoteService.issue(
                 userId,

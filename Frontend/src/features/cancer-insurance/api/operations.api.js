@@ -42,3 +42,21 @@ export const getPremiumCollectionTimeline = async (limit = 8) => {
   if (!payload?.success) throw new Error(payload?.message || '보험료 수납 타임라인을 불러오지 못했습니다.');
   return payload.data;
 };
+
+const delinquencyPayload = (response) => {
+  const payload = response?.data;
+  if (!payload?.success) throw new Error(payload?.message || '미납 배치 요청을 처리하지 못했습니다.');
+  return payload.data;
+};
+
+export const getDelinquencyRuns = async () => delinquencyPayload(
+  await httpClient.get('/api/v1/ops/premium-collections/delinquency/runs')
+);
+
+export const runPremiumDelinquency = async (instanceKey, reason) => delinquencyPayload(
+  await httpClient.post('/api/v1/ops/premium-collections/delinquency/runs', { instanceKey, reason })
+);
+
+export const resumePremiumDelinquency = async (runId, reason) => delinquencyPayload(
+  await httpClient.post(`/api/v1/ops/premium-collections/delinquency/runs/${encodeURIComponent(runId)}/resume`, { reason })
+);

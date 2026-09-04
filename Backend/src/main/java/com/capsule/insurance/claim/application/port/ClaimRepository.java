@@ -13,7 +13,7 @@ import java.util.Optional;
 
 public interface ClaimRepository {
 
-    boolean ownsActivePolicyCoverage(Long policyId, Long policyCoverageId, Long userId);
+    boolean ownsClaimablePolicyCoverage(Long policyId, Long policyCoverageId, Long userId, Instant incidentAt);
 
     Optional<InsuranceClaim> findByCoverageAndFingerprint(Long policyCoverageId, String fingerprint);
 

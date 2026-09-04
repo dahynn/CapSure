@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import PremiumDelinquencyPanel from './PremiumDelinquencyPanel';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -868,16 +869,23 @@ const CancerInsuranceOperationsPage = () => {
                   <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${STATUS_COLORS[item.receivableStatus] || 'bg-slate-800 text-slate-300'}`}>{item.receivableStatus}</span>
                 </div>
                 <p className="mt-3 text-[11px] text-slate-400">자동출금 {item.instructionStatus || '-'} · 환급 {item.refundStatus || '없음'}</p>
+                <p className="mt-2 text-[11px] text-amber-100">계약 {item.policyStatus} · 납부기일 {item.dueDate} · 유예 종료 {item.effectiveGraceEndsOn || '독촉 완료 전'}</p>
+                <p className="mt-1 text-[11px] text-slate-400">독촉 {item.noticeStatus === 'SIMULATED_DELIVERED' ? '모의 완료' : item.noticeStatus === 'FAILED' ? '실패 · 재시도 필요' : '없음'} · 변경 사유 {({ OVERDUE_PREMIUM: '보험료 미납', GRACE_EXPIRED_UNPAID: '유예 종료 후 미납', ARREARS_SETTLED: '연체분 완납' })[item.changeReason] || '-'}</p>
+                {item.lapsedAt && <p className="mt-1 text-[11px] text-rose-300">실효 시점 {formatDateTime(item.lapsedAt)}</p>}
+                {item.lateReviewCount > 0 && <p className="mt-1 text-[11px] text-rose-300">실효 후 수납 검토 {item.lateReviewCount}건 · 자동 부활 안 함</p>}
               </article>
             ))}
           </div>
+          <p className="mt-3 text-xs text-slate-400">실효 계약 {formatCount(premiumTimeline?.lapsedPolicyCount)}건 · 실효 후 수납 검토 {formatCount(premiumTimeline?.lateSettlementReviewCount)}건</p>
         </section>
+
+        <PremiumDelinquencyPanel onUpdated={() => loadDashboard(true)} />
 
         <section className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
           <ServerCog className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
           <p className="text-xs leading-5 text-slate-500">
-            고객 화면과 분리된 관리자 운영 화면입니다. 모든 수동 조치는 실행자와 사유, 결과 및 복구
-            시간을 별도 원장에 기록합니다.
+            고객 화면과 분리된 관리자 운영 화면입니다. 조치 유형에 따라 실행자·사유·처리 결과와
+            실행 이력을 별도 원장에 기록합니다.
           </p>
         </section>
       </main>

@@ -48,7 +48,7 @@ class CancerInsuranceMigrationTest {
                 .load();
 
         MigrateResult result = flyway.migrate();
-        assertThat(result.migrationsExecuted).isEqualTo(11);
+        assertThat(result.migrationsExecuted).isEqualTo(12);
     }
 
     @Test
@@ -63,9 +63,11 @@ class CancerInsuranceMigrationTest {
                     'pay_order', 'clm_claim', 'clm_decision', 'ops_job_execution', 'ops_outbox_event',
                     'ops_financial_event_audit', 'ops_recovery_action', 'ifc_financial_message',
                     'ins_premium_receivable', 'pay_collection_instruction',
-                    'pay_premium_settlement', 'pay_refund_case'
+                    'pay_premium_settlement', 'pay_refund_case', 'ops_premium_delinquency_run',
+                    'ops_premium_delinquency_target', 'ops_premium_delinquency_attempt',
+                    'ins_premium_notice', 'ins_policy_delinquency_history', 'pay_late_settlement_review'
                   )
-                """)).isEqualTo(16);
+                """)).isEqualTo(22);
 
         assertThat(queryLong("""
                 SELECT COUNT(*)
