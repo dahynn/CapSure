@@ -110,7 +110,7 @@ public class JdbcPremiumCollectionRepository {
                        p.status AS policy_status, p.lapsed_at, r.due_date, n.effective_grace_ends_on, n.status AS notice_status,
                        (SELECT reason_code FROM ins_policy_delinquency_history h WHERE h.policy_id = p.policy_id ORDER BY h.history_id DESC LIMIT 1) AS change_reason,
                        (SELECT COUNT(*) FROM pay_late_settlement_review lr JOIN pay_premium_settlement ps USING(premium_settlement_id) WHERE ps.premium_receivable_id = r.premium_receivable_id) AS late_review_count,
-                       (SELECT status FROM pay_collection_instruction i WHERE i.premium_receivable_id = r.premium_receivable_id ORDER BY i.collection_instruction_id DESC LIMIT 1) AS instruction_status,
+                       (SELECT status FROM pay_collection_instruction i WHERE i.premium_receivable_id = r.premium_receivable_id AND i.collection_method = 'AUTO_DEBIT' ORDER BY i.collection_instruction_id DESC LIMIT 1) AS instruction_status,
                        (SELECT status FROM pay_refund_case f WHERE f.premium_receivable_id = r.premium_receivable_id ORDER BY f.refund_case_id DESC LIMIT 1) AS refund_status
                 FROM ins_premium_receivable r JOIN ins_policy p USING(policy_id)
                 LEFT JOIN ins_premium_notice n USING(premium_receivable_id)

@@ -157,6 +157,7 @@ class PremiumDelinquencyIntegrationTest {
         long p = policy(); var r = due(p, "2020-01-01");
         jdbc.update("UPDATE pay_collection_instruction SET status = 'SUBMITTED'");
         assertThat(settle(r, "100", "instant").collectionStatus()).isEqualTo("CANCEL_REQUESTED");
+        assertThat(repository.loadTimeline(8).items().getFirst().instructionStatus()).isEqualTo("CANCEL_REQUESTED");
         var captured = tx.execute(s -> collections.captureAutomaticDebit(r.collectionInstructionId(), "auto"));
         assertThat(captured.status()).isEqualTo("OVERPAID");
         tx.execute(s -> collections.createDuplicateDebitRefundCases());
