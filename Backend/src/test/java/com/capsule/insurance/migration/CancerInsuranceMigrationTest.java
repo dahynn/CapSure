@@ -48,7 +48,7 @@ class CancerInsuranceMigrationTest {
                 .load();
 
         MigrateResult result = flyway.migrate();
-        assertThat(result.migrationsExecuted).isEqualTo(10);
+        assertThat(result.migrationsExecuted).isEqualTo(11);
     }
 
     @Test
@@ -61,9 +61,11 @@ class CancerInsuranceMigrationTest {
                   AND table_name IN (
                     'ins_product_version', 'ins_terms_document', 'ins_application', 'ins_policy',
                     'pay_order', 'clm_claim', 'clm_decision', 'ops_job_execution', 'ops_outbox_event',
-                    'ops_financial_event_audit', 'ops_recovery_action', 'ifc_financial_message'
+                    'ops_financial_event_audit', 'ops_recovery_action', 'ifc_financial_message',
+                    'ins_premium_receivable', 'pay_collection_instruction',
+                    'pay_premium_settlement', 'pay_refund_case'
                   )
-                """)).isEqualTo(12);
+                """)).isEqualTo(16);
 
         assertThat(queryLong("""
                 SELECT COUNT(*)
@@ -155,6 +157,42 @@ class CancerInsuranceMigrationTest {
         assertThat(queryLong("SELECT COUNT(*) FROM ins_terms_clause")).isEqualTo(15);
     }
 
+    @Test
+    @DisplayName("환급 케이스의 멱등키는 중복 수납 환급을 한 건으로 제한한다")
+    void enforcesRefundCaseIdempotency() throws SQLException {
+        execute("INSERT INTO usr_user (email, name, phone, user_status) VALUES ('refund-test@example.com', '테스트', '010-0000-0000', 'ACTIVE')");
+        execute("""
+                INSERT INTO ins_quote (quote_no, user_id, product_version_id, status, monthly_premium, snapshot_json, terms_document_hash, expires_at)
+                SELECT 'QUOTE-REFUND-TEST', u.user_id, p.product_version_id, 'ISSUED', 29900, '{}'::jsonb, t.source_hash, NOW() + INTERVAL '1 day'
+                FROM usr_user u JOIN ins_product_version p ON p.product_code = 'CAPSURE-DEMO-CANCER'
+                JOIN ins_terms_document t ON t.terms_document_id = p.terms_document_id WHERE u.email = 'refund-test@example.com'
+                """);
+        execute("""
+                INSERT INTO ins_application (application_no, quote_id, applicant_user_id, insured_user_id, status)
+                SELECT 'APP-REFUND-TEST', q.quote_id, u.user_id, u.user_id, 'APPROVED' FROM ins_quote q JOIN usr_user u ON u.email = 'refund-test@example.com' WHERE q.quote_no = 'QUOTE-REFUND-TEST'
+                """);
+        execute("""
+                INSERT INTO ins_policy (policy_no, application_id, policyholder_user_id, insured_user_id, beneficiary_user_id, status, activated_at)
+                SELECT 'POL-REFUND-TEST', a.application_id, u.user_id, u.user_id, u.user_id, 'ACTIVE', NOW() FROM ins_application a JOIN usr_user u ON u.email = 'refund-test@example.com' WHERE a.application_no = 'APP-REFUND-TEST'
+                """);
+        execute("""
+                INSERT INTO ins_premium_receivable (policy_id, billing_cycle, due_date, grace_ends_on, amount_due, amount_settled, status)
+                SELECT policy_id, DATE '2026-09-01', DATE '2026-09-01', DATE '2026-09-15', 29900, 59800, 'OVERPAID' FROM ins_policy WHERE policy_no = 'POL-REFUND-TEST'
+                """);
+        execute("""
+                INSERT INTO pay_refund_case (premium_receivable_id, refund_no, amount, reason_code, status, idempotency_key)
+                SELECT premium_receivable_id, 'REF-REFUND-TEST', 29900, 'DUPLICATE_DEBIT', 'AUTO_REFUND_ELIGIBLE', 'duplicate-debit:refund-test' FROM ins_premium_receivable WHERE billing_cycle = DATE '2026-09-01'
+                ON CONFLICT (idempotency_key) DO NOTHING
+                """);
+        execute("""
+                INSERT INTO pay_refund_case (premium_receivable_id, refund_no, amount, reason_code, status, idempotency_key)
+                SELECT premium_receivable_id, 'REF-REFUND-TEST-RETRY', 29900, 'DUPLICATE_DEBIT', 'AUTO_REFUND_ELIGIBLE', 'duplicate-debit:refund-test' FROM ins_premium_receivable WHERE billing_cycle = DATE '2026-09-01'
+                ON CONFLICT (idempotency_key) DO NOTHING
+                """);
+        assertThat(queryLong("SELECT COUNT(*) FROM pay_refund_case WHERE idempotency_key = 'duplicate-debit:refund-test'"))
+                .isEqualTo(1);
+    }
+
     private static void createLegacySchema() throws Exception {
         try (Connection connection = openConnection();
              InputStream input = new ClassPathResource("db/schema/schema.sql").getInputStream();
@@ -169,6 +207,12 @@ class CancerInsuranceMigrationTest {
              ResultSet resultSet = statement.executeQuery(sql)) {
             resultSet.next();
             return resultSet.getLong(1);
+        }
+    }
+
+    private static void execute(String sql) throws SQLException {
+        try (Connection connection = openConnection(); Statement statement = connection.createStatement()) {
+            statement.execute(sql);
         }
     }
 
