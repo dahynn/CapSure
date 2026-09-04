@@ -1,6 +1,7 @@
 package com.capsule.insurance.payment.adapter;
 
 import com.capsule.insurance.payment.application.port.FinancialInterfaceJournalRepository;
+import com.capsule.insurance.payment.application.port.PaymentInterfaceCircuitStatusProvider;
 import com.capsule.insurance.payment.application.port.PremiumPaymentGateway;
 import com.capsule.insurance.payment.domain.FinancialInterfaceMessage;
 import com.capsule.insurance.payment.domain.GatewayPaymentResult;
@@ -23,7 +24,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Primary
-public class JournaledPremiumPaymentGateway implements PremiumPaymentGateway {
+public class JournaledPremiumPaymentGateway
+        implements PremiumPaymentGateway, PaymentInterfaceCircuitStatusProvider {
 
     private static final String INTERFACE_NAME = "FAKE_PREMIUM_PAYMENT";
     private static final int CIRCUIT_FAILURE_THRESHOLD = 3;
@@ -171,6 +173,19 @@ public class JournaledPremiumPaymentGateway implements PremiumPaymentGateway {
         circuitOpenedUntil = null;
         consecutiveTimeouts = 0;
         return false;
+    }
+
+    @Override
+    public synchronized CircuitStatus currentStatus() {
+        Instant now = Instant.now(clock);
+        boolean open = isCircuitOpen(now);
+        return new CircuitStatus(
+                INTERFACE_NAME,
+                open,
+                consecutiveTimeouts,
+                circuitFailureThreshold,
+                open ? circuitOpenedUntil : null
+        );
     }
 
     private String responseStatus(GatewayPaymentResult result) {
