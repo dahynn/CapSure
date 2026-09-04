@@ -35,3 +35,10 @@ export const runPaymentReconciliation = async (reason) => {
   }
   return payload.data;
 };
+
+export const getPremiumCollectionTimeline = async (limit = 8) => {
+  const response = await httpClient.get(`/api/v1/ops/premium-collections/timeline?limit=${encodeURIComponent(limit)}`);
+  const payload = response?.data;
+  if (!payload?.success) throw new Error(payload?.message || '보험료 수납 타임라인을 불러오지 못했습니다.');
+  return payload.data;
+};
