@@ -5,10 +5,12 @@ import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.premiumcollection.domain.PremiumCollectionSnapshot;
 import com.capsule.insurance.premiumcollection.dto.CreatePremiumReceivableRequest;
 import com.capsule.insurance.premiumcollection.dto.InstantSettlementRequest;
+import com.capsule.insurance.premiumcollection.dto.PremiumCollectionTimelineResponse;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
+import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -69,6 +71,25 @@ public class JdbcPremiumCollectionRepository {
                 WHERE r.status = 'OVERPAID'
                 ON CONFLICT (idempotency_key) DO NOTHING
                 """);
+    }
+
+    public PremiumCollectionTimelineResponse loadTimeline(int limit) {
+        long due = countByStatus("DUE");
+        long grace = countByStatus("GRACE");
+        long overpaid = countByStatus("OVERPAID");
+        long refunds = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pay_refund_case WHERE status IN ('PENDING', 'AUTO_REFUND_ELIGIBLE', 'MANUAL_REVIEW')", Long.class);
+        List<PremiumCollectionTimelineResponse.Item> items = jdbcTemplate.query("""
+                SELECT r.premium_receivable_id, r.policy_id, r.billing_cycle, r.amount_due, r.amount_settled, r.status AS receivable_status, r.updated_at,
+                       (SELECT status FROM pay_collection_instruction i WHERE i.premium_receivable_id = r.premium_receivable_id ORDER BY i.collection_instruction_id DESC LIMIT 1) AS instruction_status,
+                       (SELECT status FROM pay_refund_case f WHERE f.premium_receivable_id = r.premium_receivable_id ORDER BY f.refund_case_id DESC LIMIT 1) AS refund_status
+                FROM ins_premium_receivable r ORDER BY r.updated_at DESC, r.premium_receivable_id DESC LIMIT ?
+                """, (rs, row) -> new PremiumCollectionTimelineResponse.Item(rs.getLong("premium_receivable_id"), rs.getLong("policy_id"), rs.getObject("billing_cycle", java.time.LocalDate.class), rs.getBigDecimal("amount_due"), rs.getBigDecimal("amount_settled"), rs.getString("receivable_status"), rs.getString("instruction_status"), rs.getString("refund_status"), rs.getTimestamp("updated_at").toInstant()), limit);
+        return new PremiumCollectionTimelineResponse(due, grace, overpaid, refunds, items);
+    }
+
+    private long countByStatus(String status) {
+        Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ins_premium_receivable WHERE status = ?", Long.class, status);
+        return count == null ? 0 : count;
     }
 
     private PremiumCollectionSnapshot lock(Long receivableId) {

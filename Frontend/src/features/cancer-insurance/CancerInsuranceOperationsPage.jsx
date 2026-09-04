@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import {
   getOperationsDashboard,
+  getPremiumCollectionTimeline,
   replayDeadLetter,
   runPaymentReconciliation,
 } from './api/operations.api';
@@ -79,6 +80,19 @@ const STATUS_COLORS = {
   CIRCUIT_OPEN: 'bg-rose-400/10 text-rose-100',
   REQUESTED: 'bg-sky-400/10 text-sky-200',
   REJECTED: 'bg-rose-400/10 text-rose-100',
+  DUE: 'bg-amber-300/10 text-amber-100',
+  GRACE: 'bg-rose-400/10 text-rose-100',
+  SETTLED: 'bg-emerald-400/10 text-emerald-200',
+  OVERPAID: 'bg-violet-400/10 text-violet-200',
+  LAPSED: 'bg-rose-400/10 text-rose-100',
+  SCHEDULED: 'bg-sky-400/10 text-sky-200',
+  SUBMITTED: 'bg-amber-300/10 text-amber-100',
+  CANCEL_REQUESTED: 'bg-amber-300/10 text-amber-100',
+  CANCELED: 'bg-slate-800 text-slate-300',
+  CAPTURED: 'bg-emerald-400/10 text-emerald-200',
+  AUTO_REFUND_ELIGIBLE: 'bg-violet-400/10 text-violet-200',
+  MANUAL_REVIEW: 'bg-rose-400/10 text-rose-100',
+  REFUNDED: 'bg-emerald-400/10 text-emerald-200',
 };
 
 const formatCount = (value) => integer.format(Number(value || 0));
@@ -143,6 +157,7 @@ const EmptyState = ({ children }) => (
 const CancerInsuranceOperationsPage = () => {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
+  const [premiumTimeline, setPremiumTimeline] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -159,7 +174,12 @@ const CancerInsuranceOperationsPage = () => {
     setError('');
     setForbidden(false);
     try {
-      setDashboard(await getOperationsDashboard(8));
+      const [dashboardData, timelineData] = await Promise.all([
+        getOperationsDashboard(8),
+        getPremiumCollectionTimeline(8),
+      ]);
+      setDashboard(dashboardData);
+      setPremiumTimeline(timelineData);
     } catch (requestError) {
       if (requestError.response?.status === 403) {
         setForbidden(true);
@@ -821,6 +841,35 @@ const CancerInsuranceOperationsPage = () => {
                 </article>
               ))
             )}
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-amber-200">PREMIUM COLLECTION</p>
+              <h2 className="mt-1 text-lg font-black text-white">보험료 수납·환급 타임라인</h2>
+            </div>
+            <TimerReset className="h-5 w-5 text-slate-700" />
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <MetricCard icon={Clock3} label="납부 대기" value={premiumTimeline?.dueCount} caption="보험료 채권" tone="amber" />
+            <MetricCard icon={AlertTriangle} label="유예 중" value={premiumTimeline?.graceCount} caption="독촉·유예기간" tone="rose" />
+            <MetricCard icon={CircleDotDashed} label="초과 수납" value={premiumTimeline?.overpaidCount} caption="대사 대상" tone="violet" />
+            <MetricCard icon={RotateCcw} label="환급 대기" value={premiumTimeline?.refundPendingCount} caption="자동·수동 검토" tone="blue" />
+          </div>
+          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-800 bg-[#09111F]">
+            {!premiumTimeline || premiumTimeline.items.length === 0 ? (
+              <EmptyState>아직 보험료 수납 원장이 없습니다.</EmptyState>
+            ) : premiumTimeline.items.map((item, index) => (
+              <article key={item.premiumReceivableId} className={`p-4 ${index ? 'border-t border-slate-800' : ''}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div><p className="text-xs font-black text-white">증권 #{item.policyId} · {item.billingCycle}</p><p className="mt-1 text-[10px] text-slate-500">청구 {Number(item.amountDue).toLocaleString()}원 · 수납 {Number(item.amountSettled).toLocaleString()}원</p></div>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${STATUS_COLORS[item.receivableStatus] || 'bg-slate-800 text-slate-300'}`}>{item.receivableStatus}</span>
+                </div>
+                <p className="mt-3 text-[11px] text-slate-400">자동출금 {item.instructionStatus || '-'} · 환급 {item.refundStatus || '없음'}</p>
+              </article>
+            ))}
           </div>
         </section>
 

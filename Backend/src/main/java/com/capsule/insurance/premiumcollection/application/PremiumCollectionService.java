@@ -4,6 +4,7 @@ import com.capsule.insurance.premiumcollection.domain.PremiumCollectionSnapshot;
 import com.capsule.insurance.premiumcollection.dto.CreatePremiumReceivableRequest;
 import com.capsule.insurance.premiumcollection.dto.InstantSettlementRequest;
 import com.capsule.insurance.premiumcollection.infra.JdbcPremiumCollectionRepository;
+import com.capsule.insurance.premiumcollection.dto.PremiumCollectionTimelineResponse;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,5 +35,9 @@ public class PremiumCollectionService {
     @Transactional
     public int createDuplicateDebitRefundCases() {
         return repository.createDuplicateDebitRefundCases();
+    }
+
+    public PremiumCollectionTimelineResponse getTimeline(int limit) {
+        return repository.loadTimeline(Math.min(Math.max(limit, 1), 50));
     }
 }
