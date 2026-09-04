@@ -13,12 +13,14 @@ import {
   LockKeyhole,
   Play,
   RefreshCw,
+  Radio,
   RotateCcw,
   ServerCog,
   ShieldAlert,
   TimerReset,
   Wrench,
   Workflow,
+  WifiOff,
   X,
 } from 'lucide-react';
 import {
@@ -73,6 +75,10 @@ const STATUS_COLORS = {
   CORRECTED: 'bg-emerald-400/10 text-emerald-200',
   MATCHED: 'bg-sky-400/10 text-sky-200',
   STILL_UNKNOWN: 'bg-amber-300/10 text-amber-100',
+  TIMEOUT: 'bg-amber-300/10 text-amber-100',
+  CIRCUIT_OPEN: 'bg-rose-400/10 text-rose-100',
+  REQUESTED: 'bg-sky-400/10 text-sky-200',
+  REJECTED: 'bg-rose-400/10 text-rose-100',
 };
 
 const formatCount = (value) => integer.format(Number(value || 0));
@@ -422,6 +428,102 @@ const CancerInsuranceOperationsPage = () => {
               caption="변경 불가 금융 이벤트 이력"
               tone="violet"
             />
+          </div>
+        </section>
+
+        <section className="rounded-[26px] border border-[#82D8FC]/20 bg-[#09111F] p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold text-[#82D8FC]">FINANCIAL INTERFACE</p>
+              <h2 className="mt-1 text-lg font-black text-white">결제 전문 · 기관 상태</h2>
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                채널 요청과 외부기관 응답을 주문번호·상관관계 ID 기준으로 확인합니다.
+              </p>
+            </div>
+            <span
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${dashboard.paymentInterfaceCircuit.open ? 'bg-rose-400/10 text-rose-200' : 'bg-[#82D8FC]/10 text-[#82D8FC]'}`}
+            >
+              {dashboard.paymentInterfaceCircuit.open ? (
+                <WifiOff className="h-5 w-5" />
+              ) : (
+                <Radio className="h-5 w-5" />
+              )}
+            </span>
+          </div>
+          <div className="mt-5 grid grid-cols-4 gap-2 text-center">
+            {[
+              ['전문', dashboard.paymentInterface.totalMessageCount, 'text-white'],
+              ['성공', dashboard.paymentInterface.succeededResponseCount, 'text-emerald-200'],
+              ['timeout', dashboard.paymentInterface.timeoutResponseCount, 'text-amber-200'],
+              ['차단', dashboard.paymentInterface.circuitOpenResponseCount, 'text-rose-200'],
+            ].map(([label, value, className]) => (
+              <div key={label} className="rounded-2xl bg-slate-950/55 px-2 py-3">
+                <p className={`text-lg font-black ${className}`}>{formatCount(value)}</p>
+                <p className="mt-1 text-[10px] font-bold text-slate-600">{label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-800 px-4 py-3 text-xs">
+            <span className="text-slate-400">현재 circuit</span>
+            <strong className={dashboard.paymentInterfaceCircuit.open ? 'text-rose-200' : 'text-emerald-200'}>
+              {dashboard.paymentInterfaceCircuit.open
+                ? `OPEN · ${formatDateTime(dashboard.paymentInterfaceCircuit.openUntil)}까지`
+                : `CLOSED · timeout ${dashboard.paymentInterfaceCircuit.consecutiveTimeouts}/${dashboard.paymentInterfaceCircuit.failureThreshold}`}
+            </strong>
+          </div>
+          <p className="mt-3 text-[10px] text-slate-600">
+            마지막 전문 {formatDateTime(dashboard.paymentInterface.latestMessageAt)}
+          </p>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-[#82D8FC]">MESSAGE TIMELINE</p>
+              <h2 className="mt-1 text-lg font-black text-white">최근 결제 전문</h2>
+            </div>
+            <span className="text-xs text-slate-600">
+              최근 {dashboard.recentPaymentInterfaceMessages.length}건
+            </span>
+          </div>
+          <div className="space-y-3">
+            {dashboard.recentPaymentInterfaceMessages.length === 0 ? (
+              <EmptyState>아직 외부기관에 기록된 결제 전문이 없습니다.</EmptyState>
+            ) : (
+              dashboard.recentPaymentInterfaceMessages.map((message) => (
+                <article
+                  key={message.financialMessageId}
+                  className="rounded-2xl border border-slate-800 bg-[#09111F] p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-white">{message.businessKey}</p>
+                      <p className="mt-1 truncate text-[11px] text-slate-600">
+                        {message.direction === 'OUTBOUND_REQUEST' ? '기관 요청' : '기관 응답'} · {message.messageType}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black ${STATUS_COLORS[message.status] || 'bg-slate-800 text-slate-300'}`}
+                    >
+                      {message.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 rounded-xl bg-slate-950/55 px-3 py-2 text-[10px] text-slate-500">
+                    <p className="truncate">corr · {message.correlationId}</p>
+                    {message.idempotencyKey && <p className="mt-1 truncate">idem · {message.idempotencyKey}</p>}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[10px] text-slate-600">
+                    <span>{message.interfaceName}</span>
+                    <span>{formatDateTime(message.occurredAt)}</span>
+                  </div>
+                  {message.errorCode && (
+                    <p className="mt-3 rounded-xl bg-rose-400/10 px-3 py-2 text-[11px] text-rose-200">
+                      {message.errorCode}
+                    </p>
+                  )}
+                </article>
+              ))
+            )}
           </div>
         </section>
 
