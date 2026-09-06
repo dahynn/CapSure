@@ -26,6 +26,7 @@ const CancerInsuranceFlowLayout = lazy(() => import('@/features/cancer-insurance
 const CancerInsuranceProductPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceProductPage'));
 const CancerInsuranceApplicationPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceApplicationPage'));
 const CancerInsurancePaymentPage = lazy(() => import('@/features/cancer-insurance/CancerInsurancePaymentPage'));
+const CancerInsurancePaymentReturnPage = lazy(() => import('@/features/cancer-insurance/CancerInsurancePaymentReturnPage'));
 const CancerInsurancePolicyPage = lazy(() => import('@/features/cancer-insurance/CancerInsurancePolicyPage'));
 const CancerInsuranceClaimPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceClaimPage'));
 const CancerInsuranceClaimResultPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceClaimResultPage'));
@@ -73,6 +74,8 @@ const AppRouter = () => {
             <Route index element={<CancerInsuranceProductPage />} />
             <Route path="application" element={<CancerInsuranceApplicationPage />} />
             <Route path="payment" element={<CancerInsurancePaymentPage />} />
+            <Route path="payment/success" element={<CancerInsurancePaymentReturnPage result="success" />} />
+            <Route path="payment/fail" element={<CancerInsurancePaymentReturnPage result="fail" />} />
             <Route path="policy" element={<CancerInsurancePolicyPage />} />
             <Route path="claim" element={<CancerInsuranceClaimPage />} />
             <Route path="claim/result" element={<CancerInsuranceClaimResultPage />} />
