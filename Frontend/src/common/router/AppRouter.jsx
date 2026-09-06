@@ -1,48 +1,47 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '@/layouts/MainLayout';
-import AuthPage from '@/features/auth/AuthPage';
-import LoginPage from '@/features/auth/components/LoginPage';
-import SignupPage from '@/features/auth/components/SignupPage';
-import HomePage from '@/features/home/HomePage';
-import ActiveInsurancesPage from '@/features/home/ActiveInsurancesPage';
-import SearchPage from '@/features/search/SearchPage';
 
-// Refactored Capsure Feature Routes
-import CapsureFlowLayout from '@/features/capsure/CapsureFlowLayout';
-import CapsureBudgetPage from '@/features/capsure/CapsureBudgetPage';
-import CapsureMakerPage from '@/features/capsure/CapsureMakerPage';
-import CapsureProductDetailPage from '@/features/capsure/CapsureProductDetailPage';
-import CapsureTermsPage from '@/features/capsure/CapsureTermsPage';
-import CapsurePaymentSummaryPage from '@/features/capsure/CapsurePaymentSummaryPage';
-import CapsureResultPage from '@/features/capsure/CapsureResultPage';
+const AuthPage = lazy(() => import('@/features/auth/AuthPage'));
+const LoginPage = lazy(() => import('@/features/auth/components/LoginPage'));
+const SignupPage = lazy(() => import('@/features/auth/components/SignupPage'));
+const HomePage = lazy(() => import('@/features/home/HomePage'));
+const ActiveInsurancesPage = lazy(() => import('@/features/home/ActiveInsurancesPage'));
+const SearchPage = lazy(() => import('@/features/search/SearchPage'));
+const CapsureFlowLayout = lazy(() => import('@/features/capsure/CapsureFlowLayout'));
+const CapsureBudgetPage = lazy(() => import('@/features/capsure/CapsureBudgetPage'));
+const CapsureMakerPage = lazy(() => import('@/features/capsure/CapsureMakerPage'));
+const CapsureProductDetailPage = lazy(() => import('@/features/capsure/CapsureProductDetailPage'));
+const CapsureTermsPage = lazy(() => import('@/features/capsure/CapsureTermsPage'));
+const CapsurePaymentSummaryPage = lazy(() => import('@/features/capsure/CapsurePaymentSummaryPage'));
+const CapsureResultPage = lazy(() => import('@/features/capsure/CapsureResultPage'));
+const MyPage = lazy(() => import('@/features/mypage/MyPage'));
+const ProfileEditPage = lazy(() => import('@/features/mypage/components/ProfileEditPage'));
+const CapsuleDetailPage = lazy(() => import('@/features/mypage/components/CapsuleDetailPage'));
+const CapsuleEditPage = lazy(() => import('@/features/mypage/components/CapsuleEditPage'));
+const OnboardingPage = lazy(() => import('@/features/onboarding/components/OnboardingPage'));
+const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
+const DiagnosisReportPage = lazy(() => import('@/features/dashboard/DiagnosisReportPage'));
+const CancerInsuranceFlowLayout = lazy(() => import('@/features/cancer-insurance/CancerInsuranceFlowLayout'));
+const CancerInsuranceProductPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceProductPage'));
+const CancerInsuranceApplicationPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceApplicationPage'));
+const CancerInsurancePaymentPage = lazy(() => import('@/features/cancer-insurance/CancerInsurancePaymentPage'));
+const CancerInsurancePolicyPage = lazy(() => import('@/features/cancer-insurance/CancerInsurancePolicyPage'));
+const CancerInsuranceClaimPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceClaimPage'));
+const CancerInsuranceClaimResultPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceClaimResultPage'));
+const CancerInsuranceOperationsPage = lazy(() => import('@/features/cancer-insurance/CancerInsuranceOperationsPage'));
 
-// MyPage Features
-import MyPage from '@/features/mypage/MyPage';
-import ProfileEditPage from '@/features/mypage/components/ProfileEditPage';
-import CapsuleDetailPage from '@/features/mypage/components/CapsuleDetailPage';
-import CapsuleEditPage from '@/features/mypage/components/CapsuleEditPage';
-
-import OnboardingPage from '@/features/onboarding/components/OnboardingPage';
-
-// Dashboard Feature
-import DashboardPage from '@/features/dashboard/DashboardPage';
-import DiagnosisReportPage from '@/features/dashboard/DiagnosisReportPage';
-
-// Cancer Insurance Financial Process
-import CancerInsuranceFlowLayout from '@/features/cancer-insurance/CancerInsuranceFlowLayout';
-import CancerInsuranceProductPage from '@/features/cancer-insurance/CancerInsuranceProductPage';
-import CancerInsuranceApplicationPage from '@/features/cancer-insurance/CancerInsuranceApplicationPage';
-import CancerInsurancePaymentPage from '@/features/cancer-insurance/CancerInsurancePaymentPage';
-import CancerInsurancePolicyPage from '@/features/cancer-insurance/CancerInsurancePolicyPage';
-import CancerInsuranceClaimPage from '@/features/cancer-insurance/CancerInsuranceClaimPage';
-import CancerInsuranceClaimResultPage from '@/features/cancer-insurance/CancerInsuranceClaimResultPage';
-import CancerInsuranceOperationsPage from '@/features/cancer-insurance/CancerInsuranceOperationsPage';
+const RouteFallback = () => (
+  <div className="flex min-h-screen items-center justify-center bg-[#020715] px-6 text-sm text-slate-300">
+    화면을 불러오는 중입니다.
+  </div>
+);
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
         <Route element={<AuthPage />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
@@ -95,7 +94,8 @@ const AppRouter = () => {
 
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };
