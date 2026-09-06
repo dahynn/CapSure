@@ -5,6 +5,10 @@ import java.math.BigDecimal;
 
 public interface PremiumPaymentGateway {
 
+    default String providerCode() {
+        return "FAKE";
+    }
+
     GatewayPaymentResult confirm(ConfirmCommand command);
 
     GatewayPaymentResult inquire(String providerPaymentKey);

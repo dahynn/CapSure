@@ -51,3 +51,11 @@ mydata:
     token-audience: capsule-main-client
     access-token-ttl: 10m
     refresh-token-ttl: 7d
+
+payment:
+  gateway: ${PAYMENT_GATEWAY:fake}
+  toss:
+    base-url: ${TOSS_PAYMENTS_BASE_URL:https://api.tosspayments.com}
+    secret-key: ${TOSS_PAYMENTS_SECRET_KEY:}
+    timeout: ${TOSS_PAYMENTS_TIMEOUT:10s}
+    allow-live-key: ${TOSS_PAYMENTS_ALLOW_LIVE_KEY:false}

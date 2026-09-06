@@ -46,6 +46,13 @@ class JournaledPremiumPaymentGatewayTest {
                 .map(FinancialInterfaceMessage::correlationId)
                 .distinct()
                 .count()).isEqualTo(4);
+        assertThat(journal.messages)
+                .extracting(FinancialInterfaceMessage::interfaceName)
+                .containsOnly("FAKE_PREMIUM_PAYMENT");
+        assertThat(journal.messages)
+                .extracting(FinancialInterfaceMessage::payloadJson)
+                .noneMatch(payload -> payload.contains("fake-timeout-circuit-"));
+        assertThat(journal.messages.getFirst().payloadJson()).contains("providerPaymentKeyHash");
     }
 
     private PremiumPaymentGateway.ConfirmCommand command(String providerPaymentKey, int sequence) {

@@ -30,8 +30,6 @@ import org.springframework.util.StringUtils;
 public class PaymentService {
 
     private static final Duration ORDER_VALIDITY = Duration.ofMinutes(30);
-    private static final String PROVIDER = "FAKE";
-
     private final PaymentRepository paymentRepository;
     private final PolicyRepository policyRepository;
     private final PremiumPaymentGateway paymentGateway;
@@ -147,6 +145,13 @@ public class PaymentService {
                         "결제 승인 금액이 서버 주문 금액과 다릅니다."
                 );
             }
+            if ("TOSS".equals(paymentGateway.providerCode())
+                    && !order.orderNo().equals(request.providerOrderId())) {
+                throw new BusinessException(
+                        ErrorCode.BUSINESS_RULE_VIOLATION,
+                        "Toss Payments 주문번호가 서버 주문과 다릅니다."
+                );
+            }
 
             PaymentAttempt sameRequest = paymentRepository
                     .findAttemptByIdempotencyKey(idempotencyKey)
@@ -173,7 +178,7 @@ public class PaymentService {
                 );
             }
             PaymentAttempt providerKeyOwner = paymentRepository
-                    .findAttemptByProviderPaymentKey(PROVIDER, request.providerPaymentKey())
+                    .findAttemptByProviderPaymentKey(paymentGateway.providerCode(), request.providerPaymentKey())
                     .orElse(null);
             if (providerKeyOwner != null) {
                 throw new BusinessException(
@@ -191,7 +196,7 @@ public class PaymentService {
             );
             PaymentAttempt attempt = paymentRepository.createProcessingAttempt(
                     order.paymentOrderId(),
-                    PROVIDER,
+                    paymentGateway.providerCode(),
                     request.providerPaymentKey(),
                     idempotencyKey,
                     toJson(command)
@@ -234,6 +239,9 @@ public class PaymentService {
         if (target.attempt() == null) {
             return toResponse(target.order());
         }
+        if (!target.attempt().provider().equals(paymentGateway.providerCode())) {
+            return toResponse(target.order());
+        }
         GatewayPaymentResult result = paymentGateway.inquire(target.attempt().providerPaymentKey());
         String reconciliationResult = "UNKNOWN".equals(result.status())
                 ? "STILL_UNKNOWN"
@@ -253,11 +261,12 @@ public class PaymentService {
     }
 
     public PaymentOrderResponse applyProviderNotification(
+            String provider,
             String providerPaymentKey,
             GatewayPaymentResult result
     ) {
         PaymentAttempt attempt = paymentRepository
-                .findAttemptByProviderPaymentKey(PROVIDER, providerPaymentKey)
+                .findAttemptByProviderPaymentKey(provider, providerPaymentKey)
                 .orElseThrow(() -> notFound("webhook 대상 결제 시도를 찾을 수 없습니다."));
         PaymentOrder completed = finalizeResult(
                 attempt.paymentOrderId(),
@@ -300,7 +309,7 @@ public class PaymentService {
             if (reconciliation != null) {
                 paymentRepository.recordReconciliation(
                         paymentOrderId,
-                        PROVIDER,
+                        paymentGateway.providerCode(),
                         reconciliation.localStatus(),
                         reconciliation.providerStatus(),
                         reconciliation.result(),
