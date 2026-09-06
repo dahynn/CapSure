@@ -6,6 +6,7 @@ import SubscribedCapsures from "./components/SubscribedCapsures";
 import ActiveInsurances from "./components/ActiveInsurances";
 import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
 import { getCategoryRecommendations, getHomeDashboard } from './api/home.api';
+import { getUserProfile } from '@/features/mypage/api/mypage.api';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 
 const CATEGORY_LABEL_MAP = {
@@ -52,8 +53,7 @@ const HomePage = () => {
     });
 
     React.useEffect(() => {
-        import('@/features/mypage/api/mypage.api')
-            .then(({ getUserProfile }) => getUserProfile())
+        getUserProfile()
             .then(data => {
                 if (data && data.name) setUser({ name: data.name });
             })

@@ -23,6 +23,7 @@ import {
     getInitialPremiumPayment,
 } from './api/cancerInsurance.api';
 import { useCancerInsurance } from './context/CancerInsuranceContext';
+import TossPaymentCheckout from './TossPaymentCheckout';
 
 const currency = new Intl.NumberFormat('ko-KR');
 
@@ -94,6 +95,8 @@ const STATUS_COPY = {
 
 const CancerInsurancePaymentPage = () => {
     const navigate = useNavigate();
+    const tossClientKey = import.meta.env.VITE_TOSS_CLIENT_KEY?.trim();
+    const tossEnabled = Boolean(tossClientKey);
     const {
         flowIds,
         updateFlowIds,
@@ -176,6 +179,7 @@ const CancerInsurancePaymentPage = () => {
             const confirmed = await confirmInitialPremiumPayment(
                 payment.paymentOrderId,
                 providerPaymentKey,
+                null,
                 payment.amount,
                 getRequestKey(`initial-premium-confirm-${scenario}`),
             );
@@ -304,7 +308,9 @@ const CancerInsurancePaymentPage = () => {
                 </button>
                 <div className="ml-2">
                     <p className="text-xs font-bold text-[#82D8FC]">STEP 3 · 초회 보험료</p>
-                    <h1 className="mt-0.5 text-xl font-black text-white">가상 결제를 진행해주세요</h1>
+                    <h1 className="mt-0.5 text-xl font-black text-white">
+                        {tossEnabled ? 'Toss 테스트 결제를 진행해주세요' : '가상 결제를 진행해주세요'}
+                    </h1>
                 </div>
             </header>
 
@@ -338,50 +344,58 @@ const CancerInsurancePaymentPage = () => {
                     <div className="flex items-start gap-3">
                         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" />
                         <div>
-                            <p className="text-sm font-black text-amber-100">실제 결제정보를 입력하지 않습니다</p>
+                            <p className="text-sm font-black text-amber-100">
+                                {tossEnabled ? 'Toss Payments 테스트 환경입니다' : '실제 결제정보를 입력하지 않습니다'}
+                            </p>
                             <p className="mt-1 text-xs leading-5 text-amber-100/60">
-                                Fake PG가 승인·거절·응답 지연을 재현하며 실제 카드 승인이나 보험료 송금은 발생하지 않습니다.
+                                {tossEnabled
+                                    ? '테스트 결제수단만 사용해주세요. 실제 카드 승인이나 보험료 송금은 발생하지 않습니다.'
+                                    : 'Fake PG가 승인·거절·응답 지연을 재현하며 실제 카드 승인이나 보험료 송금은 발생하지 않습니다.'}
                             </p>
                         </div>
                     </div>
                 </section>
 
-                <section>
-                    <div className="mb-4 flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F2BEF7]/10 text-[#F2BEF7]">
-                            <ServerCog className="h-5 w-5" />
-                        </span>
-                        <div>
-                            <p className="text-xs font-bold text-[#F2BEF7]">장애 시나리오</p>
-                            <h2 className="text-lg font-black text-white">PG 응답을 선택해보세요</h2>
+                {tossEnabled ? (
+                    <TossPaymentCheckout clientKey={tossClientKey} payment={payment} onError={setError} />
+                ) : (
+                    <section>
+                        <div className="mb-4 flex items-center gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F2BEF7]/10 text-[#F2BEF7]">
+                                <ServerCog className="h-5 w-5" />
+                            </span>
+                            <div>
+                                <p className="text-xs font-bold text-[#F2BEF7]">장애 시나리오</p>
+                                <h2 className="text-lg font-black text-white">PG 응답을 선택해보세요</h2>
+                            </div>
                         </div>
-                    </div>
-                    <div className="space-y-3">
-                        {PAYMENT_SCENARIOS.map((item) => {
-                            const ScenarioIcon = item.icon;
-                            const selected = item.id === scenario;
-                            return (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() => setScenario(item.id)}
-                                    className={`flex w-full items-start gap-4 rounded-2xl border p-4 text-left transition-all ${selected ? 'border-[#82D8FC] bg-[#82D8FC]/10' : 'border-slate-800 bg-[#09111F]'}`}
-                                >
-                                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-[#82D8FC] text-[#020715]' : 'bg-slate-800 text-slate-500'}`}>
-                                        <ScenarioIcon className="h-5 w-5" />
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block text-sm font-black text-white">{item.title}</span>
-                                        <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
-                                    </span>
-                                    <span className={`mt-1 flex h-5 w-5 items-center justify-center rounded-full border ${selected ? 'border-[#82D8FC] bg-[#82D8FC] text-[#020715]' : 'border-slate-700 text-transparent'}`}>
-                                        <Check className="h-3 w-3" strokeWidth={3} />
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </section>
+                        <div className="space-y-3">
+                            {PAYMENT_SCENARIOS.map((item) => {
+                                const ScenarioIcon = item.icon;
+                                const selected = item.id === scenario;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => setScenario(item.id)}
+                                        className={`flex w-full items-start gap-4 rounded-2xl border p-4 text-left transition-all ${selected ? 'border-[#82D8FC] bg-[#82D8FC]/10' : 'border-slate-800 bg-[#09111F]'}`}
+                                    >
+                                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-[#82D8FC] text-[#020715]' : 'bg-slate-800 text-slate-500'}`}>
+                                            <ScenarioIcon className="h-5 w-5" />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-sm font-black text-white">{item.title}</span>
+                                            <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
+                                        </span>
+                                        <span className={`mt-1 flex h-5 w-5 items-center justify-center rounded-full border ${selected ? 'border-[#82D8FC] bg-[#82D8FC] text-[#020715]' : 'border-slate-700 text-transparent'}`}>
+                                            <Check className="h-3 w-3" strokeWidth={3} />
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
 
                 <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
                     <div className="flex items-start gap-3">
@@ -400,14 +414,16 @@ const CancerInsurancePaymentPage = () => {
                 )}
             </main>
 
-            <div className="fixed app-fixed-cta left-1/2 z-40 w-full max-w-[560px] -translate-x-1/2 bg-gradient-to-t from-[#020715] via-[#020715] to-transparent px-6 pb-6 pt-8">
-                <AppButton onClick={confirmPayment} disabled={confirming}>
-                    {confirming
-                        ? <Loader2 className="h-5 w-5 animate-spin" />
-                        : <CreditCard className="h-5 w-5" />}
-                    {confirming ? '결제 원장을 처리하고 있어요' : selectedScenario.actionLabel}
-                </AppButton>
-            </div>
+            {!tossEnabled && (
+                <div className="fixed app-fixed-cta left-1/2 z-40 w-full max-w-[560px] -translate-x-1/2 bg-gradient-to-t from-[#020715] via-[#020715] to-transparent px-6 pb-6 pt-8">
+                    <AppButton onClick={confirmPayment} disabled={confirming}>
+                        {confirming
+                            ? <Loader2 className="h-5 w-5 animate-spin" />
+                            : <CreditCard className="h-5 w-5" />}
+                        {confirming ? '결제 원장을 처리하고 있어요' : selectedScenario.actionLabel}
+                    </AppButton>
+                </div>
+            )}
         </div>
     );
 };

@@ -7,6 +7,10 @@ import java.math.BigDecimal;
 
 public record ConfirmPaymentRequest(
         @NotBlank String providerPaymentKey,
+        String providerOrderId,
         @NotNull @DecimalMin(value = "0.01") BigDecimal amount
 ) {
+    public ConfirmPaymentRequest(String providerPaymentKey, BigDecimal amount) {
+        this(providerPaymentKey, null, amount);
+    }
 }

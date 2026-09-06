@@ -60,3 +60,25 @@ export const runPremiumDelinquency = async (instanceKey, reason) => delinquencyP
 export const resumePremiumDelinquency = async (runId, reason) => delinquencyPayload(
   await httpClient.post(`/api/v1/ops/premium-collections/delinquency/runs/${encodeURIComponent(runId)}/resume`, { reason })
 );
+
+const billingPayload = (response) => {
+  const payload = response?.data;
+  if (!payload?.success) throw new Error(payload?.message || '정기 보험료 채권 요청을 처리하지 못했습니다.');
+  return payload.data;
+};
+
+export const getPremiumBillingRuns = async () => billingPayload(
+  await httpClient.get('/api/v1/ops/premium-collections/billing/runs')
+);
+
+export const runPremiumBilling = async (instanceKey, billingCycle, reason) => billingPayload(
+  await httpClient.post('/api/v1/ops/premium-collections/billing/runs', {
+    instanceKey,
+    billingCycle,
+    reason,
+  })
+);
+
+export const resumePremiumBilling = async (runId, reason) => billingPayload(
+  await httpClient.post(`/api/v1/ops/premium-collections/billing/runs/${encodeURIComponent(runId)}/resume`, { reason })
+);

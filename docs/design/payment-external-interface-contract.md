@@ -2,7 +2,7 @@
 
 ## 목적
 
-CapSure의 채널계가 결제 승인 결과를 직접 해석하지 않도록 분리한다. 결제 코어는 주문 금액·상태·멱등성을 책임지고, 외부기관 어댑터는 기관별 전문 형식과 통신 실패를 흡수한다. 현재 기관은 `FAKE_PREMIUM_PAYMENT`이며, Toss Payments 또는 은행 sandbox는 같은 port를 구현하는 별도 adapter로 교체한다.
+CapSure의 채널계가 결제 승인 결과를 직접 해석하지 않도록 분리한다. 결제 코어는 주문 금액·상태·멱등성을 책임지고, 외부기관 어댑터는 기관별 전문 형식과 통신 실패를 흡수한다. 기본값은 `FAKE_PREMIUM_PAYMENT`이고, 로컬 환경변수로 `TOSS_PREMIUM_PAYMENT` 테스트 어댑터를 선택할 수 있다.
 
 ```text
 채널계 PaymentController
@@ -11,10 +11,23 @@ CapSure의 채널계가 결제 승인 결과를 직접 해석하지 않도록 �
         ↓ PremiumPaymentGateway port
 전문·회로차단 JournaledPremiumPaymentGateway
         ↓
-FakePremiumPaymentGateway (향후 Toss/은행 adapter)
+FakePremiumPaymentGateway 또는 TossPremiumPaymentGateway
         ↓
 ifc_financial_message 요청·응답 전문 원장
 ```
+
+## 어댑터 선택과 비밀정보
+
+| 환경변수 | 의미 | 기본값 |
+| --- | --- | --- |
+| `PAYMENT_GATEWAY` | `fake` 또는 `toss` 선택 | `fake` |
+| `TOSS_PAYMENTS_SECRET_KEY` | Toss 테스트 시크릿 키 | 없음 |
+| `TOSS_PAYMENTS_BASE_URL` | Toss API 기준 URL | `https://api.tosspayments.com` |
+| `TOSS_PAYMENTS_TIMEOUT` | 승인·조회 제한시간 | `10s` |
+| `TOSS_PAYMENTS_ALLOW_LIVE_KEY` | 실키 사용 방어 해제 | `false` |
+| `VITE_TOSS_CLIENT_KEY` | 브라우저 결제위젯 테스트 클라이언트 키 | 없음 |
+
+시크릿 키가 없거나 HTTPS가 아닌 API 주소를 사용하면 Toss 어댑터를 시작하지 않는다. 기본 설정에서는 `test_` 접두 키만 허용하며, 키 값은 코드·Git·외부 전문 원장에 저장하지 않는다.
 
 ## 승인 전문 계약
 
@@ -30,13 +43,15 @@ ifc_financial_message 요청·응답 전문 원장
 
 동일 멱등 키는 `pay_attempt`에서 먼저 확인한다. 이미 생성된 시도가 있으면 외부기관에 전문을 다시 보내지 않고 기존 주문 상태를 반환한다.
 
+Toss 승인에서는 브라우저가 돌려준 `orderId`와 `amount`를 서버의 `PaymentOrder.orderNo` 및 금액과 먼저 비교한다. 일치할 때만 `POST /v1/payments/confirm`에 서버 주문번호·금액·결제 키를 전송한다. 승인 성공 URL은 결제 인증 결과일 뿐 계약 활성화 근거로 사용하지 않는다.
+
 ## 조회·대사 계약
 
 timeout 또는 통신 오류는 승인 실패로 단정하지 않고 `UNKNOWN`으로 남긴다. 기존 결제 대사 배치가 `PREMIUM_PAYMENT_INQUIRY` 요청·응답 전문을 남기며 외부 상태를 재조회한다. 따라서 승인 요청을 무작정 재시도해 이중 수납을 만들지 않는다.
 
 ## 회로 차단 규칙
 
-- `FAKE_GATEWAY_TIMEOUT` 또는 adapter 예외가 연속 3회면 30초 동안 새 승인 전문을 외부기관으로 보내지 않는다.
+- `UNKNOWN` 응답 또는 adapter 예외가 연속 3회면 30초 동안 새 승인 전문을 외부기관으로 보내지 않는다.
 - 차단 중 요청은 `PAYMENT_INTERFACE_CIRCUIT_OPEN`과 `CIRCUIT_OPEN` 전문 상태로 남기고 주문을 `UNKNOWN` 대사 흐름에 맡긴다.
 - 정상 승인 또는 명시적 거절 응답은 연속 timeout 수를 초기화한다.
 
@@ -44,8 +59,14 @@ timeout 또는 통신 오류는 승인 실패로 단정하지 않고 `UNKNOWN`�
 
 ## 원장 보존 경계
 
-`ifc_financial_message`는 전문 본문 JSON, SHA-256 해시, interface 이름, 방향, 상관관계 ID, 멱등 키, 업무 키, 상태, 오류 코드, 시각을 저장한다. 카드 번호, 계좌번호, 토큰, 실결제 키 같은 비밀 정보는 이 교육용 구현의 전문에 넣지 않는다.
+`ifc_financial_message`는 전문 본문 JSON, SHA-256 해시, interface 이름, 방향, 상관관계 ID, 멱등 키, 업무 키, 상태, 오류 코드, 시각을 저장한다. Toss 결제 키와 거래 ID는 전문 본문에 원문 대신 SHA-256 해시만 기록한다. 카드 번호, 계좌번호, 토큰, 시크릿 키 같은 비밀 정보는 저장하지 않는다.
 
 ## 범위
 
-이 문서는 실제 Toss Payments·기업은행 API 명세가 아니다. 실제 기관 연결 전에는 해당 기관의 최신 공식 API·인증 방식·webhook 검증 규칙을 별도 계약 문서와 adapter 테스트로 확인한다.
+현재 범위는 Toss Payments 테스트 일반결제를 이용한 초회 보험료 승인·조회다. 실결제, 자동결제 빌링키, 취소·환불, 운영 webhook 서명 검증은 포함하지 않는다.
+
+공식 근거:
+
+- [Toss Payments 결제 흐름](https://docs.tosspayments.com/guides/v2/get-started/payment-flow)
+- [Toss Payments API 키](https://docs.tosspayments.com/reference/using-api/api-keys)
+- [Toss Payments 결제 승인 API](https://docs.tosspayments.com/reference)

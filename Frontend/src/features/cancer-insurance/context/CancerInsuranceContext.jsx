@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = 'capsure:cancer-insurance-flow:v1';
 
@@ -53,9 +53,9 @@ export const CancerInsuranceProvider = ({ children }) => {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(flowIds));
     }, [flowIds]);
 
-    const updateFlowIds = (patch) => {
+    const updateFlowIds = useCallback((patch) => {
         setFlowIds((previous) => ({ ...previous, ...patch }));
-    };
+    }, []);
 
     const getRequestKey = (name) => {
         if (requestKeys[name]) {

@@ -10,6 +10,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +32,6 @@ import org.springframework.stereotype.Component;
 public class JournaledPremiumPaymentGateway
         implements PremiumPaymentGateway, PaymentInterfaceCircuitStatusProvider {
 
-    private static final String INTERFACE_NAME = "FAKE_PREMIUM_PAYMENT";
     private static final int CIRCUIT_FAILURE_THRESHOLD = 3;
     private static final Duration CIRCUIT_OPEN_DURATION = Duration.ofSeconds(30);
 
@@ -43,7 +47,7 @@ public class JournaledPremiumPaymentGateway
 
     @Autowired
     public JournaledPremiumPaymentGateway(
-            @Qualifier("fakePremiumPaymentGateway") PremiumPaymentGateway delegate,
+            @Qualifier("selectedPremiumPaymentGateway") PremiumPaymentGateway delegate,
             FinancialInterfaceJournalRepository journalRepository,
             ObjectMapper objectMapper
     ) {
@@ -55,6 +59,11 @@ public class JournaledPremiumPaymentGateway
                 CIRCUIT_FAILURE_THRESHOLD,
                 CIRCUIT_OPEN_DURATION
         );
+    }
+
+    @Override
+    public String providerCode() {
+        return delegate.providerCode();
     }
 
     public JournaledPremiumPaymentGateway(
@@ -85,7 +94,7 @@ public class JournaledPremiumPaymentGateway
                 command.orderNo(),
                 "REQUESTED",
                 null,
-                command,
+                sanitizedCommand(command),
                 requestedAt
         );
 
@@ -100,7 +109,7 @@ public class JournaledPremiumPaymentGateway
                 command.orderNo(),
                 responseStatus(result),
                 result.errorCode(),
-                result,
+                sanitizedResult(result),
                 Instant.now(clock)
         );
         return result;
@@ -118,7 +127,7 @@ public class JournaledPremiumPaymentGateway
                 providerPaymentKey,
                 "REQUESTED",
                 null,
-                Map.of("providerPaymentKey", providerPaymentKey),
+                Map.of("providerPaymentKeyHash", hash(providerPaymentKey)),
                 requestedAt
         );
         GatewayPaymentResult result;
@@ -135,7 +144,7 @@ public class JournaledPremiumPaymentGateway
                 providerPaymentKey,
                 responseStatus(result),
                 result.errorCode(),
-                result,
+                sanitizedResult(result),
                 Instant.now(clock)
         );
         return result;
@@ -144,7 +153,7 @@ public class JournaledPremiumPaymentGateway
     private synchronized GatewayPaymentResult invokeConfirmation(ConfirmCommand command) {
         try {
             GatewayPaymentResult result = delegate.confirm(command);
-            if ("FAKE_GATEWAY_TIMEOUT".equals(result.errorCode())) {
+            if ("UNKNOWN".equals(result.status())) {
                 consecutiveTimeouts++;
                 if (consecutiveTimeouts >= circuitFailureThreshold) {
                     circuitOpenedUntil = Instant.now(clock).plus(circuitOpenDuration);
@@ -180,7 +189,7 @@ public class JournaledPremiumPaymentGateway
         Instant now = Instant.now(clock);
         boolean open = isCircuitOpen(now);
         return new CircuitStatus(
-                INTERFACE_NAME,
+                interfaceName(),
                 open,
                 consecutiveTimeouts,
                 circuitFailureThreshold,
@@ -212,7 +221,7 @@ public class JournaledPremiumPaymentGateway
             Instant occurredAt
     ) {
         journalRepository.append(new FinancialInterfaceMessage(
-                INTERFACE_NAME,
+                interfaceName(),
                 messageType,
                 direction,
                 correlationId,
@@ -223,6 +232,43 @@ public class JournaledPremiumPaymentGateway
                 toJson(payload),
                 occurredAt
         ));
+    }
+
+    private String interfaceName() {
+        return providerCode() + "_PREMIUM_PAYMENT";
+    }
+
+    private Map<String, Object> sanitizedCommand(ConfirmCommand command) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("orderNo", command.orderNo());
+        payload.put("providerPaymentKeyHash", hash(command.providerPaymentKey()));
+        payload.put("amount", command.amount());
+        payload.put("currencyCode", command.currencyCode());
+        payload.put("idempotencyKey", command.idempotencyKey());
+        return payload;
+    }
+
+    private Map<String, Object> sanitizedResult(GatewayPaymentResult result) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("status", result.status());
+        payload.put("providerPaymentKeyHash", hash(result.providerPaymentKey()));
+        payload.put("providerTransactionIdHash", hash(result.providerTransactionId()));
+        payload.put("errorCode", result.errorCode());
+        payload.put("message", result.message());
+        return payload;
+    }
+
+    private String hash(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256을 사용할 수 없습니다.", exception);
+        }
     }
 
     private String toJson(Object value) {

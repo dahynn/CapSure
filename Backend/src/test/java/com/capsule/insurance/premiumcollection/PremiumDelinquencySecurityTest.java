@@ -10,7 +10,9 @@ import com.capsule.insurance.auth.domain.TokenBlacklistRepository;
 import com.capsule.insurance.common.security.SecurityConfig;
 import com.capsule.insurance.common.security.jwt.JwtAuthenticationFilter;
 import com.capsule.insurance.common.security.jwt.JwtTokenProvider;
+import com.capsule.insurance.premiumcollection.api.PremiumBillingController;
 import com.capsule.insurance.premiumcollection.api.PremiumDelinquencyController;
+import com.capsule.insurance.premiumcollection.application.PremiumBillingService;
 import com.capsule.insurance.premiumcollection.application.PremiumDelinquencyService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -21,12 +23,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(PremiumDelinquencyController.class)
+@WebMvcTest({PremiumDelinquencyController.class, PremiumBillingController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class PremiumDelinquencySecurityTest {
     static final String URL = "/api/v1/ops/premium-collections/delinquency/runs";
+    static final String BILLING_URL = "/api/v1/ops/premium-collections/billing/runs";
     @Autowired MockMvc mvc;
     @MockitoBean PremiumDelinquencyService service;
+    @MockitoBean PremiumBillingService billingService;
     @MockitoBean JwtTokenProvider tokens;
     @MockitoBean TokenBlacklistRepository blacklist;
 
@@ -39,7 +43,27 @@ class PremiumDelinquencySecurityTest {
                 .andExpect(status().isForbidden());
         mvc.perform(post(URL + "/1/resume").with(user("1").roles("USER")).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
+        mvc.perform(get(BILLING_URL)).andExpect(status().isForbidden());
+        mvc.perform(post(BILLING_URL).with(user("1").roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
         verifyNoInteractions(service);
+        verifyNoInteractions(billingService);
+    }
+
+    @Test void adminCanRunAndResumeRecurringBillingWithAuditedActor() throws Exception {
+        when(billingService.recent()).thenReturn(List.of());
+        mvc.perform(get(BILLING_URL).with(user("42").roles("ADMIN"))).andExpect(status().isOk());
+        mvc.perform(post(BILLING_URL).with(user("42").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"instanceKey\":\"billing-2026-09\",\"billingCycle\":\"2026-09-01\",\"reason\":\"월 청구\"}"))
+                .andExpect(status().isOk());
+        verify(billingService).run("billing-2026-09", java.time.LocalDate.parse("2026-09-01"), 42L, "월 청구");
+        mvc.perform(post(BILLING_URL + "/1/resume").with(user("42").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"재개\"}"))
+                .andExpect(status().isOk());
+        verify(billingService).resume(1L, 42L, "재개");
     }
 
     @Test void adminCanReadRunAndResumeWithAuditedActor() throws Exception {
@@ -61,6 +85,11 @@ class PremiumDelinquencySecurityTest {
         mvc.perform(post(URL + "/1/resume").with(user("42").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"reason\":\" \"}"))
                 .andExpect(status().isBadRequest());
+        mvc.perform(post(BILLING_URL).with(user("42").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"instanceKey\":\"billing\",\"reason\":\"월 청구\"}"))
+                .andExpect(status().isBadRequest());
         verifyNoInteractions(service);
+        verifyNoInteractions(billingService);
     }
 }
