@@ -18,6 +18,7 @@ import com.capsule.insurance.auth.domain.TokenBlacklistRepository;
 import com.capsule.insurance.common.security.jwt.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -46,6 +47,7 @@ public class AuthService {
         this.tokenBlacklistRepository = tokenBlacklistRepository;
     }
 
+    @Transactional
     public void logout(String userId, String accessToken) {
         // 1. Refresh Token 무효화 (저장소에서 삭제)
         refreshTokenRepository.deleteByUserId(userId);
@@ -59,6 +61,7 @@ public class AuthService {
         }
     }
 
+    @Transactional
     public void withdraw(String userId, String accessToken) {
         UserAccount user = userAccountMapper.findByUserId(Long.valueOf(userId));
         if (user == null) {
@@ -123,12 +126,6 @@ public class AuthService {
         }
 
         String userId = jwtTokenProvider.getUserIdFromToken(providedToken);
-        String storedToken = refreshTokenRepository.findByUserId(userId);
-        
-        if (storedToken == null || !providedToken.equals(storedToken)) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED, "토큰 정보가 일치하지 않습니다. 다시 로그인해주세요.");
-        }
-
         UserAccount user = userAccountMapper.findByUserId(Long.valueOf(userId));
         if (user == null || user.getUserStatus() == com.capsule.insurance.auth.domain.UserStatus.WITHDRAWN || user.getUserStatus() == com.capsule.insurance.auth.domain.UserStatus.LOCKED) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "접근이 제한된 계정입니다.");
@@ -138,16 +135,22 @@ public class AuthService {
         String newAccessToken = jwtTokenProvider.createAccessToken(userId, user.getEmail(), role);
         String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
 
-        refreshTokenRepository.save(userId, newRefreshToken);
+        if (!refreshTokenRepository.replaceIfMatches(userId, providedToken, newRefreshToken)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "이미 갱신되었거나 만료된 토큰입니다. 다시 로그인해주세요.");
+        }
 
         return new AuthResult(newAccessToken, newRefreshToken, "Bearer", userId, role);
     }
 
+    @Transactional
     public void signup(SignupRequest request) {
         
         // 1. 비밀번호 일치 확인
         if (!request.password().equals(request.passwordConfirm())) {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
+        }
+        if (request.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "비밀번호는 UTF-8 기준 72바이트 이내로 입력해주세요.");
         }
         
         // 2. 이메일 중복 체크
@@ -155,10 +158,11 @@ public class AuthService {
             throw new BusinessException(ErrorCode.DUPLICATED_EMAIL);
         }
         
-        // 3. 이메일 인증 확인 - TODO: 프론트 이메일 인증 UI 연동 후 주석 해제
-        // if (!emailService.isEmailVerified(request.email())) {
-        //     throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
-        // }
+        // Consume verification in the same transaction as account creation.
+        if (!emailService.consumeVerified(request.email())) {
+            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+        // SMS 발송 및 휴대폰 본인인증은 사용자 요청으로 이번 범위에서 제외한다.
         // if (!smsService.isPhoneVerified(request.phone())) {
         //    throw new BusinessException(ErrorCode.UNAUTHORIZED, "휴대폰 인증이 완료되지 않았습니다.");
         // }
@@ -177,9 +181,7 @@ public class AuthService {
                 
         userAccountMapper.insert(userAccount);
         
-        // 5. 사용된 이메일 및 휴대폰 인증 상태 제거
-        emailService.completeSignup(request.email());
-        smsService.completeSignup(request.phone());
+        // Email verification was consumed above. Phone ownership is not asserted.
         
     }
 

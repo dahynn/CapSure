@@ -37,4 +37,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_SERVER_ERROR.getDefaultMessage()));
     }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMalformedRequest(Exception exception) {
+        return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.INVALID_INPUT, "요청 형식이나 날짜가 올바르지 않습니다."));
+    }
+
+    @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDuplicateKey(Exception exception) {
+        return ResponseEntity.status(ErrorCode.DUPLICATED_RESOURCE.getStatus())
+                .body(ApiResponse.error(ErrorCode.DUPLICATED_RESOURCE, "이미 등록되었거나 처리된 요청입니다."));
+    }
 }
