@@ -118,7 +118,7 @@ public class AuthService {
     public AuthResult refresh(TokenRefreshRequest request) {
         String providedToken = request.refreshToken();
 
-        if (!jwtTokenProvider.validateToken(providedToken)) {
+        if (!jwtTokenProvider.validateRefreshToken(providedToken)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "유효하지 않거나 만료된 Refresh Token입니다.");
         }
 

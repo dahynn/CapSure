@@ -28,6 +28,11 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, exception) -> {
+                    response.setStatus(401);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"success\":false,\"errorCode\":\"UNAUTHORIZED\",\"message\":\"로그인이 필요합니다.\"}");
+                }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/ops/**").hasRole("ADMIN")
                         .requestMatchers(
@@ -35,7 +40,6 @@ public class SecurityConfig {
                                 "/insurers/**",
                                 "/api/v1/cancer-products/**",
                                 "/api/v1/terms/**",
-                                "/mydata/**",
                                 "/mock/**",
                                 "/actuator/health",
                                 "/actuator/info",

@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,14 +24,19 @@ public class JwtTokenProvider {
     private final long accessTokenValidTime = 1000L * 60 * 60; // 1시간
     private final long refreshTokenValidTime = 1000L * 60 * 60 * 24 * 7; // 7일
 
-    public JwtTokenProvider(@Value("${jwt.secret:defaultSecretKeyForLocalTestOnlyPlzChangeInProdEnvironment!!xyz123}") String secret) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    public JwtTokenProvider(@Value("${jwt.secret:${JWT_SECRET:}}") String secret) {
+        // Local sessions use a process-local random key when no deployment secret is supplied.
+        this.secretKey = StringUtils.hasText(secret)
+                ? Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8))
+                : Jwts.SIG.HS512.key().build();
     }
 
     public String createAccessToken(String userId, String email, String role) {
         Date now = new Date();
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId)
+                .claim("tokenType", "ACCESS")
                 .claim("email", email)
                 .claim("role", role)
                 .issuedAt(now)
@@ -42,7 +48,9 @@ public class JwtTokenProvider {
     public String createRefreshToken(String userId) {
         Date now = new Date();
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId)
+                .claim("tokenType", "REFRESH")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + refreshTokenValidTime))
                 .signWith(secretKey)
@@ -68,10 +76,39 @@ public class JwtTokenProvider {
 
     public Authentication getAuthentication(String token) {
         Claims claims = Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
+        if (!isAccessClaims(claims)) {
+            throw new IllegalArgumentException("API 인증에는 Access Token이 필요합니다.");
+        }
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);
-        User principal = new User(userId, "", List.of(new SimpleGrantedAuthority(role != null ? role : "ROLE_USER")));
+        User principal = new User(userId, "", List.of(new SimpleGrantedAuthority(role)));
         return new UsernamePasswordAuthenticationToken(principal, token, principal.getAuthorities());
+    }
+
+    public boolean validateAccessToken(String token) {
+        try {
+            return isAccessClaims(Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload());
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
+    public boolean validateRefreshToken(String token) {
+        try {
+            Claims claims = Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
+            String type = claims.get("tokenType", String.class);
+            return (type == null || "REFRESH".equals(type))
+                    && claims.get("role") == null && StringUtils.hasText(claims.getSubject());
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
+    private boolean isAccessClaims(Claims claims) {
+        String type = claims.get("tokenType", String.class);
+        return (type == null || "ACCESS".equals(type))
+                && StringUtils.hasText(claims.get("role", String.class))
+                && StringUtils.hasText(claims.getSubject());
     }
 
     public String getUserIdFromToken(String token) {
