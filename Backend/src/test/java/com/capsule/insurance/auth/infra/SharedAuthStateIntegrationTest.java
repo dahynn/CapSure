@@ -3,6 +3,9 @@ package com.capsule.insurance.auth.infra;
 import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.time.Duration;
+import com.capsule.insurance.payment.application.PaymentCircuitBreaker;
+import com.capsule.insurance.payment.infra.JdbcPaymentCircuitStateStore;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -44,7 +47,7 @@ class SharedAuthStateIntegrationTest {
     @BeforeEach
     void reset() {
         jdbc.execute("TRUNCATE usr_user RESTART IDENTITY CASCADE");
-        jdbc.execute("TRUNCATE auth_revoked_token, auth_email_verification");
+        jdbc.execute("TRUNCATE auth_revoked_token, auth_email_verification, ifc_payment_circuit_state");
         jdbc.update("""
                 INSERT INTO usr_user(user_id,email,name,phone) VALUES
                 (1,'one@example.test','사용자1','01000000001'), (2,'two@example.test','사용자2','01000000002')
@@ -162,5 +165,56 @@ class SharedAuthStateIntegrationTest {
         assertThat(repository.summary(2L).unreadAudits()).isEqualTo(1);
         jdbc.update("INSERT INTO audit_event_log(event_type,actor_user_id,target_type,target_id) VALUES ('SUBSCRIPTION_CHANGED',1,'SUBSCRIPTION',1)");
         assertThat(repository.summary(1L).unreadAudits()).isEqualTo(1);
+    }
+
+    private PaymentCircuitBreaker circuit() {
+        return new PaymentCircuitBreaker(new JdbcPaymentCircuitStateStore(jdbc,
+                new DataSourceTransactionManager(jdbc.getDataSource())), 3, Duration.ofSeconds(30), Duration.ofMinutes(2));
+    }
+
+    @Test
+    void circuitStateSurvivesInstancesAndIgnoresLateSuccesses() {
+        var first = circuit(); var second = circuit();
+        assertThat(first.status("TOSS_PREMIUM_PAYMENT").open()).isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ifc_payment_circuit_state", Integer.class)).isZero();
+        var late = first.acquire("TOSS_PREMIUM_PAYMENT");
+        for (int i = 0; i < 3; i++) second.complete(second.acquire("TOSS_PREMIUM_PAYMENT"), true);
+        first.complete(late, false);
+        assertThat(circuit().status("TOSS_PREMIUM_PAYMENT").open()).isTrue();
+        assertThat(circuit().acquire("TOSS_PREMIUM_PAYMENT")).isNull();
+        assertThat(circuit().acquire("FAKE_PREMIUM_PAYMENT")).isNotNull();
+    }
+
+    @Test
+    void onlyOneReplicaCanProbeAfterCooldown() throws Exception {
+        var first = circuit(); var second = circuit();
+        for (int i = 0; i < 3; i++) first.complete(first.acquire("TOSS_PREMIUM_PAYMENT"), true);
+        jdbc.update("UPDATE ifc_payment_circuit_state SET open_until = now() - interval '1 second'");
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var a = executor.submit(() -> { start.await(); return first.acquire("TOSS_PREMIUM_PAYMENT"); });
+            var b = executor.submit(() -> { start.await(); return second.acquire("TOSS_PREMIUM_PAYMENT"); });
+            start.countDown();
+            var pa = a.get(); var pb = b.get();
+            assertThat(java.util.stream.Stream.of(pa, pb).filter(java.util.Objects::nonNull).count()).isEqualTo(1);
+            assertThat(first.status("TOSS_PREMIUM_PAYMENT").open()).isTrue();
+            second.complete(pa == null ? pb : pa, false);
+            assertThat(first.status("TOSS_PREMIUM_PAYMENT").open()).isFalse();
+            assertThat(first.status("TOSS_PREMIUM_PAYMENT").consecutiveTimeouts()).isZero();
+        }
+    }
+
+    @Test
+    void crashedProbeExpiresAndItsLateOutcomeCannotResetNewProbe() {
+        var breaker = circuit();
+        for (int i = 0; i < 3; i++) breaker.complete(breaker.acquire("TOSS_PREMIUM_PAYMENT"), true);
+        jdbc.update("UPDATE ifc_payment_circuit_state SET open_until = now() - interval '1 second'");
+        var oldProbe = breaker.acquire("TOSS_PREMIUM_PAYMENT");
+        jdbc.update("UPDATE ifc_payment_circuit_state SET probe_until = now() - interval '1 second'");
+        var newProbe = circuit().acquire("TOSS_PREMIUM_PAYMENT");
+        breaker.complete(oldProbe, false);
+        assertThat(breaker.status("TOSS_PREMIUM_PAYMENT").open()).isTrue();
+        breaker.complete(newProbe, true);
+        assertThat(breaker.acquire("TOSS_PREMIUM_PAYMENT")).isNull();
     }
 }

@@ -3,6 +3,8 @@ package com.capsule.insurance.payment.adapter;
 import com.capsule.insurance.payment.application.port.FinancialInterfaceJournalRepository;
 import com.capsule.insurance.payment.application.port.PaymentInterfaceCircuitStatusProvider;
 import com.capsule.insurance.payment.application.port.PremiumPaymentGateway;
+import com.capsule.insurance.payment.application.port.PaymentCircuitStateStore;
+import com.capsule.insurance.payment.application.PaymentCircuitBreaker;
 import com.capsule.insurance.payment.domain.FinancialInterfaceMessage;
 import com.capsule.insurance.payment.domain.GatewayPaymentResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,17 +41,14 @@ public class JournaledPremiumPaymentGateway
     private final FinancialInterfaceJournalRepository journalRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
-    private final int circuitFailureThreshold;
-    private final Duration circuitOpenDuration;
-
-    private int consecutiveTimeouts;
-    private Instant circuitOpenedUntil;
+    private final PaymentCircuitBreaker circuit;
 
     @Autowired
     public JournaledPremiumPaymentGateway(
             @Qualifier("selectedPremiumPaymentGateway") PremiumPaymentGateway delegate,
             FinancialInterfaceJournalRepository journalRepository,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            PaymentCircuitStateStore circuitStore
     ) {
         this(
                 delegate,
@@ -57,7 +56,8 @@ public class JournaledPremiumPaymentGateway
                 objectMapper,
                 Clock.systemUTC(),
                 CIRCUIT_FAILURE_THRESHOLD,
-                CIRCUIT_OPEN_DURATION
+                CIRCUIT_OPEN_DURATION,
+                circuitStore
         );
     }
 
@@ -74,12 +74,20 @@ public class JournaledPremiumPaymentGateway
             int circuitFailureThreshold,
             Duration circuitOpenDuration
     ) {
+        this(delegate, journalRepository, objectMapper, clock, circuitFailureThreshold, circuitOpenDuration,
+                new InMemoryPaymentCircuitStateStore(clock));
+    }
+
+    public JournaledPremiumPaymentGateway(
+            PremiumPaymentGateway delegate, FinancialInterfaceJournalRepository journalRepository,
+            ObjectMapper objectMapper, Clock clock, int circuitFailureThreshold,
+            Duration circuitOpenDuration, PaymentCircuitStateStore circuitStore
+    ) {
         this.delegate = delegate;
         this.journalRepository = journalRepository;
         this.objectMapper = objectMapper;
         this.clock = clock;
-        this.circuitFailureThreshold = circuitFailureThreshold;
-        this.circuitOpenDuration = circuitOpenDuration;
+        this.circuit = new PaymentCircuitBreaker(circuitStore, circuitFailureThreshold, circuitOpenDuration, Duration.ofMinutes(2));
     }
 
     @Override
@@ -98,9 +106,10 @@ public class JournaledPremiumPaymentGateway
                 requestedAt
         );
 
-        GatewayPaymentResult result = isCircuitOpen(requestedAt)
+        var permit = circuit.acquire(interfaceName());
+        GatewayPaymentResult result = permit == null
                 ? GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_CIRCUIT_OPEN")
-                : invokeConfirmation(command);
+                : invokeConfirmation(command, permit);
         append(
                 "PREMIUM_PAYMENT_CONFIRM",
                 "INBOUND_RESPONSE",
@@ -151,51 +160,20 @@ public class JournaledPremiumPaymentGateway
         return result;
     }
 
-    private synchronized GatewayPaymentResult invokeConfirmation(ConfirmCommand command) {
+    private GatewayPaymentResult invokeConfirmation(ConfirmCommand command, PaymentCircuitBreaker.Permit permit) {
+        GatewayPaymentResult result;
         try {
-            GatewayPaymentResult result = delegate.confirm(command);
-            if ("UNKNOWN".equals(result.status())) {
-                consecutiveTimeouts++;
-                if (consecutiveTimeouts >= circuitFailureThreshold) {
-                    circuitOpenedUntil = Instant.now(clock).plus(circuitOpenDuration);
-                }
-            } else {
-                consecutiveTimeouts = 0;
-                circuitOpenedUntil = null;
-            }
-            return result;
+            result = delegate.confirm(command);
         } catch (RuntimeException exception) {
-            consecutiveTimeouts++;
-            if (consecutiveTimeouts >= circuitFailureThreshold) {
-                circuitOpenedUntil = Instant.now(clock).plus(circuitOpenDuration);
-            }
-            return GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_CONFIRM_ERROR");
+            result = GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_CONFIRM_ERROR");
         }
-    }
-
-    private synchronized boolean isCircuitOpen(Instant now) {
-        if (circuitOpenedUntil == null) {
-            return false;
-        }
-        if (now.isBefore(circuitOpenedUntil)) {
-            return true;
-        }
-        circuitOpenedUntil = null;
-        consecutiveTimeouts = 0;
-        return false;
+        circuit.complete(permit, "UNKNOWN".equals(result.status()));
+        return result;
     }
 
     @Override
-    public synchronized CircuitStatus currentStatus() {
-        Instant now = Instant.now(clock);
-        boolean open = isCircuitOpen(now);
-        return new CircuitStatus(
-                interfaceName(),
-                open,
-                consecutiveTimeouts,
-                circuitFailureThreshold,
-                open ? circuitOpenedUntil : null
-        );
+    public CircuitStatus currentStatus() {
+        return circuit.status(interfaceName());
     }
 
     private String responseStatus(GatewayPaymentResult result) {
