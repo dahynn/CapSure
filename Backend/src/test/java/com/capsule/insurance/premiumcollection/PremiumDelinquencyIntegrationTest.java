@@ -166,6 +166,25 @@ class PremiumDelinquencyIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT amount FROM pay_refund_case", BigDecimal.class)).isEqualByComparingTo("100");
     }
 
+    @Test void additionalOverpaymentsReserveOnlyTheUnrefundedDifference() throws Exception {
+        var r = due(policy(), "2020-01-01");
+        settle(r, "200", "first-overpayment");
+        int firstRun = tx.execute(s -> collections.createDuplicateDebitRefundCases());
+        assertThat(firstRun).isEqualTo(1);
+        jdbc.update("UPDATE pay_refund_case SET status = 'REFUNDED'");
+        settle(r, "50", "second-overpayment");
+        parallel(() -> tx.execute(s -> collections.createDuplicateDebitRefundCases()),
+                () -> tx.execute(s -> collections.createDuplicateDebitRefundCases()));
+        assertThat(count("pay_refund_case")).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM pay_refund_case", BigDecimal.class))
+                .isEqualByComparingTo("150");
+        assertThat(jdbc.queryForObject("SELECT amount FROM pay_refund_case WHERE status = 'AUTO_REFUND_ELIGIBLE'", BigDecimal.class))
+                .isEqualByComparingTo("50");
+        jdbc.update("UPDATE pay_refund_case SET status = 'FAILED' WHERE status = 'AUTO_REFUND_ELIGIBLE'");
+        int retryRun = tx.execute(s -> collections.createDuplicateDebitRefundCases());
+        assertThat(retryRun).isZero();
+    }
+
     @Test void twoWorkersAndRepeatedRunsDoNotDuplicate100NoticesOrTransitions() throws Exception {
         for (int i = 0; i < 100; i++) due(policy(), "2020-01-01");
         var results = parallel(() -> run("worker-a"), () -> run("worker-b"));

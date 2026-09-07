@@ -420,7 +420,7 @@ class PaymentReconciliationBatchServiceIntegrationTest {
         }
 
         @Override
-        public GatewayPaymentResult inquire(String providerPaymentKey) {
+        public GatewayPaymentResult inquire(InquiryCommand command) {
             if (coordinatedCalls.getAndIncrement() < 2) {
                 firstTwoInquiries.countDown();
                 try {
@@ -432,7 +432,7 @@ class PaymentReconciliationBatchServiceIntegrationTest {
                     throw new IllegalStateException("경쟁 작업자 동기화가 중단되었습니다.", exception);
                 }
             }
-            return delegate.inquire(providerPaymentKey);
+            return delegate.inquire(command);
         }
     }
 }

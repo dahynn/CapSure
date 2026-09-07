@@ -116,15 +116,16 @@ public class JournaledPremiumPaymentGateway
     }
 
     @Override
-    public GatewayPaymentResult inquire(String providerPaymentKey) {
-        String correlationId = "PAYMENT-INQUIRY:" + providerPaymentKey + ":" + UUID.randomUUID();
+    public GatewayPaymentResult inquire(InquiryCommand command) {
+        String providerPaymentKey = command.providerPaymentKey();
+        String correlationId = "PAYMENT-INQUIRY:" + command.orderNo() + ":" + UUID.randomUUID();
         Instant requestedAt = Instant.now(clock);
         append(
                 "PREMIUM_PAYMENT_INQUIRY",
                 "OUTBOUND_REQUEST",
                 correlationId,
                 null,
-                providerPaymentKey,
+                command.orderNo(),
                 "REQUESTED",
                 null,
                 Map.of("providerPaymentKeyHash", hash(providerPaymentKey)),
@@ -132,7 +133,7 @@ public class JournaledPremiumPaymentGateway
         );
         GatewayPaymentResult result;
         try {
-            result = delegate.inquire(providerPaymentKey);
+            result = delegate.inquire(command);
         } catch (RuntimeException exception) {
             result = GatewayPaymentResult.unknown(providerPaymentKey, "PAYMENT_INTERFACE_INQUIRY_ERROR");
         }
@@ -141,7 +142,7 @@ public class JournaledPremiumPaymentGateway
                 "INBOUND_RESPONSE",
                 correlationId,
                 null,
-                providerPaymentKey,
+                command.orderNo(),
                 responseStatus(result),
                 result.errorCode(),
                 sanitizedResult(result),

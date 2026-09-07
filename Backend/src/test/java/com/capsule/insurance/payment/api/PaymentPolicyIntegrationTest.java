@@ -200,8 +200,8 @@ class PaymentPolicyIntegrationTest {
             }
 
             @Override
-            public GatewayPaymentResult inquire(String providerPaymentKey) {
-                return GatewayPaymentResult.unknown(providerPaymentKey, "TEST_NOT_FOUND");
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                return GatewayPaymentResult.unknown(command.providerPaymentKey(), "TEST_NOT_FOUND");
             }
         };
         PaymentService tossPaymentService = new PaymentService(
@@ -271,6 +271,14 @@ class PaymentPolicyIntegrationTest {
             assertThat(attemptId).isEqualTo(firstAttemptId);
         }
 
+        assertThat(paymentGateway.confirmationInvocationCount()).isEqualTo(invocationsBefore + 1);
+        mockMvc.perform(post("/api/v1/payments/{paymentOrderId}/confirm", orderId)
+                        .principal(authentication(userId))
+                        .header("Idempotency-Key", "confirm-100-same-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmRequest("fake-paid-different-payload", "29900.00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("IDEMPOTENCY_CONFLICT"));
         assertThat(paymentGateway.confirmationInvocationCount()).isEqualTo(invocationsBefore + 1);
         assertThat(count("pay_attempt", "payment_order_id", orderId)).isEqualTo(1);
         assertThat(count("ins_policy_version", "policy_id", policyId)).isEqualTo(1);
@@ -378,9 +386,9 @@ class PaymentPolicyIntegrationTest {
             }
 
             @Override
-            public GatewayPaymentResult inquire(String providerPaymentKey) {
+            public GatewayPaymentResult inquire(InquiryCommand command) {
                 inquiryCalled.set(true);
-                return GatewayPaymentResult.failed(providerPaymentKey, "TEST_WRONG_PROVIDER");
+                return GatewayPaymentResult.failed(command.providerPaymentKey(), "TEST_WRONG_PROVIDER");
             }
         };
         PaymentService tossPaymentService = new PaymentService(

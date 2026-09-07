@@ -11,7 +11,15 @@ public interface PremiumPaymentGateway {
 
     GatewayPaymentResult confirm(ConfirmCommand command);
 
-    GatewayPaymentResult inquire(String providerPaymentKey);
+    GatewayPaymentResult inquire(InquiryCommand command);
+
+    record InquiryCommand(
+            String orderNo,
+            String providerPaymentKey,
+            BigDecimal amount,
+            String currencyCode
+    ) {
+    }
 
     record ConfirmCommand(
             String orderNo,

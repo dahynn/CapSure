@@ -82,17 +82,19 @@ public class TossPremiumPaymentGateway implements PremiumPaymentGateway {
                 .header("Idempotency-Key", command.idempotencyKey())
                 .POST(HttpRequest.BodyPublishers.ofString(toJson(payload)))
                 .build();
-        return exchange(request, command.providerPaymentKey());
+        return exchange(request, new InquiryCommand(
+                command.orderNo(), command.providerPaymentKey(), command.amount(), command.currencyCode()
+        ));
     }
 
     @Override
-    public GatewayPaymentResult inquire(String providerPaymentKey) {
-        String encodedKey = URLEncoder.encode(providerPaymentKey, StandardCharsets.UTF_8)
+    public GatewayPaymentResult inquire(InquiryCommand command) {
+        String encodedKey = URLEncoder.encode(command.providerPaymentKey(), StandardCharsets.UTF_8)
                 .replace("+", "%20");
         HttpRequest request = requestBuilder("/v1/payments/" + encodedKey)
                 .GET()
                 .build();
-        return exchange(request, providerPaymentKey);
+        return exchange(request, command);
     }
 
     private HttpRequest.Builder requestBuilder(String path) {
@@ -102,14 +104,19 @@ public class TossPremiumPaymentGateway implements PremiumPaymentGateway {
                 .header("Accept", "application/json");
     }
 
-    private GatewayPaymentResult exchange(HttpRequest request, String providerPaymentKey) {
+    private GatewayPaymentResult exchange(HttpRequest request, InquiryCommand expected) {
+        String providerPaymentKey = expected.providerPaymentKey();
         try {
             TossHttpResponse response = transport.send(request);
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                return mapPayment(providerPaymentKey, response.body());
+                return mapPayment(expected, response.body());
             }
             String errorCode = errorCode(response.body(), "TOSS_HTTP_" + response.statusCode());
-            if (response.statusCode() >= 500
+            // An unsuccessful lookup is not evidence that the payment failed.
+            if ("GET".equals(request.method())
+                    || response.statusCode() >= 500
+                    || response.statusCode() == 408
+                    || response.statusCode() == 429
                     || response.statusCode() == 401
                     || response.statusCode() == 403
                     || response.statusCode() == 409
@@ -128,9 +135,20 @@ public class TossPremiumPaymentGateway implements PremiumPaymentGateway {
         }
     }
 
-    private GatewayPaymentResult mapPayment(String providerPaymentKey, String body) {
+    private GatewayPaymentResult mapPayment(InquiryCommand expected, String body) {
+        String providerPaymentKey = expected.providerPaymentKey();
         try {
             JsonNode payment = objectMapper.readTree(body);
+            if (payment == null || !payment.isObject()) {
+                return GatewayPaymentResult.unknown(providerPaymentKey, "TOSS_INVALID_RESPONSE");
+            }
+            if (!providerPaymentKey.equals(payment.path("paymentKey").asText())
+                    || !expected.orderNo().equals(payment.path("orderId").asText())
+                    || !expected.currencyCode().equals(payment.path("currency").asText())
+                    || !payment.path("totalAmount").isNumber()
+                    || expected.amount().compareTo(payment.path("totalAmount").decimalValue()) != 0) {
+                return GatewayPaymentResult.unknown(providerPaymentKey, "TOSS_PAYMENT_MISMATCH");
+            }
             String status = payment.path("status").asText();
             String transactionId = payment.path("lastTransactionKey").asText(providerPaymentKey);
             return switch (status) {
