@@ -43,7 +43,7 @@ Toss 응답 계약은 [Toss Payments 공식 API 문서](https://docs.tosspayment
 
 ## 남은 개발·운영 범위
 
-다음은 코드에서 확인한 잔여 항목으로, 기능 구현 완료와 별도다.
+다음은 최초 리뷰 시점의 잔여 항목이다. 같은 날 후속 개발로 1~4의 코드 연결·공유 상태·로컬 리허설을 보완했다. SMS는 사용자 요청으로 제외했으며 최신 상태는 [후속 개발 결과](runtime-readiness-2026-09-07.md)를 따른다. 공개 운영 완료와는 별도다.
 
 1. **배포 구성 정합성**: 현재 `Frontend/nginx.conf`에는 동일 출처 API 프록시가 없고 과거 도메인·인증서 경로가 고정되어 있다. `Infra/main/docker-compose.yml`의 backend 포트 8000과 main 프로필 8080도 맞춰야 한다. 배포 대상·도메인 선택 후 환경별 설정과 이미지 리허설이 필요하다.
 2. **회원가입 인증**: `AuthService.signup`의 이메일·휴대폰 인증 강제가 주석 처리되어 있고 `SmsService.sendVerificationCode`는 메시지 구성만 수행한다. 실제 발송·요청 제한·인증 상태 일회 소비를 연결하기 전에는 운영 회원 인증으로 설명할 수 없다.
@@ -58,4 +58,4 @@ Toss 응답 계약은 [Toss Payments 공식 API 문서](https://docs.tosspayment
 - 작업 브랜치: `fix/capsure-code-review-hardening`.
 - 코드 커밋: `df0377a` 인증·마이데이터, `f7485ad` 결제·환급, `d4e27b9` 프론트 결제 복구.
 - 이번 결과는 로컬 커밋이다. push·PR 생성·배포는 하지 않았다. PR 작성은 사용자가 직접 한다는 기존 의사를 유지한다.
-- 다음 단계: 수정 diff 검토 후 원격 반영, 그다음 배포 설정·인증 발송 범위를 확정한다.
+- 다음 단계: 후속 개발 결과와 수정 diff 검토 후 사용자 승인에 따라 원격 반영한다. 공개 HTTPS·실제 SMTP·운영 알림·백업/복구 확인은 별도다.
