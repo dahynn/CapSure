@@ -23,6 +23,9 @@ public record SignupRequest(
         @jakarta.validation.constraints.Past
         java.time.LocalDate birthDate,
         @jakarta.validation.constraints.NotNull
-        com.capsule.insurance.auth.domain.Gender gender
+        com.capsule.insurance.auth.domain.Gender gender,
+        @NotBlank(message = "이메일 인증 증명이 필요합니다.")
+        @jakarta.validation.constraints.Size(max = 2048)
+        String emailVerificationToken
 ) {
 }

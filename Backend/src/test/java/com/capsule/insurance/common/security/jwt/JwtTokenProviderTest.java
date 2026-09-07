@@ -39,6 +39,16 @@ class JwtTokenProviderTest {
         assertThat(provider.createRefreshToken("42")).isNotEqualTo(provider.createRefreshToken("42"));
     }
 
+    @Test void emailProofIsBoundToRecipientAndCannotAuthenticateOrRefresh() {
+        String proof = provider.createEmailVerificationToken("owner@example.test");
+        assertThat(provider.validateEmailVerificationToken(proof, "owner@example.test")).isTrue();
+        assertThat(provider.validateEmailVerificationToken(proof, "attacker@example.test")).isFalse();
+        assertThat(provider.validateEmailVerificationToken("invalid", "owner@example.test")).isFalse();
+        assertThat(provider.validateEmailVerificationToken(provider.createAccessToken("1", "owner@example.test", "ROLE_USER"), "owner@example.test")).isFalse();
+        assertThat(provider.validateAccessToken(proof)).isFalse();
+        assertThat(provider.validateRefreshToken(proof)).isFalse();
+    }
+
     @Test void absentConfigurationDoesNotReuseAPublicSigningKey() {
         var firstProcess = new JwtTokenProvider("");
         var secondProcess = new JwtTokenProvider("");

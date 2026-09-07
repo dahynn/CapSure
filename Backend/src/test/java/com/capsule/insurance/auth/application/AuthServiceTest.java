@@ -54,10 +54,14 @@ class AuthServiceTest {
     @Test
     void signupRequiresOneTimeEmailVerificationButNotSms() {
         var request = new SignupRequest("signup@example.test", "Passw0rd!", "테스트", "Passw0rd!",
-                "01000000000", LocalDate.of(1990, 1, 1), Gender.M);
+                "01000000000", LocalDate.of(1990, 1, 1), Gender.M, "verification-proof");
         assertThatThrownBy(() -> authService.signup(request)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("이메일 인증");
         org.mockito.Mockito.verify(userAccountMapper, org.mockito.Mockito.never()).insert(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verifyNoInteractions(emailService);
+        given(jwtTokenProvider.validateEmailVerificationToken(request.emailVerificationToken(), request.email())).willReturn(true);
+        assertThatThrownBy(() -> authService.signup(request)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("이메일 인증");
         given(emailService.consumeVerified(request.email())).willReturn(true);
         authService.signup(request);
         verify(userAccountMapper).insert(org.mockito.ArgumentMatchers.any());

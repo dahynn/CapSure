@@ -32,6 +32,13 @@ class DashboardSecurityTest {
         verifyNoInteractions(service);
     }
 
+    @Test void missingRoutesReturnNotFoundInsteadOfServerFailure() throws Exception {
+        mvc.perform(get("/dashboard/route-that-does-not-exist").with(user("42")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+        verifyNoInteractions(service);
+    }
+
     @Test void summaryAndReadCursorUseAuthenticatedIdentity() throws Exception {
         when(service.getSummary(42L)).thenReturn(new DashboardSummary(3, 1, 2));
         when(service.markAuditsRead(42L)).thenReturn(new DashboardSummary(3, 1, 0));

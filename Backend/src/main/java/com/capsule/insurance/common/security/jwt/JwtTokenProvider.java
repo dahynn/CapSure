@@ -57,6 +57,24 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String createEmailVerificationToken(String email) {
+        Date now = new Date();
+        return Jwts.builder().id(UUID.randomUUID().toString()).subject(email)
+                .claim("tokenType", "EMAIL_VERIFICATION").issuedAt(now)
+                .expiration(new Date(now.getTime() + 30 * 60 * 1000L))
+                .signWith(secretKey).compact();
+    }
+
+    public boolean validateEmailVerificationToken(String token, String email) {
+        try {
+            Claims claims = Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
+            return "EMAIL_VERIFICATION".equals(claims.get("tokenType", String.class))
+                    && email.equals(claims.getSubject()) && claims.getExpiration() != null;
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
     public String resolveToken(HttpServletRequest request) {
         String authorization = request.getHeader("Authorization");
         if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {

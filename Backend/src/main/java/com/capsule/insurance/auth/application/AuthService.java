@@ -159,7 +159,8 @@ public class AuthService {
         }
         
         // Consume verification in the same transaction as account creation.
-        if (!emailService.consumeVerified(request.email())) {
+        if (!jwtTokenProvider.validateEmailVerificationToken(request.emailVerificationToken(), request.email())
+                || !emailService.consumeVerified(request.email())) {
             throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
         // SMS 발송 및 휴대폰 본인인증은 사용자 요청으로 이번 범위에서 제외한다.
