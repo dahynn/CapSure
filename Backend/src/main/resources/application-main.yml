@@ -3,7 +3,7 @@ spring:
     model:
       chat: openai
     openai:
-      api-key: "here"
+      api-key: ${OPENAI_API_KEY:disabled-local}
       base-url: ${OPENAI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com}
       chat:
         completions-path: /v1/chat/completions
@@ -41,7 +41,7 @@ insurer:
 
 mydata:
   mock:
-    base-url: http://localhost:8081
+    base-url: ${MYDATA_MOCK_BASE_URL:http://localhost:8081}
     client-id: capsule-main-client
     provider-code: CAPSULE-MOCK
     timeout: 5s

@@ -1,5 +1,5 @@
 # 1단계: Build (Gradle 환경)
-# 주의: Mac(ARM) -> AWS(x86) 배포 시 아래 FROM 줄을 FROM --platform=linux/amd64 eclipse-temurin:21-jdk-alpine AS build-stage 로 변경해야 한다.
+# Target architecture is selected with docker buildx --platform; do not edit FROM per host.
 FROM eclipse-temurin:21-jdk-alpine AS build-stage
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY build.gradle settings.gradle ./
 RUN chmod +x ./gradlew
 
 # 의존성 다운로드
-RUN ./gradlew dependencies --no-daemon || true
+RUN ./gradlew dependencies --no-daemon
 
 # 소스 코드 복사 및 빌드 수행 (bootJar)
 COPY src src
@@ -24,15 +24,16 @@ FROM eclipse-temurin:21-jre-alpine AS execute-stage
 WORKDIR /app
 
 # 타임존 설정을 위한 패키지 설치 (선택 사항이나 한국 시간대 기준 운영 시 권장)
-RUN apk add --no-cache tzdata && \
+RUN apk add --no-cache tzdata curl && \
     cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
     echo "Asia/Seoul" > /etc/timezone
 
 # 1단계에서 빌드된 jar 파일 복사
 COPY --from=build-stage /app/build/libs/*-SNAPSHOT.jar app.jar
 
-# 백엔드 API 포트 (예시: 8000)
-EXPOSE 8000
+# main profile uses 8080; the separately configured mock profile uses 8081.
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=60s CMD curl -fsS http://127.0.0.1:${SERVER_PORT:-8080}/actuator/health || exit 1
 
 # 애플리케이션 실행
 ENTRYPOINT ["java", "-jar", "app.jar"]

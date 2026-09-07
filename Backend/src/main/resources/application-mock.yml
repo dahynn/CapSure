@@ -3,7 +3,7 @@ spring:
     model:
       chat: openai
     openai:
-      api-key: "here"
+      api-key: ${OPENAI_API_KEY:disabled-local}
       base-url: ${OPENAI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com}
       chat:
         completions-path: /v1/chat/completions
