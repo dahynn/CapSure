@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createRequestKeyStore } from '@/common/utils/requestKeyStore.mjs';
 
 const STORAGE_KEY = 'capsure:cancer-insurance-flow:v1';
 
@@ -47,7 +48,10 @@ export const CancerInsuranceProvider = ({ children }) => {
     const [payment, setPayment] = useState(null);
     const [policy, setPolicy] = useState(null);
     const [claim, setClaim] = useState(null);
-    const [requestKeys, setRequestKeys] = useState({});
+    const requestKeys = useRef(null);
+    if (!requestKeys.current) {
+        requestKeys.current = createRequestKeyStore(sessionStorage, `${STORAGE_KEY}:request-keys`, createRequestKey);
+    }
 
     useEffect(() => {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(flowIds));
@@ -57,14 +61,7 @@ export const CancerInsuranceProvider = ({ children }) => {
         setFlowIds((previous) => ({ ...previous, ...patch }));
     }, []);
 
-    const getRequestKey = (name) => {
-        if (requestKeys[name]) {
-            return requestKeys[name];
-        }
-        const key = createRequestKey(name);
-        setRequestKeys((previous) => ({ ...previous, [name]: key }));
-        return key;
-    };
+    const getRequestKey = useCallback((name) => requestKeys.current.get(name), []);
 
     const resetFlow = () => {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -76,7 +73,7 @@ export const CancerInsuranceProvider = ({ children }) => {
         setPayment(null);
         setPolicy(null);
         setClaim(null);
-        setRequestKeys({});
+        requestKeys.current.clear();
     };
 
     const resetClaim = () => {
@@ -108,7 +105,7 @@ export const CancerInsuranceProvider = ({ children }) => {
         getRequestKey,
         resetClaim,
         resetFlow,
-    }), [flowIds, product, terms, quote, application, payment, policy, claim, requestKeys]);
+    }), [flowIds, product, terms, quote, application, payment, policy, claim, getRequestKey]);
 
     return (
         <CancerInsuranceContext.Provider value={value}>

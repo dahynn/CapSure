@@ -23,6 +23,7 @@ export default function CancerInsurancePaymentReturnPage({ result }) {
         let active = true;
 
         const confirm = async () => {
+            let approvalRequested = false;
             const paymentKey = params.get('paymentKey');
             const orderId = params.get('orderId');
             const amount = params.get('amount');
@@ -36,7 +37,8 @@ export default function CancerInsurancePaymentReturnPage({ result }) {
                 if (stored.orderNo !== orderId || Number(stored.amount) !== Number(amount)) {
                     throw new Error('결제 인증 결과가 서버 주문번호 또는 금액과 일치하지 않습니다.');
                 }
-                const confirmed = await confirmInitialPremiumPayment(
+                approvalRequested = stored.status === 'CREATED';
+                const confirmed = stored.status !== 'CREATED' ? stored : await confirmInitialPremiumPayment(
                     stored.paymentOrderId,
                     paymentKey,
                     orderId,
@@ -58,8 +60,10 @@ export default function CancerInsurancePaymentReturnPage({ result }) {
                 }
             } catch (error) {
                 if (!active) return;
-                setStatus('failed');
-                setMessage(error.message || '결제 승인 결과를 처리하지 못했습니다.');
+                setStatus(approvalRequested ? 'pending' : 'failed');
+                setMessage(approvalRequested
+                    ? '승인 요청 후 결과를 확인하지 못했습니다. 결제 화면에서 주문 상태를 다시 확인해주세요.'
+                    : error.message || '결제 승인 결과를 처리하지 못했습니다.');
             }
         };
 

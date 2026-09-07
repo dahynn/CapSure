@@ -188,7 +188,7 @@ const CancerInsuranceApplicationPage = () => {
             }
             const submitted = await submitCancerApplication(
                 draft.applicationId,
-                getRequestKey('application-submit'),
+                getRequestKey(`application-submit-${draft.applicationId}`),
             );
             setApplication(submitted);
         } catch (requestError) {

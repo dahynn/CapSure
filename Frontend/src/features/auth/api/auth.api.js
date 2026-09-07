@@ -75,6 +75,8 @@ export const authApi = {
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('refreshToken');
         sessionStorage.removeItem('authRole');
+        sessionStorage.removeItem('capsure:cancer-insurance-flow:v1');
+        sessionStorage.removeItem('capsure:cancer-insurance-flow:v1:request-keys');
         return { success: true };
     },
 
