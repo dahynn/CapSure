@@ -94,6 +94,7 @@ const SignupPage = () => {
     const [authCode, setAuthCode] = useState('');
     const [sentEmail, setSentEmail] = useState('');
     const [verifiedEmail, setVerifiedEmail] = useState('');
+    const [emailVerificationToken, setEmailVerificationToken] = useState('');
     const [verificationBusy, setVerificationBusy] = useState(false);
     const [verificationMessage, setVerificationMessage] = useState('');
     const emailVerified = Boolean(verifiedEmail && verifiedEmail === signupForm.email.trim());
@@ -101,7 +102,7 @@ const SignupPage = () => {
     const handleChange = (e) => {
         setSignupForm({ ...signupForm, [e.target.name]: e.target.value });
         if (e.target.name === 'email') {
-            setVerifiedEmail(''); setSentEmail(''); setAuthCode(''); setVerificationMessage('');
+            setVerifiedEmail(''); setEmailVerificationToken(''); setSentEmail(''); setAuthCode(''); setVerificationMessage('');
         }
     };
 
@@ -112,7 +113,7 @@ const SignupPage = () => {
         setVerificationBusy(true); setError(''); setVerificationMessage('');
         try {
             await authApi.sendEmailCode(email);
-            setSentEmail(email); setVerifiedEmail(''); setAuthCode('');
+            setSentEmail(email); setVerifiedEmail(''); setEmailVerificationToken(''); setAuthCode('');
             setVerificationMessage('인증 메일을 보냈습니다. 3분 이내에 입력해주세요. 재발송은 60초 후 가능합니다.');
         } catch (error) { setError(error.message || '인증 메일을 발송하지 못했습니다.'); }
         finally { setVerificationBusy(false); }
@@ -122,7 +123,9 @@ const SignupPage = () => {
         if (verificationBusy) return;
         setVerificationBusy(true); setError('');
         try {
-            await authApi.verifyEmailCode(sentEmail, authCode);
+            const verification = await authApi.verifyEmailCode(sentEmail, authCode);
+            if (!verification?.emailVerificationToken) throw new Error('인증 증명을 받지 못했습니다. 다시 인증해주세요.');
+            setEmailVerificationToken(verification.emailVerificationToken);
             setVerifiedEmail(sentEmail); setVerificationMessage('이메일 인증이 완료되었습니다. 30분 이내에 가입해주세요.');
         } catch (error) { setError(error.message || '인증번호를 확인해주세요.'); }
         finally { setVerificationBusy(false); }
@@ -155,6 +158,7 @@ const SignupPage = () => {
             await authApi.signup({
                 ...signupForm,
                 email: signupForm.email.trim(),
+                emailVerificationToken,
                 birthDate,
             });
             setView('signup-success');
