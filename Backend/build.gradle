@@ -55,11 +55,46 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform { excludeTags 'measurement', 'large-benchmark' }
+}
+
+tasks.register('reliabilityMeasurement', Test) {
+    description = 'Opt-in synthetic PostgreSQL reconciliation wall-clock experiment'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'measurement' }
+    maxParallelForks = 1
+    outputs.upToDateWhen { false }
+    systemProperty 'capsure.measurement.output', providers.gradleProperty('measurementOutput').getOrElse('build/reliability-measurement.json')
+    testLogging { showStandardStreams = true }
+}
+
+tasks.register('largeScaleDelinquencyBenchmark', Test) {
+    description = 'Opt-in synthetic PostgreSQL premium-delinquency benchmark (1,000/10,000 targets)'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'large-benchmark' }
+    maxParallelForks = 1
+    outputs.upToDateWhen { false }
+    systemProperty 'capsure.large-benchmark.output',
+            providers.gradleProperty('largeBenchmarkOutput').getOrElse('build/large-scale-delinquency-benchmark.json')
+    testLogging { showStandardStreams = true }
+}
+
+tasks.withType(Test).configureEach {
+    if (providers.gradleProperty('evidenceDir').isPresent()) {
+        reports.junitXml.outputLocation = file("${providers.gradleProperty('evidenceDir').get()}/${name}-xml")
+    }
 }
 
 tasks.named('bootJar') {
     enabled = true
+}
+
+tasks.named('processResources') {
+    exclude '**/.env*'
 }
 
 tasks.named('jar') {

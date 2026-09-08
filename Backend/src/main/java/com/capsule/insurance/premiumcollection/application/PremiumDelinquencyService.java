@@ -93,16 +93,25 @@ public class PremiumDelinquencyService {
     }
 
     private boolean processChunk(long id) {
+        // Do not lock the whole execution while a chunk is evaluated. Target rows are
+        // locked for this transaction, so concurrent callers of the same instance can
+        // claim disjoint policies while preserving the contract -> receivable lock order.
         var dates = jdbc.query("""
                 SELECT business_date FROM ops_premium_delinquency_run
-                WHERE run_id = ? AND status <> 'COMPLETED' FOR UPDATE SKIP LOCKED
+                WHERE run_id = ? AND status <> 'COMPLETED'
                 """, (rs, n) -> rs.getObject(1, LocalDate.class), id);
         if (dates.isEmpty()) return false;
         LocalDate date = dates.getFirst();
         List<Long> targets = jdbc.query("""
                 SELECT policy_id FROM ops_premium_delinquency_target
-                WHERE run_id = ? AND outcome IS NULL ORDER BY policy_id LIMIT 20
+                WHERE run_id = ? AND outcome IS NULL
+                ORDER BY policy_id LIMIT 20
+                FOR UPDATE SKIP LOCKED
                 """, (rs, n) -> rs.getLong(1), id);
+        if (targets.isEmpty()) {
+            completeIfNoTargetsRemain(id);
+            return false;
+        }
         for (long policy : targets) {
             String outcome = evaluate(policy, date, id);
             jdbc.update("""
@@ -110,14 +119,26 @@ public class PremiumDelinquencyService {
                     WHERE run_id = ? AND policy_id = ?
                     """, outcome, id, policy);
         }
-        boolean pending = Boolean.TRUE.equals(jdbc.queryForObject("""
+        boolean pending = hasUnprocessedTargets(id);
+        if (!pending) completeIfNoTargetsRemain(id);
+        return pending;
+    }
+
+    private boolean hasUnprocessedTargets(long id) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS(SELECT 1 FROM ops_premium_delinquency_target WHERE run_id = ? AND outcome IS NULL)
                 """, Boolean.class, id));
+    }
+
+    private void completeIfNoTargetsRemain(long id) {
         jdbc.update("""
-                UPDATE ops_premium_delinquency_run SET status = ?, error_reason = NULL,
-                finished_at = CASE WHEN ? THEN NULL ELSE NOW() END WHERE run_id = ?
-                """, pending ? "RUNNING" : "COMPLETED", pending, id);
-        return pending;
+                UPDATE ops_premium_delinquency_run SET status = 'COMPLETED', error_reason = NULL, finished_at = NOW()
+                WHERE run_id = ? AND status <> 'COMPLETED'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM ops_premium_delinquency_target
+                      WHERE run_id = ? AND outcome IS NULL
+                  )
+                """, id, id);
     }
 
     private String evaluate(long policyId, LocalDate date, long runId) {

@@ -55,6 +55,25 @@ class JournaledPremiumPaymentGatewayTest {
         assertThat(journal.messages.getFirst().payloadJson()).contains("providerPaymentKeyHash");
     }
 
+    @Test
+    void inquiryDoesNotExposePaymentKeysInAnyJournalField() throws Exception {
+        FakePremiumPaymentGateway delegate = new FakePremiumPaymentGateway();
+        String paymentKey = "private-test-payment-key";
+        delegate.settleAsPaid(paymentKey);
+        RecordingJournal journal = new RecordingJournal();
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        var gateway = new JournaledPremiumPaymentGateway(delegate, journal, mapper,
+                Clock.systemUTC(), 3, Duration.ofSeconds(30));
+
+        assertThat(gateway.inquire(new PremiumPaymentGateway.InquiryCommand(
+                "PAY-PRIVATE", paymentKey, BigDecimal.valueOf(29900), "KRW"
+        )).status()).isEqualTo("PAID");
+
+        assertThat(journal.messages).hasSize(2);
+        assertThat(mapper.writeValueAsString(journal.messages)).doesNotContain(paymentKey, "FAKE-TX-RECONCILED");
+        assertThat(journal.messages).extracting(FinancialInterfaceMessage::businessKey).containsOnly("PAY-PRIVATE");
+    }
+
     private PremiumPaymentGateway.ConfirmCommand command(String providerPaymentKey, int sequence) {
         return new PremiumPaymentGateway.ConfirmCommand(
                 "PAY-CIRCUIT-" + sequence,

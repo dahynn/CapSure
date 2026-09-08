@@ -35,15 +35,15 @@ class PremiumDelinquencySecurityTest {
     @MockitoBean TokenBlacklistRepository blacklist;
 
     @Test void anonymousAndCustomerCannotReadOrRunOrResume() throws Exception {
-        mvc.perform(get(URL)).andExpect(status().isForbidden());
+        mvc.perform(get(URL)).andExpect(status().isUnauthorized());
         mvc.perform(get(URL).with(user("1").roles("USER"))).andExpect(status().isForbidden());
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         mvc.perform(post(URL).with(user("1").roles("USER")).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
         mvc.perform(post(URL + "/1/resume").with(user("1").roles("USER")).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
-        mvc.perform(get(BILLING_URL)).andExpect(status().isForbidden());
+        mvc.perform(get(BILLING_URL)).andExpect(status().isUnauthorized());
         mvc.perform(post(BILLING_URL).with(user("1").roles("USER"))
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());

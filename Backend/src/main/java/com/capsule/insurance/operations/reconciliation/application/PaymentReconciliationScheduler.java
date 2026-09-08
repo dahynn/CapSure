@@ -43,7 +43,8 @@ public class PaymentReconciliationScheduler {
                 );
             }
         } catch (RuntimeException exception) {
-            log.error("Payment reconciliation cycle failed: instance={}", instanceKey, exception);
+            log.error("Payment reconciliation cycle failed: instance={}, error={}", instanceKey,
+                    com.capsule.insurance.common.exception.SafeFailure.describe(exception));
         }
     }
 }

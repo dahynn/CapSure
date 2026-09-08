@@ -17,6 +17,8 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class TossPremiumPaymentGatewayTest {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -29,7 +31,7 @@ class TossPremiumPaymentGatewayTest {
             captured.set(request);
             return new TossPremiumPaymentGateway.TossHttpResponse(
                     200,
-                    "{\"status\":\"DONE\",\"lastTransactionKey\":\"tx-1\"}"
+                    paymentJson("payment-key-1")
             );
         });
 
@@ -70,10 +72,10 @@ class TossPremiumPaymentGatewayTest {
         AtomicReference<HttpRequest> captured = new AtomicReference<>();
         TossPremiumPaymentGateway gateway = gateway(request -> {
             captured.set(request);
-            return new TossPremiumPaymentGateway.TossHttpResponse(200, "{\"status\":\"DONE\"}");
+            return new TossPremiumPaymentGateway.TossHttpResponse(200, paymentJson("pay key"));
         });
 
-        assertThat(gateway.inquire("pay key").status()).isEqualTo("PAID");
+        assertThat(gateway.inquire(inquiry("pay key")).status()).isEqualTo("PAID");
         assertThat(captured.get().uri().toString()).endsWith("/v1/payments/pay%20key");
         assertThat(captured.get().method()).isEqualTo("GET");
     }
@@ -89,6 +91,54 @@ class TossPremiumPaymentGatewayTest {
         assertThatThrownBy(() -> new TossPremiumPaymentGateway(
                 "http://api.tosspayments.com", SECRET_KEY, Duration.ofSeconds(10), false, OBJECT_MAPPER
         )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"paymentKey", "orderId", "totalAmount", "currency"})
+    void mismatchedPaymentIdentityNeverApprovesConfirmOrInquiry(String field) throws Exception {
+        var json = (com.fasterxml.jackson.databind.node.ObjectNode) OBJECT_MAPPER.readTree(paymentJson("payment-key-1"));
+        if (field.equals("totalAmount")) json.put(field, 1);
+        else json.put(field, "different-value");
+        TossPremiumPaymentGateway gateway = gateway(request ->
+                new TossPremiumPaymentGateway.TossHttpResponse(200, json.toString()));
+        assertThat(gateway.confirm(command("payment-key-1")).errorCode()).isEqualTo("TOSS_PAYMENT_MISMATCH");
+        assertThat(gateway.inquire(inquiry("payment-key-1")).errorCode()).isEqualTo("TOSS_PAYMENT_MISMATCH");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "{}", "{\"status\":\"DONE\"}", "not-json"})
+    void incompleteResponseCannotActivateAPolicy(String body) {
+        TossPremiumPaymentGateway gateway = gateway(request ->
+                new TossPremiumPaymentGateway.TossHttpResponse(200, body));
+        assertThat(gateway.confirm(command("payment-key-1")).status()).isEqualTo("UNKNOWN");
+        assertThat(gateway.inquire(inquiry("payment-key-1")).status()).isEqualTo("UNKNOWN");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {400, 401, 403, 404, 408, 409, 429, 503})
+    void inquiryHttpErrorsRemainReconcilable(int httpStatus) {
+        TossPremiumPaymentGateway gateway = gateway(request ->
+                new TossPremiumPaymentGateway.TossHttpResponse(httpStatus, "{\"code\":\"LOOKUP_ERROR\"}"));
+        assertThat(gateway.inquire(inquiry("payment-key-1")).status()).isEqualTo("UNKNOWN");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {408, 429})
+    void timeoutAndRateLimitAreNotFinalDeclines(int httpStatus) {
+        TossPremiumPaymentGateway gateway = gateway(request ->
+                new TossPremiumPaymentGateway.TossHttpResponse(httpStatus, "{}"));
+        assertThat(gateway.confirm(command("payment-key-1")).status()).isEqualTo("UNKNOWN");
+    }
+
+    private static String paymentJson(String paymentKey) {
+        return """
+                {"status":"DONE","paymentKey":"%s","orderId":"PAY-ORDER-1",
+                 "totalAmount":29900,"currency":"KRW","lastTransactionKey":"tx-1"}
+                """.formatted(paymentKey);
+    }
+
+    private PremiumPaymentGateway.InquiryCommand inquiry(String paymentKey) {
+        return new PremiumPaymentGateway.InquiryCommand("PAY-ORDER-1", paymentKey, new BigDecimal("29900"), "KRW");
     }
 
     private TossPremiumPaymentGateway gateway(TossPremiumPaymentGateway.TossHttpTransport transport) {

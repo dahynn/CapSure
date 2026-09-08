@@ -1,17 +1,20 @@
 services:
   # [Production] Frontend
   frontend:
-    image: ${DOCKER_USER}/capsure-frontend:latest
+    image: ${DOCKER_USER}/capsure-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: ../../Frontend
+      args:
+        VITE_TOSS_CLIENT_KEY: ${VITE_TOSS_CLIENT_KEY:-}
     container_name: capsure-frontend-prod
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/www/certbot:/var/www/certbot:ro
+      - "127.0.0.1:${FRONTEND_PORT:-58080}:80"
     restart: always
     environment:
       - NODE_ENV=production
+    depends_on:
+      backend:
+        condition: service_healthy
 
   # [Production] PostgreSQL
   postgres:
@@ -24,6 +27,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in Infra/main/.env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Only run on a fresh volume. Never manually run this legacy reset script on an existing DB.
+      - ../../Backend/src/main/resources/db/schema/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+      - ../../Backend/src/main/resources/db/schema/product_source.sql:/docker-entrypoint-initdb.d/20-product_source.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -33,23 +39,34 @@ services:
 
   # [Production] Backend
   backend:
-    image: ${DOCKER_USER}/capsure-backend:latest
+    image: ${DOCKER_USER}/capsure-backend:${IMAGE_TAG:-latest}
+    build:
+      context: ../../Backend
     container_name: capsure-backend-prod
-    ports:
-      - "58000:8000"
+    expose:
+      - "8080"
     restart: always
     environment:
-      - NODE_ENV=production
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB:-capsure}
-      - POSTGRES_USER=${POSTGRES_USER:-capsure}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_PROFILES_ACTIVE=main,production
+      - SERVER_PORT=8080
+      - DB_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-capsure}
+      - DB_USERNAME=${POSTGRES_USER:-capsure}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET:?set a shared JWT_SECRET of at least 32 bytes}
+      - MYDATA_MOCK_BASE_URL=${MYDATA_MOCK_BASE_URL:?set the reachable synthetic MyData service URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-disabled-local}
+      - PAYMENT_GATEWAY=${PAYMENT_GATEWAY:-fake}
+      - TOSS_PAYMENTS_SECRET_KEY=${TOSS_PAYMENTS_SECRET_KEY:-}
+      - SPRING_MAIL_HOST=${SPRING_MAIL_HOST:-}
+      - SPRING_MAIL_PORT=${SPRING_MAIL_PORT:-587}
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME:-}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
 
   promtail:
+    profiles: [monitoring]
     image: grafana/promtail:3.6.7
     container_name: main-promtail
     restart: always
@@ -66,6 +83,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   node-exporter:
+    profiles: [monitoring]
     image: prom/node-exporter:v1.10.2
     container_name: main-node-exporter
     restart: always
@@ -82,12 +100,13 @@ services:
       - "--path.rootfs=/rootfs"
 
   cadvisor:
+    profiles: [monitoring]
     image: ghcr.io/google/cadvisor:0.56.2
     container_name: main-cadvisor
     restart: always
     privileged: true
     ports:
-      - "${MAIN_CADVISOR_PORT:-58080}:8080"
+      - "127.0.0.1:${MAIN_CADVISOR_PORT:-58081}:8080"
     devices:
       - /dev/kmsg
     volumes:

@@ -75,6 +75,7 @@ const SignupPage = () => {
 
     const [signupForm, setSignupForm] = useState({
         email: '',
+        fullName: '',
         password: '',
         passwordConfirm: '',
         phone: '',
@@ -90,12 +91,51 @@ const SignupPage = () => {
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+    const [authCode, setAuthCode] = useState('');
+    const [sentEmail, setSentEmail] = useState('');
+    const [verifiedEmail, setVerifiedEmail] = useState('');
+    const [emailVerificationToken, setEmailVerificationToken] = useState('');
+    const [verificationBusy, setVerificationBusy] = useState(false);
+    const [verificationMessage, setVerificationMessage] = useState('');
+    const emailVerified = Boolean(verifiedEmail && verifiedEmail === signupForm.email.trim());
 
-    const handleChange = (e) => setSignupForm({ ...signupForm, [e.target.name]: e.target.value });
+    const handleChange = (e) => {
+        setSignupForm({ ...signupForm, [e.target.name]: e.target.value });
+        if (e.target.name === 'email') {
+            setVerifiedEmail(''); setEmailVerificationToken(''); setSentEmail(''); setAuthCode(''); setVerificationMessage('');
+        }
+    };
+
+    const sendCode = async () => {
+        if (verificationBusy) return;
+        const email = signupForm.email.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('올바른 이메일 주소를 입력해주세요.'); return; }
+        setVerificationBusy(true); setError(''); setVerificationMessage('');
+        try {
+            await authApi.sendEmailCode(email);
+            setSentEmail(email); setVerifiedEmail(''); setEmailVerificationToken(''); setAuthCode('');
+            setVerificationMessage('인증 메일을 보냈습니다. 3분 이내에 입력해주세요. 재발송은 60초 후 가능합니다.');
+        } catch (error) { setError(error.message || '인증 메일을 발송하지 못했습니다.'); }
+        finally { setVerificationBusy(false); }
+    };
+
+    const verifyCode = async () => {
+        if (verificationBusy) return;
+        setVerificationBusy(true); setError('');
+        try {
+            const verification = await authApi.verifyEmailCode(sentEmail, authCode);
+            if (!verification?.emailVerificationToken) throw new Error('인증 증명을 받지 못했습니다. 다시 인증해주세요.');
+            setEmailVerificationToken(verification.emailVerificationToken);
+            setVerifiedEmail(sentEmail); setVerificationMessage('이메일 인증이 완료되었습니다. 30분 이내에 가입해주세요.');
+        } catch (error) { setError(error.message || '인증번호를 확인해주세요.'); }
+        finally { setVerificationBusy(false); }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        if (loading || verificationBusy) return;
+        if (!emailVerified) { setError('이메일 인증을 완료해주세요.'); return; }
         
         if (!agreed) {
             setError('서비스 약관 및 개인정보 처리방침에 동의해주세요.');
@@ -117,15 +157,17 @@ const SignupPage = () => {
             
             await authApi.signup({
                 ...signupForm,
+                email: signupForm.email.trim(),
+                emailVerificationToken,
                 birthDate,
-                fullName: '사용자', // 와이어프레임에 이름 필드가 없어서 기본값 처리
             });
             setView('signup-success');
             setTimeout(() => {
                 navigate('/login', { replace: true, state: location.state });
             }, 1500);
         } catch (err) {
-            setError('회원가입에 실패했습니다.');
+            if (err.payload?.errorCode === 'EMAIL_NOT_VERIFIED') setVerifiedEmail('');
+            setError(err.message || '회원가입에 실패했습니다.');
         } finally {
             setLoading(false);
         }
@@ -134,7 +176,9 @@ const SignupPage = () => {
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
-    const days = Array.from({ length: 31 }, (_, i) => i + 1);
+    const daysInMonth = new Date(Number(birthYear) || currentYear, Number(birthMonth) || 1, 0).getDate();
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    React.useEffect(() => { if (Number(birthDay) > daysInMonth) setBirthDay(''); }, [daysInMonth, birthDay]);
 
     if (view === 'signup-success') {
         return (
@@ -180,12 +224,34 @@ const SignupPage = () => {
                         <label className="block text-sm font-medium text-white mb-2">이메일 주소</label>
                         <input
                             type="email" name="email"
+                            disabled={verificationBusy || loading}
                             value={signupForm.email} onChange={handleChange} required
                             placeholder="name@example.com"
                             className="w-full px-4 py-4 rounded-2xl text-slate-900 placeholder-slate-400 text-sm outline-none bg-white transition-all"
                             onFocus={e => e.target.style.boxShadow = '0 0 0 2px var(--color-brand-blue)'}
                             onBlur={e => e.target.style.boxShadow = 'none'}
                         />
+                        <button type="button" onClick={sendCode} disabled={verificationBusy || loading || emailVerified}
+                            className="mt-2 w-full rounded-xl border border-sky-400/50 px-4 py-3 text-sm text-sky-200 disabled:opacity-50">
+                            {emailVerified ? '이메일 인증 완료' : verificationBusy ? '처리 중' : sentEmail ? '인증 메일 재발송' : '인증 메일 보내기'}
+                        </button>
+                        {sentEmail && !emailVerified && (
+                            <div className="mt-2 flex gap-2">
+                                <input aria-label="이메일 인증번호" inputMode="numeric" autoComplete="one-time-code"
+                                    value={authCode} onChange={(e) => setAuthCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    placeholder="인증번호 6자리" maxLength={6} disabled={verificationBusy || loading}
+                                    className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 text-sm text-slate-900" />
+                                <button type="button" onClick={verifyCode} disabled={verificationBusy || loading || authCode.length !== 6}
+                                    className="rounded-xl bg-sky-700 px-4 text-sm text-white disabled:opacity-50">확인</button>
+                            </div>
+                        )}
+                        {verificationMessage && <p role="status" className="mt-2 text-xs leading-5 text-sky-200">{verificationMessage}</p>}
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-white" htmlFor="signup-name">이름</label>
+                        <input id="signup-name" name="fullName" value={signupForm.fullName} onChange={handleChange} required maxLength={100}
+                            autoComplete="name" placeholder="이름" className="w-full rounded-2xl bg-white px-4 py-4 text-sm text-slate-900" />
                     </div>
 
                     {/* 비밀번호 */}
@@ -194,6 +260,7 @@ const SignupPage = () => {
                         <div className="relative">
                             <input
                                 type={showPassword ? 'text' : 'password'} name="password"
+                                minLength={8} maxLength={72} autoComplete="new-password"
                                 value={signupForm.password} onChange={handleChange} required
                                 placeholder="••••••••"
                                 className="w-full px-4 py-4 pr-12 rounded-2xl text-slate-900 placeholder-slate-400 text-sm outline-none bg-white transition-all"
@@ -248,6 +315,7 @@ const SignupPage = () => {
                     </div>
 
                     {/* 성별 (토글) */}
+                    <p className="text-xs leading-5 text-slate-400">현재 문자 인증은 제공하지 않습니다. 입력한 전화번호는 본인인증 완료로 처리되지 않습니다.</p>
                     <div>
                         <label className="block text-sm font-medium text-white mb-2">성별</label>
                         <div className="flex gap-3">
@@ -316,7 +384,7 @@ const SignupPage = () => {
                     <div className="pt-8 mt-auto pb-4">
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || verificationBusy}
                             className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 disabled:opacity-60 mb-6 text-slate-900"
                             style={{ backgroundColor: 'var(--color-brand-purple)' }}
                         >

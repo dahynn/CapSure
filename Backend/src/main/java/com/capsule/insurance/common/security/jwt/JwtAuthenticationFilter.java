@@ -33,7 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String token = jwtTokenProvider.resolveToken(request);
 
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
+        if (StringUtils.hasText(token) && jwtTokenProvider.validateAccessToken(token)) {
             if (!tokenBlacklistRepository.isBlacklisted(token)) {
                 SecurityContextHolder.getContext().setAuthentication(jwtTokenProvider.getAuthentication(token));
             } else {

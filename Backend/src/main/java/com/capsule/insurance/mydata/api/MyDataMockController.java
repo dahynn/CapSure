@@ -17,8 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/mock/v2/insu")
 public class MyDataMockController {
 
-    private static final long DEFAULT_USER_ID = 1L;
-
     private final MyDataService myDataService;
 
     public MyDataMockController(MyDataService myDataService) {
@@ -26,27 +24,31 @@ public class MyDataMockController {
     }
 
     @GetMapping("/insurance")
-    public MyDataInsuranceListResponse getInsuranceList() {
-        return myDataService.getInsuranceList(DEFAULT_USER_ID);
+    public MyDataInsuranceListResponse getInsuranceList(@RequestParam(defaultValue = "1") Long userId) {
+        return myDataService.getInsuranceList(userId);
     }
 
     @GetMapping("/insurances/{insuNum}/property")
-    public MyDataContractResponse getInsuranceProperty(@PathVariable("insuNum") String insuNum) {
-        return myDataService.getInsuranceProperty(DEFAULT_USER_ID, insuNum);
+    public MyDataContractResponse getInsuranceProperty(@PathVariable("insuNum") String insuNum,
+            @RequestParam(defaultValue = "1") Long userId) {
+        return myDataService.getInsuranceProperty(userId, insuNum);
     }
 
     @GetMapping("/insurances/basic")
-    public MyDataContractResponse getInsuranceBasic(@RequestParam("insuNum") String insuNum) {
-        return myDataService.getInsuranceBasic(DEFAULT_USER_ID, insuNum);
+    public MyDataContractResponse getInsuranceBasic(@RequestParam("insuNum") String insuNum,
+            @RequestParam(defaultValue = "1") Long userId) {
+        return myDataService.getInsuranceBasic(userId, insuNum);
     }
 
     @GetMapping("/insurances/contracts")
-    public MyDataInsuranceContractsResponse getInsuranceContracts(@RequestParam("insuNum") String insuNum) {
-        return myDataService.getInsuranceContracts(DEFAULT_USER_ID, insuNum);
+    public MyDataInsuranceContractsResponse getInsuranceContracts(@RequestParam("insuNum") String insuNum,
+            @RequestParam(defaultValue = "1") Long userId) {
+        return myDataService.getInsuranceContracts(userId, insuNum);
     }
 
     @GetMapping("/insurances/coverages")
-    public MyDataInsuranceCoveragesResponse getInsuranceCoverages(@RequestParam("insuNum") String insuNum) {
-        return myDataService.getInsuranceCoverages(DEFAULT_USER_ID, insuNum);
+    public MyDataInsuranceCoveragesResponse getInsuranceCoverages(@RequestParam("insuNum") String insuNum,
+            @RequestParam(defaultValue = "1") Long userId) {
+        return myDataService.getInsuranceCoverages(userId, insuNum);
     }
 }

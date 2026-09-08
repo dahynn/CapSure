@@ -38,5 +38,43 @@ class RequestIdFilterTest {
         String ping() {
             return "ok";
         }
+
+        @GetMapping("/filter-test/{identifier}")
+        String path() { return "ok"; }
+    }
+
+    @Test
+    void rawQueryPathAndUntrustedRequestIdAreExcludedFromLogs() throws Exception {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(RequestIdFilter.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>() {
+            @Override protected void append(ch.qos.logback.classic.spi.ILoggingEvent event) {
+                event.prepareForDeferredProcessing();
+                super.append(event);
+            }
+        };
+        appender.start(); logger.addAppender(appender);
+        try {
+            var result = mockMvc.perform(get("/filter-test/synthetic-path-secret")
+                            .queryParam("paymentKey", "synthetic-payment-secret")
+                            .queryParam("email", "synthetic@example.test")
+                            .queryParam("access_token", "synthetic-access-secret")
+                            .header("X-Request-Id", "untrusted-secret\nforged-log")
+                            .header("X-Forwarded-For", "untrusted-forwarded-secret"))
+                    .andExpect(status().isOk()).andReturn();
+            String output = appender.list.stream().map(e -> e.getFormattedMessage())
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            assertThat(output).contains("/filter-test/{identifier}")
+                    .doesNotContain("synthetic-path-secret", "synthetic-payment-secret", "synthetic@example.test",
+                            "synthetic-access-secret", "untrusted-secret", "forged-log", "untrusted-forwarded-secret");
+            assertThat(result.getResponse().getHeader("X-Request-Id"))
+                    .matches("[0-9a-f-]{36}");
+            assertThat(appender.list).allSatisfy(event -> {
+                assertThat(event.getMDCPropertyMap().get("requestId"))
+                        .isEqualTo(result.getResponse().getHeader("X-Request-Id"));
+                assertThat(event.getMDCPropertyMap().get("sourceIp"))
+                        .isEqualTo("127.0.0.1");
+            });
+            assertThat(org.slf4j.MDC.getCopyOfContextMap()).isNullOrEmpty();
+        } finally { logger.detachAppender(appender); appender.stop(); }
     }
 }

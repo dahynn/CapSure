@@ -339,6 +339,25 @@ class ClaimAssessmentIntegrationTest {
                         .principal(authentication(otherUserId)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+        for (String action : List.of("submit", "payments")) {
+            mockMvc.perform(post("/api/v1/claims/{claimId}/" + action, claimId)
+                            .principal(authentication(otherUserId)).header("Idempotency-Key", "stranger-" + action))
+                    .andExpect(status().isNotFound());
+        }
+        mockMvc.perform(put("/api/v1/claims/{claimId}/evidence", claimId)
+                        .principal(authentication(otherUserId)).contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(Map.of(
+                                "evidenceType", "DEMO_PATHOLOGY_REPORT", "syntheticReference", "synthetic://not-owner",
+                                "checksum", PATHOLOGY_CHECKSUM, "metadata", Map.of("fixture", true), "verified", true))))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/policies/{id}/claims", policy.policyId())
+                        .principal(authentication(otherUserId)).contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(Map.of(
+                                "policyCoverageId", policy.policyCoverageId(), "incidentAt", Instant.now().toString(),
+                                "diagnosisCategory", "DEMO_GENERAL_CANCER"))))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/claims/{claimId}", claimId).principal(authentication(userId)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("MANUAL_REVIEW"));
     }
 
     @Test

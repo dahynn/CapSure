@@ -34,7 +34,8 @@ public class FakePremiumPaymentGateway implements PremiumPaymentGateway {
     }
 
     @Override
-    public GatewayPaymentResult inquire(String providerPaymentKey) {
+    public GatewayPaymentResult inquire(InquiryCommand command) {
+        String providerPaymentKey = command.providerPaymentKey();
         return providerLedger.getOrDefault(
                 providerPaymentKey,
                 GatewayPaymentResult.unknown(providerPaymentKey, "FAKE_PAYMENT_NOT_FOUND")

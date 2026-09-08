@@ -39,6 +39,19 @@ class AuthControllerTest {
     @MockitoBean
     private SmsService smsService;
 
+    @MockitoBean
+    private com.capsule.insurance.common.security.jwt.JwtTokenProvider tokens;
+
+    @Test
+    void successfulEmailVerificationReturnsRecipientProof() throws Exception {
+        given(emailService.verifyCode("owner@example.test", "123456")).willReturn(true);
+        given(tokens.createEmailVerificationToken("owner@example.test")).willReturn("signed-proof");
+        mockMvc.perform(post("/auth/email/verify-code").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"owner@example.test\",\"authCode\":\"123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.emailVerificationToken").value("signed-proof"));
+    }
+
     @Test
     void loginReturnsApiResponse() throws Exception {
         given(authService.login(any()))

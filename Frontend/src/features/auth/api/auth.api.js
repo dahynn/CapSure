@@ -1,4 +1,4 @@
-import { httpClient } from '@/common/api/httpClient';
+import { httpClient, clearAuthStorage, getAccessToken, refreshAccessToken, setAuthStorage } from '@/common/api/httpClient';
 
 /**
  * Auth(인증) 관련 API 엔드포인트 모음
@@ -10,15 +10,7 @@ export const authApi = {
     login: async (credentials) => {
         const response = await httpClient.post('/auth/login', credentials);
         const data = response.data?.data;
-        if (data?.accessToken) {
-            localStorage.setItem('accessToken', data.accessToken);
-        }
-        if (data?.refreshToken) {
-            localStorage.setItem('refreshToken', data.refreshToken);
-        }
-        if (data?.role) {
-            localStorage.setItem('authRole', data.role);
-        }
+        if (data?.accessToken) { clearAuthStorage(); setAuthStorage(data); }
         return data;
     },
 
@@ -64,17 +56,13 @@ export const authApi = {
      * 로그아웃
      */
     logout: async () => {
+        const accessToken = getAccessToken();
+        clearAuthStorage();
         try {
-            await httpClient.post('/auth/logout', {});
+            await httpClient.post('/auth/logout', {}, { headers: { Authorization: `Bearer ${accessToken || ''}` } });
         } catch (e) {
             // 서버 로그아웃 실패해도 로컬 토큰 제거
         }
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('authRole');
-        sessionStorage.removeItem('accessToken');
-        sessionStorage.removeItem('refreshToken');
-        sessionStorage.removeItem('authRole');
         return { success: true };
     },
 
@@ -82,9 +70,17 @@ export const authApi = {
      * 로그인 세션 연장
      */
     extendSession: async () => {
-        const response = await httpClient.post('/auth/extend-session', {});
-        return response.data?.data;
+        try {
+            await refreshAccessToken();
+            return { success: true };
+        } catch (error) {
+            if ([401, 403].includes(error.status)) clearAuthStorage();
+            throw error;
+        }
     },
+
+    sendEmailCode: async (email) => (await httpClient.post('/auth/email/send-code', { email })).data?.data,
+    verifyEmailCode: async (email, authCode) => (await httpClient.post('/auth/email/verify-code', { email, authCode })).data?.data,
 
     saveOnboardingCategories: async (categoryCodes) => {
         const response = await httpClient.post('/auth/onboarding/categories', { categoryCodes });

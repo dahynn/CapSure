@@ -157,10 +157,11 @@ public class PaymentService {
                     .findAttemptByIdempotencyKey(idempotencyKey)
                     .orElse(null);
             if (sameRequest != null) {
-                if (!sameRequest.paymentOrderId().equals(paymentOrderId)) {
+                if (!sameRequest.paymentOrderId().equals(paymentOrderId)
+                        || !sameRequest.providerPaymentKey().equals(request.providerPaymentKey())) {
                     throw new BusinessException(
                             ErrorCode.IDEMPOTENCY_CONFLICT,
-                            "다른 결제 주문에 사용된 Idempotency-Key입니다."
+                            "다른 결제 주문 또는 결제키에 사용된 Idempotency-Key입니다."
                     );
                 }
                 return new ConfirmationReservation(order, sameRequest, false);
@@ -242,7 +243,12 @@ public class PaymentService {
         if (!target.attempt().provider().equals(paymentGateway.providerCode())) {
             return toResponse(target.order());
         }
-        GatewayPaymentResult result = paymentGateway.inquire(target.attempt().providerPaymentKey());
+        GatewayPaymentResult result = paymentGateway.inquire(new PremiumPaymentGateway.InquiryCommand(
+                target.order().orderNo(),
+                target.attempt().providerPaymentKey(),
+                target.order().amount(),
+                target.order().currencyCode()
+        ));
         String reconciliationResult = "UNKNOWN".equals(result.status())
                 ? "STILL_UNKNOWN"
                 : (target.order().status().equals(result.status()) ? "MATCHED" : "CORRECTED");

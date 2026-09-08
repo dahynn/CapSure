@@ -125,7 +125,7 @@ const CancerInsurancePaymentPage = () => {
                     ? await getInitialPremiumPayment(flowIds.paymentOrderId)
                     : await createInitialPremiumOrder(
                         flowIds.applicationId,
-                        getRequestKey('initial-premium-order'),
+                        getRequestKey(`initial-premium-order-${flowIds.applicationId}`),
                     );
                 if (!active) return;
                 setPayment(order);
@@ -174,14 +174,14 @@ const CancerInsurancePaymentPage = () => {
         setConfirming(true);
         setError('');
         try {
-            const providerSeed = getRequestKey(`fake-provider-${scenario}`);
+            const providerSeed = getRequestKey(`fake-provider-${payment.paymentOrderId}-${scenario}`);
             const providerPaymentKey = `fake-${scenario}-${providerSeed}`;
             const confirmed = await confirmInitialPremiumPayment(
                 payment.paymentOrderId,
                 providerPaymentKey,
                 null,
                 payment.amount,
-                getRequestKey(`initial-premium-confirm-${scenario}`),
+                getRequestKey(`initial-premium-confirm-${payment.paymentOrderId}-${scenario}`),
             );
             setPayment(confirmed);
             updateFlowIds({
@@ -287,9 +287,11 @@ const CancerInsurancePaymentPage = () => {
                             결제 결과 다시 확인
                         </AppButton>
                     )}
-                    <AppButton onClick={restart} tone="subtle">
-                        <RotateCcw className="h-4 w-4" /> 새 견적으로 다시 시작
-                    </AppButton>
+                    {!pending && (
+                        <AppButton onClick={restart} tone="subtle">
+                            <RotateCcw className="h-4 w-4" /> 새 견적으로 다시 시작
+                        </AppButton>
+                    )}
                 </div>
             </div>
         );

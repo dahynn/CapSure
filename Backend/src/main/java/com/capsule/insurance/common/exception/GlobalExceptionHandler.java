@@ -33,8 +33,26 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnhandledException(Exception exception) {
-        log.error("Unhandled exception", exception);
+        log.error("Unhandled exception: {}", SafeFailure.describe(exception));
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_SERVER_ERROR.getDefaultMessage()));
+    }
+
+    @ExceptionHandler({org.springframework.web.servlet.resource.NoResourceFoundException.class,
+            org.springframework.web.servlet.NoHandlerFoundException.class})
+    public ResponseEntity<ApiResponse<Void>> handleMissingRoute(Exception exception) {
+        return ResponseEntity.status(ErrorCode.RESOURCE_NOT_FOUND.getStatus())
+                .body(ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, "요청한 경로를 찾을 수 없습니다."));
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMalformedRequest(Exception exception) {
+        return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.INVALID_INPUT, "요청 형식이나 날짜가 올바르지 않습니다."));
+    }
+
+    @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDuplicateKey(Exception exception) {
+        return ResponseEntity.status(ErrorCode.DUPLICATED_RESOURCE.getStatus())
+                .body(ApiResponse.error(ErrorCode.DUPLICATED_RESOURCE, "이미 등록되었거나 처리된 요청입니다."));
     }
 }
