@@ -212,13 +212,14 @@ public class JdbcPaymentReconciliationJobRepository implements PaymentReconcilia
                 ) VALUES (
                     'PAYMENT_ORDER',
                     ?,
-                    'FAKE',
+                    COALESCE((SELECT provider FROM public.pay_attempt WHERE payment_order_id = ?
+                        ORDER BY attempt_no DESC LIMIT 1), 'UNKNOWN'),
                     ?,
                     'INQUIRY_ERROR',
                     'FAILED',
                     jsonb_build_object('errorReason', CAST(? AS TEXT))
                 )
-                """, target.paymentOrderId().toString(), target.localStatus(), errorReason);
+                """, target.paymentOrderId().toString(), target.paymentOrderId(), target.localStatus(), errorReason);
     }
 
     @Override

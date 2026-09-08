@@ -108,7 +108,7 @@ public class CatalogImportService {
             CatalogImportExecution failedExecution = execution;
             transactionTemplate.execute(status -> repository.fail(
                     failedExecution.jobExecutionId(),
-                    abbreviate(exception.getClass().getSimpleName() + ": " + exception.getMessage())
+                    com.capsule.insurance.common.exception.SafeFailure.describe(exception)
             ));
             throw exception;
         }

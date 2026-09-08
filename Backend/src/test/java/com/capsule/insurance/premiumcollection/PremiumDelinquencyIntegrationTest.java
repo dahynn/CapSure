@@ -206,6 +206,18 @@ class PremiumDelinquencyIntegrationTest {
         assertThat(count("ins_policy_delinquency_history")).isEqualTo(25);
     }
 
+    @Test void sameExecutionWorkersClaimDisjointTargetsWithoutDuplicateTransitions() throws Exception {
+        for (int i = 0; i < 100; i++) due(policy(), "2020-01-01");
+        parallel(() -> run("shared-workers"), () -> run("shared-workers"));
+        assertThat(run("shared-workers").processedCount()).isEqualTo(100);
+        assertThat(count("ops_premium_delinquency_run")).isEqualTo(1);
+        assertThat(count("ops_premium_delinquency_target")).isEqualTo(100);
+        assertThat(count("ins_premium_notice")).isEqualTo(100);
+        assertThat(count("ins_policy_delinquency_history")).isEqualTo(100);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ops_premium_delinquency_target WHERE outcome IS NULL", Long.class))
+                .isZero();
+    }
+
     @Test void failedChunkRollsBackAndResumeKeepsCommittedCheckpoint() {
         for (int i = 0; i < 45; i++) due(policy(), "2020-01-01");
         AtomicInteger calls = new AtomicInteger();

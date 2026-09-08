@@ -189,7 +189,7 @@ class OperationsRecoveryServiceIntegrationTest {
     @DisplayName("수동 조치가 실패해도 실패 사유와 종료 시각은 복구 원장에 보존된다")
     void preservesFailedRecoveryAction() {
         when(reconciliationBatchService.run(anyString(), any(PaymentReconciliationRunOptions.class)))
-                .thenThrow(new IllegalStateException("PG inquiry unavailable"));
+                .thenThrow(new IllegalStateException("PG inquiry unavailable paymentKey=synthetic-private-key"));
 
         assertThatThrownBy(() -> service.runPaymentReconciliation(
                 adminUserId,
@@ -200,7 +200,9 @@ class OperationsRecoveryServiceIntegrationTest {
                 .hasMessageContaining("PG inquiry unavailable");
 
         assertThat(actionValue("status")).isEqualTo("FAILED");
-        assertThat(actionValue("error_reason")).contains("PG inquiry unavailable");
+        assertThat(actionValue("error_reason"))
+                .isEqualTo("UNEXPECTED_ERROR:IllegalStateException")
+                .doesNotContain("synthetic-private-key", "PG inquiry unavailable");
         assertThat(actionValue("completed_at IS NOT NULL")).isEqualTo("true");
     }
 

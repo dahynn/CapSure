@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.HandlerMapping;
 
 @Slf4j
 @Component
@@ -28,35 +29,28 @@ public class RequestIdFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
         String requestId = resolveRequestId(request);
         String sourceIp = resolveSourceIp(request);
         
-        // 마스킹 로직 정교화 (경로 유지, 파라미터 값만 마스킹)
-        String uri = request.getRequestURI();
-        String queryString = request.getQueryString();
-        String displayUri = uri;
-        if (StringUtils.hasText(queryString)) {
-            String maskedQuery = maskSensitiveParams(queryString);
-            displayUri = uri + "?" + maskedQuery;
-        }
-
         MDC.put("requestId", requestId);
         // MDC userId 바인딩 시점 조정 (doFilter 이전 수행)
         MDC.put("userId", resolveUserId());
         MDC.put("sourceIp", sourceIp);
         response.setHeader(REQUEST_ID_HEADER, requestId);
 
-        log.info("API START: method={}, uri={}", request.getMethod(), displayUri);
+        // Raw query/path values may contain payment keys, email addresses or identifiers.
+        log.info("API START: method={}", request.getMethod());
 
         try {
             filterChain.doFilter(request, response);
         } finally {
-            long elapsedMs = System.currentTimeMillis() - startTime;
+            long elapsedMs = (System.nanoTime() - startTime) / 1_000_000;
+            Object route = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
             log.info(
                     "API END: method={}, uri={}, status={}, elapsedMs={}",
                     request.getMethod(),
-                    displayUri,
+                    route == null ? "[unmatched]" : route.toString(),
                     response.getStatus(),
                     elapsedMs
             );
@@ -64,24 +58,14 @@ public class RequestIdFilter extends OncePerRequestFilter {
         }
     }
 
-    private String maskSensitiveParams(String queryString) {
-        if (!StringUtils.hasText(queryString)) {
-            return queryString;
-        }
-        // password, token, secret 등의 파라미터 값을 ***로 치환
-        return queryString.replaceAll("(?i)(password|token|secret|credentials)=([^&]+)", "$1=***");
-    }
-
     private String resolveRequestId(HttpServletRequest request) {
         String requestId = request.getHeader(REQUEST_ID_HEADER);
-        return StringUtils.hasText(requestId) ? requestId : UUID.randomUUID().toString();
+        return requestId != null && requestId.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+                ? requestId : UUID.randomUUID().toString();
     }
 
     private String resolveSourceIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwardedFor)) {
-            return forwardedFor.split(",")[0].trim();
-        }
+        // Forwarded header trust belongs to the configured reverse proxy/container.
         return request.getRemoteAddr();
     }
 

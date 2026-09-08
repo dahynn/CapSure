@@ -34,7 +34,8 @@ public class OutboxRelayScheduler {
                 );
             }
         } catch (RuntimeException exception) {
-            log.error("Financial outbox relay cycle failed", exception);
+            log.error("Financial outbox relay cycle failed: {}",
+                    com.capsule.insurance.common.exception.SafeFailure.describe(exception));
         }
     }
 }

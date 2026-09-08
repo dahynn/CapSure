@@ -183,6 +183,27 @@ class PaymentPolicyIntegrationTest {
     }
 
     @Test
+    void otherUsersCannotReadPolicyOrPaymentAndResponsesOmitProviderKeys() throws Exception {
+        Long owner = userIds.get(0);
+        Long stranger = userIds.get(1);
+        Long application = approveApplication(owner);
+        JsonNode order = createOrder(owner, application, "privacy-order");
+        long paymentId = order.path("paymentOrderId").asLong();
+        long policyId = order.path("policyId").asLong();
+        for (String path : List.of("/api/v1/payments/" + paymentId, "/api/v1/policies/" + policyId)) {
+            mockMvc.perform(get(path).principal(authentication(owner))).andExpect(status().isOk());
+            mockMvc.perform(get(path).principal(authentication(stranger))).andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.data").doesNotExist());
+        }
+        var response = paymentService.confirm(owner, paymentId, "privacy-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest("fake-timeout-private-key", new java.math.BigDecimal("29900.00")));
+        assertThat(response.attempts()).hasSize(1);
+        mockMvc.perform(get("/api/v1/payments/{id}", paymentId).principal(authentication(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.attempts[0].providerPaymentKey").doesNotExist());
+    }
+
+    @Test
     @DisplayName("Toss 승인 주문번호가 서버 주문과 다르면 PG 호출 전에 거절한다")
     void rejectsMismatchedTossOrderIdBeforeGatewayCall() throws Exception {
         Long userId = userIds.get(0);
