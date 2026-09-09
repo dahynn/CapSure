@@ -2,12 +2,16 @@ package com.capsule.insurance.assistantai.claim.infra;
 
 import com.capsule.insurance.assistantai.claim.application.port.ClaimCopilotReviewRepository;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEventType;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewStatus;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JdbcClaimCopilotReviewRepository implements ClaimCopilotReviewRepository {
@@ -19,13 +23,28 @@ public class JdbcClaimCopilotReviewRepository implements ClaimCopilotReviewRepos
     }
 
     @Override
+    @Transactional
     public ClaimCopilotReview registerDraft(Long claimId, String requestId) {
-        jdbcTemplate.update("""
+        int created = jdbcTemplate.update("""
                 INSERT INTO public.ops_claim_copilot_review (claim_id, request_id, review_status)
                 VALUES (?, ?, 'DRAFT')
                 ON CONFLICT (claim_id, request_id) DO NOTHING
                 """, claimId, requestId);
+        if (created == 1) {
+            insertEvent(claimId, requestId, ClaimCopilotReviewEventType.DRAFT_CREATED,
+                    ClaimCopilotReviewStatus.DRAFT, null);
+        }
         return find(claimId, requestId).orElseThrow();
+    }
+
+    @Override
+    public List<ClaimCopilotReviewEvent> findHistory(Long claimId, String requestId) {
+        return jdbcTemplate.query("""
+                SELECT claim_id, request_id, event_type, review_status, reviewer_user_id, occurred_at
+                FROM public.ops_claim_copilot_review_event
+                WHERE claim_id = ? AND request_id = ?
+                ORDER BY claim_copilot_review_event_id
+                """, this::mapEvent, claimId, requestId);
     }
 
     @Override
@@ -38,18 +57,43 @@ public class JdbcClaimCopilotReviewRepository implements ClaimCopilotReviewRepos
     }
 
     @Override
+    @Transactional
     public Optional<ClaimCopilotReview> updateReview(
             Long claimId,
             String requestId,
             ClaimCopilotReviewStatus status,
             Long reviewerUserId
     ) {
-        return jdbcTemplate.query("""
+        Optional<ClaimCopilotReview> updated = jdbcTemplate.query("""
                 UPDATE public.ops_claim_copilot_review
                 SET review_status = ?, reviewer_user_id = ?, updated_at = NOW()
                 WHERE claim_id = ? AND request_id = ?
                 RETURNING claim_id, request_id, review_status, reviewer_user_id, updated_at
                 """, this::mapReview, status.name(), reviewerUserId, claimId, requestId).stream().findFirst();
+        updated.ifPresent(ignored -> insertEvent(
+                claimId,
+                requestId,
+                status == ClaimCopilotReviewStatus.CONFIRMED
+                        ? ClaimCopilotReviewEventType.REVIEW_CONFIRMED
+                        : ClaimCopilotReviewEventType.REVIEW_REJECTED,
+                status,
+                reviewerUserId
+        ));
+        return updated;
+    }
+
+    private void insertEvent(
+            Long claimId,
+            String requestId,
+            ClaimCopilotReviewEventType eventType,
+            ClaimCopilotReviewStatus status,
+            Long reviewerUserId
+    ) {
+        jdbcTemplate.update("""
+                INSERT INTO public.ops_claim_copilot_review_event (
+                    claim_id, request_id, event_type, review_status, reviewer_user_id
+                ) VALUES (?, ?, ?, ?, ?)
+                """, claimId, requestId, eventType.name(), status.name(), reviewerUserId);
     }
 
     private ClaimCopilotReview mapReview(ResultSet resultSet, int rowNumber) throws SQLException {
@@ -60,6 +104,18 @@ public class JdbcClaimCopilotReviewRepository implements ClaimCopilotReviewRepos
                 ClaimCopilotReviewStatus.valueOf(resultSet.getString("review_status")),
                 resultSet.wasNull() ? null : reviewerUserId,
                 resultSet.getTimestamp("updated_at").toInstant()
+        );
+    }
+
+    private ClaimCopilotReviewEvent mapEvent(ResultSet resultSet, int rowNumber) throws SQLException {
+        long reviewerUserId = resultSet.getLong("reviewer_user_id");
+        return new ClaimCopilotReviewEvent(
+                resultSet.getLong("claim_id"),
+                resultSet.getString("request_id"),
+                ClaimCopilotReviewEventType.valueOf(resultSet.getString("event_type")),
+                ClaimCopilotReviewStatus.valueOf(resultSet.getString("review_status")),
+                resultSet.wasNull() ? null : reviewerUserId,
+                resultSet.getTimestamp("occurred_at").toInstant()
         );
     }
 }

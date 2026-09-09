@@ -11,12 +11,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.capsule.insurance.assistantai.claim.application.ClaimAssessmentAssistantService;
 import com.capsule.insurance.assistantai.claim.application.ClaimCopilotReviewService;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEventType;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewStatus;
 import com.capsule.insurance.auth.domain.TokenBlacklistRepository;
 import com.capsule.insurance.common.security.SecurityConfig;
 import com.capsule.insurance.common.security.jwt.JwtAuthenticationFilter;
 import com.capsule.insurance.common.security.jwt.JwtTokenProvider;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -48,6 +51,7 @@ class ClaimReviewCopilotSecurityTest {
     void anonymousAndCustomerCannotCreateOrReviewCopilotDrafts() throws Exception {
         String draftPath = "/api/v1/ops/claims/100/review-copilot/drafts";
         String reviewPath = draftPath + "/request-1/review";
+        String historyPath = reviewPath + "/history";
 
         mvc.perform(post(draftPath).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"requestId\":\"request-1\",\"instruction\":\"약관 확인\"}"))
@@ -59,6 +63,8 @@ class ClaimReviewCopilotSecurityTest {
                         .content("{\"status\":\"CONFIRMED\"}"))
                 .andExpect(status().isForbidden());
         mvc.perform(get(reviewPath).with(user("7").roles("USER")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(historyPath).with(user("7").roles("USER")))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(assessmentService, reviewService);
@@ -90,5 +96,24 @@ class ClaimReviewCopilotSecurityTest {
                 .andExpect(status().isOk());
 
         verify(reviewService).get(100L, "request-1");
+    }
+
+    @Test
+    void adminCanReadReviewHistoryWithoutCustomerOrPromptContent() throws Exception {
+        when(reviewService.history(100L, "request-1"))
+                .thenReturn(List.of(new ClaimCopilotReviewEvent(
+                        100L,
+                        "request-1",
+                        ClaimCopilotReviewEventType.DRAFT_CREATED,
+                        ClaimCopilotReviewStatus.DRAFT,
+                        null,
+                        Instant.parse("2026-09-10T00:00:00Z")
+                )));
+
+        mvc.perform(get("/api/v1/ops/claims/100/review-copilot/drafts/request-1/review/history")
+                        .with(user("99").roles("ADMIN")))
+                .andExpect(status().isOk());
+
+        verify(reviewService).history(100L, "request-1");
     }
 }

@@ -3,6 +3,7 @@ package com.capsule.insurance.assistantai.claim.api;
 import com.capsule.insurance.assistantai.claim.application.ClaimAssessmentAssistantService;
 import com.capsule.insurance.assistantai.claim.application.ClaimCopilotReviewService;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewStatus;
 import com.capsule.insurance.common.response.ApiResponse;
 import com.capsule.insurance.common.security.AuthenticatedUser;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 /** 관리자 전용 보험금 심사 보조 PoC API. 청구·지급 상태를 변경하지 않습니다. */
 @Validated
@@ -58,6 +60,14 @@ public class ClaimReviewCopilotController {
             @PathVariable String requestId
     ) {
         return ApiResponse.success(reviewService.get(claimId, requestId));
+    }
+
+    @GetMapping("/{claimId}/review-copilot/drafts/{requestId}/review/history")
+    public ApiResponse<List<ClaimCopilotReviewEvent>> getReviewHistory(
+            @PathVariable Long claimId,
+            @PathVariable String requestId
+    ) {
+        return ApiResponse.success(reviewService.history(claimId, requestId));
     }
 
     public record DraftRequest(@NotBlank String requestId, @NotBlank String instruction) {

@@ -2,10 +2,12 @@ package com.capsule.insurance.assistantai.claim.application;
 
 import com.capsule.insurance.assistantai.claim.application.port.ClaimCopilotReviewRepository;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewStatus;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 /**
  * Claim Review Copilot의 담당자 검토 상태입니다.
@@ -27,6 +29,11 @@ public class ClaimCopilotReviewService {
     public ClaimCopilotReview get(Long claimId, String requestId) {
         return repository.find(claimId, requestId).orElseThrow(() ->
                 new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "심사 보조 초안 검토 상태를 찾을 수 없습니다."));
+    }
+
+    public List<ClaimCopilotReviewEvent> history(Long claimId, String requestId) {
+        get(claimId, requestId);
+        return repository.findHistory(claimId, requestId);
     }
 
     public ClaimCopilotReview review(
