@@ -5,6 +5,11 @@ import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEventType;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewStatus;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewDraftSnapshot;
+import com.capsule.insurance.assistantai.claim.domain.ClaimAssessmentSourceReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -17,14 +22,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class JdbcClaimCopilotReviewRepository implements ClaimCopilotReviewRepository {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    public JdbcClaimCopilotReviewRepository(JdbcTemplate jdbcTemplate) {
+    public JdbcClaimCopilotReviewRepository(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
     @Transactional
-    public ClaimCopilotReview registerDraft(Long claimId, String requestId) {
+    public ClaimCopilotReview registerDraft(Long claimId, ClaimCopilotReviewDraftSnapshot draft) {
+        String requestId = draft.requestId();
         int created = jdbcTemplate.update("""
                 INSERT INTO public.ops_claim_copilot_review (claim_id, request_id, review_status)
                 VALUES (?, ?, 'DRAFT')
@@ -34,7 +42,32 @@ public class JdbcClaimCopilotReviewRepository implements ClaimCopilotReviewRepos
             insertEvent(claimId, requestId, ClaimCopilotReviewEventType.DRAFT_CREATED,
                     ClaimCopilotReviewStatus.DRAFT, null);
         }
+        jdbcTemplate.update("""
+                INSERT INTO public.ops_claim_copilot_draft_snapshot (
+                    claim_id, request_id, terms_to_check_json, missing_evidence_json,
+                    additional_questions_json, evidence_insufficient
+                ) VALUES (?, ?, CAST(? AS JSONB), CAST(? AS JSONB), CAST(? AS JSONB), ?)
+                ON CONFLICT (claim_id, request_id) DO UPDATE
+                SET terms_to_check_json = EXCLUDED.terms_to_check_json,
+                    missing_evidence_json = EXCLUDED.missing_evidence_json,
+                    additional_questions_json = EXCLUDED.additional_questions_json,
+                    evidence_insufficient = EXCLUDED.evidence_insufficient,
+                    updated_at = NOW()
+                """, claimId, requestId, toJson(draft.termsToCheck()), toJson(draft.possibleMissingEvidence()),
+                toJson(draft.additionalQuestions()), draft.evidenceInsufficient());
         return find(claimId, requestId).orElseThrow();
+    }
+
+    @Override
+    public Optional<ClaimCopilotReviewDraftSnapshot> findDraft(Long claimId, String requestId) {
+        return jdbcTemplate.query("""
+                SELECT request_id, terms_to_check_json::TEXT AS terms_to_check_json,
+                       missing_evidence_json::TEXT AS missing_evidence_json,
+                       additional_questions_json::TEXT AS additional_questions_json,
+                       evidence_insufficient
+                FROM public.ops_claim_copilot_draft_snapshot
+                WHERE claim_id = ? AND request_id = ?
+                """, this::mapDraft, claimId, requestId).stream().findFirst();
     }
 
     @Override
@@ -136,5 +169,31 @@ public class JdbcClaimCopilotReviewRepository implements ClaimCopilotReviewRepos
                 resultSet.wasNull() ? null : reviewerUserId,
                 resultSet.getTimestamp("occurred_at").toInstant()
         );
+    }
+
+    private ClaimCopilotReviewDraftSnapshot mapDraft(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new ClaimCopilotReviewDraftSnapshot(
+                resultSet.getString("request_id"),
+                fromJson(resultSet.getString("terms_to_check_json"), new TypeReference<List<ClaimAssessmentSourceReference>>() { }),
+                fromJson(resultSet.getString("missing_evidence_json"), new TypeReference<List<String>>() { }),
+                fromJson(resultSet.getString("additional_questions_json"), new TypeReference<List<String>>() { }),
+                resultSet.getBoolean("evidence_insufficient")
+        );
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("심사 보조 초안을 저장할 수 없습니다.", exception);
+        }
+    }
+
+    private <T> T fromJson(String value, TypeReference<T> type) {
+        try {
+            return objectMapper.readValue(value, type);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("심사 보조 초안을 읽을 수 없습니다.", exception);
+        }
     }
 }

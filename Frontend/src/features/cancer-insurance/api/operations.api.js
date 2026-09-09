@@ -104,3 +104,10 @@ export const updateClaimCopilotReview = async (claimId, requestId, status) => cl
   ),
   '심사 보조 검토 상태를 저장하지 못했습니다.'
 );
+
+export const getClaimCopilotDraft = async (claimId, requestId) => claimReviewPayload(
+  await httpClient.get(
+    `/api/v1/ops/claims/${encodeURIComponent(claimId)}/review-copilot/drafts/${encodeURIComponent(requestId)}`
+  ),
+  '심사 보조 초안을 불러오지 못했습니다.'
+);

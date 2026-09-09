@@ -3,6 +3,8 @@ package com.capsule.insurance.assistantai.claim.application;
 import com.capsule.insurance.assistantai.claim.application.port.ClaimCopilotReviewRepository;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewDraftSnapshot;
+import com.capsule.insurance.assistantai.claim.domain.ClaimAssessmentAssistantDraft;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewStatus;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
@@ -22,8 +24,14 @@ public class ClaimCopilotReviewService {
         this.repository = repository;
     }
 
-    public ClaimCopilotReview registerDraft(Long claimId, String requestId) {
-        return repository.registerDraft(claimId, requestId);
+    public ClaimCopilotReview registerDraft(Long claimId, ClaimAssessmentAssistantDraft draft) {
+        return repository.registerDraft(claimId, new ClaimCopilotReviewDraftSnapshot(
+                draft.requestId(),
+                draft.termsToCheck(),
+                draft.possibleMissingEvidence(),
+                draft.additionalQuestions(),
+                draft.evidenceInsufficient()
+        ));
     }
 
     public ClaimCopilotReview get(Long claimId, String requestId) {
@@ -36,6 +44,12 @@ public class ClaimCopilotReviewService {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "조회 건수는 1~100 사이여야 합니다.");
         }
         return repository.findRecent(status, limit);
+    }
+
+    public ClaimCopilotReviewDraftSnapshot draft(Long claimId, String requestId) {
+        get(claimId, requestId);
+        return repository.findDraft(claimId, requestId).orElseThrow(() ->
+                new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "심사 보조 초안을 찾을 수 없습니다."));
     }
 
     public List<ClaimCopilotReviewEvent> history(Long claimId, String requestId) {

@@ -13,6 +13,8 @@ import com.capsule.insurance.assistantai.claim.application.ClaimCopilotReviewSer
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEventType;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewDraftSnapshot;
+import com.capsule.insurance.assistantai.claim.domain.ClaimAssessmentSourceReference;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewStatus;
 import com.capsule.insurance.auth.domain.TokenBlacklistRepository;
 import com.capsule.insurance.common.security.SecurityConfig;
@@ -51,6 +53,7 @@ class ClaimReviewCopilotSecurityTest {
     void anonymousAndCustomerCannotCreateOrReviewCopilotDrafts() throws Exception {
         String draftPath = "/api/v1/ops/claims/100/review-copilot/drafts";
         String reviewPath = draftPath + "/request-1/review";
+        String detailPath = draftPath + "/request-1";
         String historyPath = reviewPath + "/history";
         String queuePath = "/api/v1/ops/claims/review-copilot/reviews";
 
@@ -64,6 +67,8 @@ class ClaimReviewCopilotSecurityTest {
                         .content("{\"status\":\"CONFIRMED\"}"))
                 .andExpect(status().isForbidden());
         mvc.perform(get(reviewPath).with(user("7").roles("USER")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(detailPath).with(user("7").roles("USER")))
                 .andExpect(status().isForbidden());
         mvc.perform(get(historyPath).with(user("7").roles("USER")))
                 .andExpect(status().isForbidden());
@@ -99,6 +104,25 @@ class ClaimReviewCopilotSecurityTest {
                 .andExpect(status().isOk());
 
         verify(reviewService).get(100L, "request-1");
+    }
+
+    @Test
+    void adminCanReadTheStructuredDraftBeforeRecordingReview() throws Exception {
+        when(reviewService.draft(100L, "request-1"))
+                .thenReturn(new ClaimCopilotReviewDraftSnapshot(
+                        "request-1",
+                        List.of(new ClaimAssessmentSourceReference(
+                                "TERMS_CLAUSE", "terms-clause:ARTICLE-09", "1.0.0", 11L)),
+                        List.of("DIAGNOSIS_CERTIFICATE"),
+                        List.of("약관 조항 적용 여부를 확인해 주세요."),
+                        true
+                ));
+
+        mvc.perform(get("/api/v1/ops/claims/100/review-copilot/drafts/request-1")
+                        .with(user("99").roles("ADMIN")))
+                .andExpect(status().isOk());
+
+        verify(reviewService).draft(100L, "request-1");
     }
 
     @Test

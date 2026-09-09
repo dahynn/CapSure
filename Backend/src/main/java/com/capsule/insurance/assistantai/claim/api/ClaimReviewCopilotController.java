@@ -4,6 +4,7 @@ import com.capsule.insurance.assistantai.claim.application.ClaimAssessmentAssist
 import com.capsule.insurance.assistantai.claim.application.ClaimCopilotReviewService;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewDraftSnapshot;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewStatus;
 import com.capsule.insurance.common.response.ApiResponse;
 import com.capsule.insurance.common.security.AuthenticatedUser;
@@ -63,6 +64,14 @@ public class ClaimReviewCopilotController {
             @PathVariable String requestId
     ) {
         return ApiResponse.success(reviewService.get(claimId, requestId));
+    }
+
+    @GetMapping("/{claimId}/review-copilot/drafts/{requestId}")
+    public ApiResponse<ClaimCopilotReviewDraftSnapshot> getDraft(
+            @PathVariable Long claimId,
+            @PathVariable String requestId
+    ) {
+        return ApiResponse.success(reviewService.draft(claimId, requestId));
     }
 
     @GetMapping("/{claimId}/review-copilot/drafts/{requestId}/review/history")

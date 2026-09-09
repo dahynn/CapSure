@@ -201,7 +201,7 @@ public class ClaimAssessmentAssistantService {
     }
 
     private AssistantResult reviewRequired(Long claimId, ClaimAssessmentAssistantDraft draft) {
-        ClaimCopilotReview review = reviewService.registerDraft(claimId, draft.requestId());
+        ClaimCopilotReview review = reviewService.registerDraft(claimId, draft);
         return AssistantResult.reviewRequired(draft, review);
     }
 

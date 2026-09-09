@@ -11,6 +11,7 @@ import com.capsule.insurance.assistantai.claim.application.port.ClaimCopilotRevi
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEventType;
+import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewDraftSnapshot;
 import com.capsule.insurance.assistantai.claim.domain.ClaimAssessmentAssistantModelDraft;
 import com.capsule.insurance.assistantai.claim.domain.ClaimAssessmentAssistantModelRequest;
 import com.capsule.insurance.assistantai.claim.domain.ClaimAssessmentSourceReference;
@@ -102,6 +103,8 @@ class ClaimAssessmentAssistantServiceTest {
         assertThat(result.draft().canFinalizeClaimDecision()).isFalse();
         assertThat(result.review().status()).isEqualTo(ClaimCopilotReviewStatus.DRAFT);
         assertThat(reviewService.get(100L, "request-2").status()).isEqualTo(ClaimCopilotReviewStatus.DRAFT);
+        assertThat(reviewService.draft(100L, "request-2").possibleMissingEvidence())
+                .containsExactly("DIAGNOSIS_CERTIFICATE");
         assertThat(gateway.requests).isEmpty();
     }
 
@@ -209,17 +212,21 @@ class ClaimAssessmentAssistantServiceTest {
 
     private static class RecordingReviewRepository implements ClaimCopilotReviewRepository {
         private final Map<String, ClaimCopilotReview> reviews = new HashMap<>();
+        private final Map<String, ClaimCopilotReviewDraftSnapshot> drafts = new HashMap<>();
         private final Map<String, List<ClaimCopilotReviewEvent>> events = new HashMap<>();
 
         @Override
-        public ClaimCopilotReview registerDraft(Long claimId, String requestId) {
+        public ClaimCopilotReview registerDraft(Long claimId, ClaimCopilotReviewDraftSnapshot draft) {
+            String requestId = draft.requestId();
             String key = key(claimId, requestId);
             if (reviews.containsKey(key)) {
+                drafts.put(key, draft);
                 return reviews.get(key);
             }
             ClaimCopilotReview review = new ClaimCopilotReview(
                     claimId, requestId, ClaimCopilotReviewStatus.DRAFT, null, Instant.now());
             reviews.put(key, review);
+            drafts.put(key, draft);
             events.computeIfAbsent(key, ignored -> new ArrayList<>()).add(new ClaimCopilotReviewEvent(
                     claimId, requestId, ClaimCopilotReviewEventType.DRAFT_CREATED,
                     ClaimCopilotReviewStatus.DRAFT, null, Instant.now()));
@@ -229,6 +236,11 @@ class ClaimAssessmentAssistantServiceTest {
         @Override
         public Optional<ClaimCopilotReview> find(Long claimId, String requestId) {
             return Optional.ofNullable(reviews.get(key(claimId, requestId)));
+        }
+
+        @Override
+        public Optional<ClaimCopilotReviewDraftSnapshot> findDraft(Long claimId, String requestId) {
+            return Optional.ofNullable(drafts.get(key(claimId, requestId)));
         }
 
         @Override

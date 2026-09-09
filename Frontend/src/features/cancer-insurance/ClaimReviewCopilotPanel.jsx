@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, FileSearch, Loader2, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
-import { getClaimCopilotReviewQueue, updateClaimCopilotReview } from './api/operations.api';
+import { getClaimCopilotDraft, getClaimCopilotReviewQueue, updateClaimCopilotReview } from './api/operations.api';
 
 const formatDateTime = (value) => {
   if (!value) return '-';
@@ -18,6 +18,9 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [savingKey, setSavingKey] = useState('');
+  const [detailLoadingKey, setDetailLoadingKey] = useState('');
+  const [selectedKey, setSelectedKey] = useState('');
+  const [drafts, setDrafts] = useState({});
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -55,6 +58,27 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
       setError(requestError.message || '심사 보조 검토 상태를 저장하지 못했습니다.');
     } finally {
       setSavingKey('');
+    }
+  };
+
+  const toggleDraft = async (item) => {
+    const key = `${item.claimId}:${item.requestId}`;
+    if (selectedKey === key) {
+      setSelectedKey('');
+      return;
+    }
+    setSelectedKey(key);
+    if (drafts[key]) return;
+    setDetailLoadingKey(key);
+    setError('');
+    try {
+      const draft = await getClaimCopilotDraft(item.claimId, item.requestId);
+      setDrafts((current) => ({ ...current, [key]: draft }));
+    } catch (requestError) {
+      setSelectedKey('');
+      setError(requestError.message || '심사 보조 초안을 불러오지 못했습니다.');
+    } finally {
+      setDetailLoadingKey('');
     }
   };
 
@@ -107,6 +131,8 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
         ) : reviews.map((item, index) => {
           const key = `${item.claimId}:${item.requestId}`;
           const saving = savingKey === key;
+          const selected = selectedKey === key;
+          const draft = drafts[key];
           return (
             <article key={key} className={`p-4 ${index ? 'border-t border-slate-800' : ''}`}>
               <div className="flex items-start justify-between gap-3">
@@ -119,7 +145,36 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
                   검토 대기
                 </span>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => toggleDraft(item)}
+                disabled={saving || detailLoadingKey === key}
+                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-200/20 bg-violet-300/10 px-3 py-2.5 text-xs font-black text-violet-100 disabled:opacity-50"
+              >
+                {detailLoadingKey === key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSearch className="h-3.5 w-3.5" />}
+                {selected ? '초안 상세 닫기' : '초안 상세 확인'}
+              </button>
+              {selected && draft && (
+                <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-[11px] leading-5 text-slate-300">
+                  <p className="font-black text-violet-100">확인할 약관 근거</p>
+                  <ul className="mt-1 space-y-1 text-slate-400">
+                    {draft.termsToCheck.length === 0 ? <li>연결된 약관 조항을 먼저 확인해야 합니다.</li> : draft.termsToCheck.map((source) => (
+                      <li key={`${source.sourceType}:${source.sourceId}`}>{source.sourceType} · {source.sourceId}</li>
+                    ))}
+                  </ul>
+                  {draft.possibleMissingEvidence.length > 0 && (
+                    <p className="mt-3 text-amber-100">누락 확인: {draft.possibleMissingEvidence.join(', ')}</p>
+                  )}
+                  {draft.additionalQuestions.length > 0 && (
+                    <ul className="mt-3 space-y-1 text-slate-400">
+                      {draft.additionalQuestions.map((question) => <li key={question}>• {question}</li>)}
+                    </ul>
+                  )}
+                  <p className="mt-3 text-[10px] text-slate-500">이 초안은 보험금 지급·거절 결정을 대신하지 않습니다.</p>
+                </div>
+              )}
+              {selected && draft && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => review(item, 'CONFIRMED')}
@@ -138,6 +193,7 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
                   <XCircle className="h-3.5 w-3.5" /> 초안 반려
                 </button>
               </div>
+              )}
             </article>
           );
         })}
