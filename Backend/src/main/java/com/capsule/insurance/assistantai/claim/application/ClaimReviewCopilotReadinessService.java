@@ -27,7 +27,6 @@ public class ClaimReviewCopilotReadinessService {
             if (!StringUtils.hasText(properties.getModel())) blockers.add("공급자 모델 ID가 필요합니다.");
             if (!StringUtils.hasText(properties.getApiKey())) blockers.add("환경변수 API 키가 필요합니다.");
             if (!properties.isAllowExternalCalls()) blockers.add("외부 호출 허용 플래그가 꺼져 있습니다.");
-            blockers.add("공급자 HTTP 어댑터는 API 확정 후에만 활성화합니다.");
         } else {
             blockers.add("지원하지 않는 공급자 설정입니다.");
         }

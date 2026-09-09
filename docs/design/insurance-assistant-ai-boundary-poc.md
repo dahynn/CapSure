@@ -43,4 +43,4 @@
 
 ## 외부 AI API 연결 전 설정
 
-`Backend/.env.example`에 필요한 환경변수 이름만 정리해 두었습니다. 현재 기본값은 `CLAIM_REVIEW_COPILOT_PROVIDER=blocked`이며, `external`로 바꿔도 공급자 HTTP 어댑터가 구현되기 전까지는 fail-closed로 차단됩니다. API 키는 `.env`, 배포 시크릿 또는 운영 환경변수에만 넣고 채팅·코드·커밋에 넣지 않습니다.
+`Backend/.env.example`에 필요한 환경변수 이름만 정리해 두었습니다. 현재 기본값은 `CLAIM_REVIEW_COPILOT_PROVIDER=blocked`입니다. OpenAI Responses API 어댑터는 `CLAIM_REVIEW_COPILOT_ALLOW_EXTERNAL_CALLS=true`가 명시되기 전까지 fail-closed로 차단됩니다. API 키는 `.env`, 배포 시크릿 또는 운영 환경변수에만 넣고 채팅·코드·커밋에 넣지 않습니다.

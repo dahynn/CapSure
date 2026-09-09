@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 class ClaimReviewCopilotReadinessServiceTest {
 
     @Test
-    void externalProviderStaysNotReadyUntilAdapterAndExplicitAllowFlagAreApproved() {
+    void externalProviderIsReadyOnlyWhenRequiredEnvironmentValuesAndExplicitAllowFlagArePresent() {
         ClaimReviewCopilotProperties properties = new ClaimReviewCopilotProperties();
         properties.setProvider("external");
         properties.setBaseUrl("https://provider.example.test");
@@ -17,8 +17,7 @@ class ClaimReviewCopilotReadinessServiceTest {
 
         var readiness = new ClaimReviewCopilotReadinessService(properties).readiness();
 
-        assertThat(readiness.ready()).isFalse();
-        assertThat(readiness.blockers()).contains("공급자 HTTP 어댑터는 API 확정 후에만 활성화합니다.");
+        assertThat(readiness.ready()).isTrue();
         assertThat(readiness.toString()).doesNotContain("not-a-real-key");
     }
 }
