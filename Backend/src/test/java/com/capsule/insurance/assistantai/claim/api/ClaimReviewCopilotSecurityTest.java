@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.capsule.insurance.assistantai.claim.application.ClaimAssessmentAssistantService;
 import com.capsule.insurance.assistantai.claim.application.ClaimCopilotReviewService;
+import com.capsule.insurance.assistantai.claim.application.ClaimReviewCopilotReadinessService;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEventType;
@@ -44,6 +45,9 @@ class ClaimReviewCopilotSecurityTest {
     private ClaimCopilotReviewService reviewService;
 
     @MockitoBean
+    private ClaimReviewCopilotReadinessService readinessService;
+
+    @MockitoBean
     private JwtTokenProvider tokens;
 
     @MockitoBean
@@ -56,6 +60,7 @@ class ClaimReviewCopilotSecurityTest {
         String detailPath = draftPath + "/request-1";
         String historyPath = reviewPath + "/history";
         String queuePath = "/api/v1/ops/claims/review-copilot/reviews";
+        String readinessPath = "/api/v1/ops/claims/review-copilot/readiness";
 
         mvc.perform(post(draftPath).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"requestId\":\"request-1\",\"instruction\":\"약관 확인\"}"))
@@ -73,6 +78,8 @@ class ClaimReviewCopilotSecurityTest {
         mvc.perform(get(historyPath).with(user("7").roles("USER")))
                 .andExpect(status().isForbidden());
         mvc.perform(get(queuePath).with(user("7").roles("USER")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(readinessPath).with(user("7").roles("USER")))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(assessmentService, reviewService);
@@ -156,5 +163,17 @@ class ClaimReviewCopilotSecurityTest {
                 .andExpect(status().isOk());
 
         verify(reviewService).recent(ClaimCopilotReviewStatus.DRAFT, 20);
+    }
+
+    @Test
+    void adminCanReadProviderReadinessWithoutExposingApiKey() throws Exception {
+        when(readinessService.readiness()).thenReturn(new ClaimReviewCopilotReadinessService.Readiness(
+                "blocked", false, false, List.of("외부 공급자가 비활성화되어 있습니다.")));
+
+        mvc.perform(get("/api/v1/ops/claims/review-copilot/readiness")
+                        .with(user("99").roles("ADMIN")))
+                .andExpect(status().isOk());
+
+        verify(readinessService).readiness();
     }
 }

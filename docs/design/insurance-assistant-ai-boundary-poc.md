@@ -40,3 +40,7 @@
 - 필수 증빙 또는 약관 근거가 부족하면 `manualReviewRequired=true`와 확인 질문만 반환합니다.
 - 전화번호 등 민감한 요청 문구는 gateway 호출 전에 차단합니다.
 - 기본 gateway는 외부 egress를 차단합니다. 테스트의 `RecordingGateway`는 모델이 아닌 안전한 demo/test-double입니다.
+
+## 외부 AI API 연결 전 설정
+
+`Backend/.env.example`에 필요한 환경변수 이름만 정리해 두었습니다. 현재 기본값은 `CLAIM_REVIEW_COPILOT_PROVIDER=blocked`이며, `external`로 바꿔도 공급자 HTTP 어댑터가 구현되기 전까지는 fail-closed로 차단됩니다. API 키는 `.env`, 배포 시크릿 또는 운영 환경변수에만 넣고 채팅·코드·커밋에 넣지 않습니다.

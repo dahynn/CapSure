@@ -111,3 +111,8 @@ export const getClaimCopilotDraft = async (claimId, requestId) => claimReviewPay
   ),
   '심사 보조 초안을 불러오지 못했습니다.'
 );
+
+export const getClaimCopilotReadiness = async () => claimReviewPayload(
+  await httpClient.get('/api/v1/ops/claims/review-copilot/readiness'),
+  '심사 보조 공급자 설정을 확인하지 못했습니다.'
+);

@@ -2,6 +2,7 @@ package com.capsule.insurance.assistantai.claim.api;
 
 import com.capsule.insurance.assistantai.claim.application.ClaimAssessmentAssistantService;
 import com.capsule.insurance.assistantai.claim.application.ClaimCopilotReviewService;
+import com.capsule.insurance.assistantai.claim.application.ClaimReviewCopilotReadinessService;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReview;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewEvent;
 import com.capsule.insurance.assistantai.claim.domain.ClaimCopilotReviewDraftSnapshot;
@@ -30,13 +31,16 @@ import java.util.List;
 public class ClaimReviewCopilotController {
     private final ClaimAssessmentAssistantService service;
     private final ClaimCopilotReviewService reviewService;
+    private final ClaimReviewCopilotReadinessService readinessService;
 
     public ClaimReviewCopilotController(
             ClaimAssessmentAssistantService service,
-            ClaimCopilotReviewService reviewService
+            ClaimCopilotReviewService reviewService,
+            ClaimReviewCopilotReadinessService readinessService
     ) {
         this.service = service;
         this.reviewService = reviewService;
+        this.readinessService = readinessService;
     }
 
     @PostMapping("/{claimId}/review-copilot/drafts")
@@ -88,6 +92,11 @@ public class ClaimReviewCopilotController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit
     ) {
         return ApiResponse.success(reviewService.recent(status, limit));
+    }
+
+    @GetMapping("/review-copilot/readiness")
+    public ApiResponse<ClaimReviewCopilotReadinessService.Readiness> readiness() {
+        return ApiResponse.success(readinessService.readiness());
     }
 
     public record DraftRequest(@NotBlank String requestId, @NotBlank String instruction) {

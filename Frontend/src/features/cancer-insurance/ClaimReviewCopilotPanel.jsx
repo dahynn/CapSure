@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, FileSearch, Loader2, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
-import { getClaimCopilotDraft, getClaimCopilotReviewQueue, updateClaimCopilotReview } from './api/operations.api';
+import {
+  getClaimCopilotDraft,
+  getClaimCopilotReadiness,
+  getClaimCopilotReviewQueue,
+  updateClaimCopilotReview,
+} from './api/operations.api';
 
 const formatDateTime = (value) => {
   if (!value) return '-';
@@ -15,6 +20,7 @@ const formatDateTime = (value) => {
 
 const ClaimReviewCopilotPanel = ({ onUpdated }) => {
   const [reviews, setReviews] = useState([]);
+  const [readiness, setReadiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [savingKey, setSavingKey] = useState('');
@@ -29,7 +35,12 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
     else setLoading(true);
     setError('');
     try {
-      setReviews(await getClaimCopilotReviewQueue('DRAFT', 20));
+      const [queue, providerReadiness] = await Promise.all([
+        getClaimCopilotReviewQueue('DRAFT', 20),
+        getClaimCopilotReadiness(),
+      ]);
+      setReviews(queue);
+      setReadiness(providerReadiness);
     } catch (requestError) {
       setError(requestError.message || '심사 보조 대기열을 불러오지 못했습니다.');
     } finally {
@@ -116,6 +127,11 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
       {error && (
         <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs leading-5 text-rose-100">
           {error}
+        </p>
+      )}
+      {readiness && !readiness.ready && (
+        <p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/5 px-3 py-2 text-[11px] leading-5 text-amber-100">
+          공급자 설정: {readiness.provider}. {readiness.blockers[0] || '외부 호출은 아직 준비되지 않았습니다.'}
         </p>
       )}
 
