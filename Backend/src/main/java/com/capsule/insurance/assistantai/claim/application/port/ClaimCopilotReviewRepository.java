@@ -13,6 +13,8 @@ public interface ClaimCopilotReviewRepository {
 
     Optional<ClaimCopilotReview> find(Long claimId, String requestId);
 
+    List<ClaimCopilotReview> findRecent(ClaimCopilotReviewStatus status, int limit);
+
     List<ClaimCopilotReviewEvent> findHistory(Long claimId, String requestId);
 
     Optional<ClaimCopilotReview> updateReview(

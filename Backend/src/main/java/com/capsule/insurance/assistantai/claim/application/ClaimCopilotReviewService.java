@@ -31,6 +31,13 @@ public class ClaimCopilotReviewService {
                 new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "심사 보조 초안 검토 상태를 찾을 수 없습니다."));
     }
 
+    public List<ClaimCopilotReview> recent(ClaimCopilotReviewStatus status, int limit) {
+        if (limit < 1 || limit > 100) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "조회 건수는 1~100 사이여야 합니다.");
+        }
+        return repository.findRecent(status, limit);
+    }
+
     public List<ClaimCopilotReviewEvent> history(Long claimId, String requestId) {
         get(claimId, requestId);
         return repository.findHistory(claimId, requestId);

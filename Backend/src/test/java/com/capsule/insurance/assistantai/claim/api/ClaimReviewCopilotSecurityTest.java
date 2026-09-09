@@ -52,6 +52,7 @@ class ClaimReviewCopilotSecurityTest {
         String draftPath = "/api/v1/ops/claims/100/review-copilot/drafts";
         String reviewPath = draftPath + "/request-1/review";
         String historyPath = reviewPath + "/history";
+        String queuePath = "/api/v1/ops/claims/review-copilot/reviews";
 
         mvc.perform(post(draftPath).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"requestId\":\"request-1\",\"instruction\":\"약관 확인\"}"))
@@ -65,6 +66,8 @@ class ClaimReviewCopilotSecurityTest {
         mvc.perform(get(reviewPath).with(user("7").roles("USER")))
                 .andExpect(status().isForbidden());
         mvc.perform(get(historyPath).with(user("7").roles("USER")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(queuePath).with(user("7").roles("USER")))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(assessmentService, reviewService);
@@ -115,5 +118,19 @@ class ClaimReviewCopilotSecurityTest {
                 .andExpect(status().isOk());
 
         verify(reviewService).history(100L, "request-1");
+    }
+
+    @Test
+    void adminCanReadOnlyDraftReviewsFromTheQueue() throws Exception {
+        when(reviewService.recent(ClaimCopilotReviewStatus.DRAFT, 20))
+                .thenReturn(List.of(new ClaimCopilotReview(
+                        100L, "request-1", ClaimCopilotReviewStatus.DRAFT, null, Instant.parse("2026-09-10T00:00:00Z"))));
+
+        mvc.perform(get("/api/v1/ops/claims/review-copilot/reviews")
+                        .param("status", "DRAFT")
+                        .with(user("99").roles("ADMIN")))
+                .andExpect(status().isOk());
+
+        verify(reviewService).recent(ClaimCopilotReviewStatus.DRAFT, 20);
     }
 }

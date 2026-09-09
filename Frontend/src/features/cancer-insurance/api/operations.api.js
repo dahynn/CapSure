@@ -82,3 +82,25 @@ export const runPremiumBilling = async (instanceKey, billingCycle, reason) => bi
 export const resumePremiumBilling = async (runId, reason) => billingPayload(
   await httpClient.post(`/api/v1/ops/premium-collections/billing/runs/${encodeURIComponent(runId)}/resume`, { reason })
 );
+
+const claimReviewPayload = (response, fallbackMessage) => {
+  const payload = response?.data;
+  if (!payload?.success) throw new Error(payload?.message || fallbackMessage);
+  return payload.data;
+};
+
+export const getClaimCopilotReviewQueue = async (status = 'DRAFT', limit = 20) => {
+  const query = new URLSearchParams({ status, limit: String(limit) });
+  return claimReviewPayload(
+    await httpClient.get(`/api/v1/ops/claims/review-copilot/reviews?${query.toString()}`),
+  '심사 보조 대기열을 불러오지 못했습니다.'
+  );
+};
+
+export const updateClaimCopilotReview = async (claimId, requestId, status) => claimReviewPayload(
+  await httpClient.post(
+    `/api/v1/ops/claims/${encodeURIComponent(claimId)}/review-copilot/drafts/${encodeURIComponent(requestId)}/review`,
+    { status }
+  ),
+  '심사 보조 검토 상태를 저장하지 못했습니다.'
+);

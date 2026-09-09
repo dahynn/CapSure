@@ -57,6 +57,25 @@ public class JdbcClaimCopilotReviewRepository implements ClaimCopilotReviewRepos
     }
 
     @Override
+    public List<ClaimCopilotReview> findRecent(ClaimCopilotReviewStatus status, int limit) {
+        if (status == null) {
+            return jdbcTemplate.query("""
+                    SELECT claim_id, request_id, review_status, reviewer_user_id, updated_at
+                    FROM public.ops_claim_copilot_review
+                    ORDER BY updated_at DESC, claim_copilot_review_id DESC
+                    LIMIT ?
+                    """, this::mapReview, limit);
+        }
+        return jdbcTemplate.query("""
+                SELECT claim_id, request_id, review_status, reviewer_user_id, updated_at
+                FROM public.ops_claim_copilot_review
+                WHERE review_status = ?
+                ORDER BY updated_at DESC, claim_copilot_review_id DESC
+                LIMIT ?
+                """, this::mapReview, status.name(), limit);
+    }
+
+    @Override
     @Transactional
     public Optional<ClaimCopilotReview> updateReview(
             Long claimId,

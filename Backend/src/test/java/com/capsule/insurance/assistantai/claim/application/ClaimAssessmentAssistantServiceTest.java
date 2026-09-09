@@ -232,6 +232,15 @@ class ClaimAssessmentAssistantServiceTest {
         }
 
         @Override
+        public List<ClaimCopilotReview> findRecent(ClaimCopilotReviewStatus status, int limit) {
+            return reviews.values().stream()
+                    .filter(review -> status == null || review.status() == status)
+                    .sorted(java.util.Comparator.comparing(ClaimCopilotReview::updatedAt).reversed())
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
         public List<ClaimCopilotReviewEvent> findHistory(Long claimId, String requestId) {
             return List.copyOf(events.getOrDefault(key(claimId, requestId), List.of()));
         }

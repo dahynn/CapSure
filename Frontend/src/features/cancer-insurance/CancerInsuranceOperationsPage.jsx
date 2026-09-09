@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import PremiumBillingPanel from './PremiumBillingPanel';
 import PremiumDelinquencyPanel from './PremiumDelinquencyPanel';
+import ClaimReviewCopilotPanel from './ClaimReviewCopilotPanel';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -883,6 +884,8 @@ const CancerInsuranceOperationsPage = () => {
         <PremiumBillingPanel onUpdated={() => loadDashboard(true)} />
 
         <PremiumDelinquencyPanel onUpdated={() => loadDashboard(true)} />
+
+        <ClaimReviewCopilotPanel onUpdated={() => loadDashboard(true)} />
 
         <section className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
           <ServerCog className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
