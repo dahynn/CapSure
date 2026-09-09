@@ -28,6 +28,10 @@ insurer:
     path: ${INSURER_TERMS_PDF_PATH:classpath:terms/fixed-terms.pdf}
     max-chars: ${INSURER_TERMS_PDF_MAX_CHARS:30000}
 
+copilot:
+  claim-review:
+    provider: ${CLAIM_REVIEW_COPILOT_PROVIDER:blocked}
+
 mydata:
   mock:
     base-url: ${MYDATA_MOCK_BASE_URL:http://localhost:8081}
