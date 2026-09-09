@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.ObjectProvider;
 
 @ExtendWith(MockitoExtension.class)
 class InsurerServiceTest {
@@ -38,10 +37,6 @@ class InsurerServiceTest {
     @Mock
     private UserAccountMapper userAccountMapper;
 
-    @Mock
-    @SuppressWarnings("rawtypes")
-    private ObjectProvider chatClientBuilderProvider;
-
     private InsurerService insurerService;
 
     private final String category = "CANCER";
@@ -49,7 +44,7 @@ class InsurerServiceTest {
 
     @BeforeEach
     void setUp() {
-        insurerService = new InsurerService(productSourceMapper, insurerCatalogMapper, userAccountMapper, chatClientBuilderProvider, "");
+        insurerService = new InsurerService(productSourceMapper, insurerCatalogMapper, userAccountMapper);
     }
 
     @Test

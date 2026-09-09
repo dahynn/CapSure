@@ -17,7 +17,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest(properties = {
-        "spring.ai.openai.api-key=dummy",
         "spring.flyway.baseline-on-migrate=true",
         "spring.flyway.baseline-version=0",
         "spring.flyway.locations=classpath:db/migration",

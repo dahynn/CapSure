@@ -1,15 +1,4 @@
 spring:
-  ai:
-    model:
-      chat: openai
-    openai:
-      api-key: ${OPENAI_API_KEY:disabled-local}
-      base-url: ${OPENAI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com}
-      chat:
-        completions-path: /v1/chat/completions
-        options:
-          model: ${OPENAI_MODEL:gpt-5.2}
-          temperature: 0.2
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:${CAPSURE_POSTGRES_PORT:5433}/${CAPSURE_POSTGRES_DB:capsure}}
     username: ${DB_USERNAME:capsure}
