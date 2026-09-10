@@ -17,11 +17,15 @@ import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** OpenAI Responses API 어댑터. 허용된 식별자만 전송하고, 호출 허용 전에는 fail-closed로 차단합니다. */
 @Component
 @ConditionalOnProperty(name = "copilot.claim-review.provider", havingValue = "external")
 public class OpenAiClaimAssessmentGateway implements ClaimAssessmentAssistantGateway {
+
+    private static final Logger log = LoggerFactory.getLogger(OpenAiClaimAssessmentGateway.class);
 
     private final ClaimReviewCopilotProperties properties;
     private final ObjectMapper objectMapper;
@@ -44,11 +48,15 @@ public class OpenAiClaimAssessmentGateway implements ClaimAssessmentAssistantGat
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload(request))))
                     .build();
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) throw new ExternalModelCallBlockedException();
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                log.warn("OpenAI claim-review request rejected: status={}", response.statusCode());
+                throw new ExternalModelCallBlockedException();
+            }
             return parse(response.body(), request);
         } catch (ExternalModelCallBlockedException exception) {
             throw exception;
         } catch (Exception exception) {
+            log.warn("OpenAI claim-review request failed: failureType={}", exception.getClass().getSimpleName());
             throw new ExternalModelCallBlockedException();
         }
     }
@@ -84,9 +92,7 @@ public class OpenAiClaimAssessmentGateway implements ClaimAssessmentAssistantGat
     }
 
     private ClaimAssessmentAssistantModelDraft parse(String body, ClaimAssessmentAssistantModelRequest request) throws Exception {
-        JsonNode result = objectMapper.readTree(body).path("output_text");
-        if (!result.isTextual()) throw new ExternalModelCallBlockedException();
-        JsonNode json = objectMapper.readTree(result.asText());
+        JsonNode json = objectMapper.readTree(outputText(body));
         List<String> ids = objectMapper.convertValue(json.path("termsSourceIds"), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { });
         List<ClaimAssessmentSourceReference> terms = request.allowedSources().stream().filter(source -> ids.contains(source.sourceId())).toList();
         return new ClaimAssessmentAssistantModelDraft(
@@ -94,5 +100,24 @@ public class OpenAiClaimAssessmentGateway implements ClaimAssessmentAssistantGat
                 objectMapper.convertValue(json.path("possibleMissingEvidence"), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { }),
                 objectMapper.convertValue(json.path("additionalQuestions"), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { }),
                 json.path("evidenceInsufficient").asBoolean(true));
+    }
+
+    /**
+     * {@code output_text} is an SDK convenience property. The raw Responses API payload carries
+     * text in {@code output[].content[]} instead, so this adapter extracts only output_text parts.
+     */
+    private String outputText(String body) throws Exception {
+        JsonNode output = objectMapper.readTree(body).path("output");
+        if (!output.isArray()) throw new ExternalModelCallBlockedException();
+        StringBuilder text = new StringBuilder();
+        for (JsonNode item : output) {
+            for (JsonNode content : item.path("content")) {
+                if ("output_text".equals(content.path("type").asText()) && content.path("text").isTextual()) {
+                    text.append(content.path("text").asText());
+                }
+            }
+        }
+        if (text.isEmpty()) throw new ExternalModelCallBlockedException();
+        return text.toString();
     }
 }
