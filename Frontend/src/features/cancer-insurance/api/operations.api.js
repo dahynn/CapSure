@@ -112,6 +112,21 @@ export const getClaimCopilotDraft = async (claimId, requestId) => claimReviewPay
   '심사 보조 초안을 불러오지 못했습니다.'
 );
 
+export const createClaimCopilotDraft = async (claimId, requestId, instruction) => claimReviewPayload(
+  await httpClient.post(
+    `/api/v1/ops/claims/${encodeURIComponent(claimId)}/review-copilot/drafts`,
+    { requestId, instruction }
+  ),
+  '심사 보조 초안을 만들지 못했습니다.'
+);
+
+export const getClaimCopilotReviewHistory = async (claimId, requestId) => claimReviewPayload(
+  await httpClient.get(
+    `/api/v1/ops/claims/${encodeURIComponent(claimId)}/review-copilot/drafts/${encodeURIComponent(requestId)}/review/history`
+  ),
+  '심사 보조 검토 이력을 불러오지 못했습니다.'
+);
+
 export const getClaimCopilotReadiness = async () => claimReviewPayload(
   await httpClient.get('/api/v1/ops/claims/review-copilot/readiness'),
   '심사 보조 공급자 설정을 확인하지 못했습니다.'

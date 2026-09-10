@@ -3,7 +3,9 @@ import { CheckCircle2, FileSearch, Loader2, RefreshCw, ShieldCheck, XCircle } fr
 import {
   getClaimCopilotDraft,
   getClaimCopilotReadiness,
+  getClaimCopilotReviewHistory,
   getClaimCopilotReviewQueue,
+  createClaimCopilotDraft,
   updateClaimCopilotReview,
 } from './api/operations.api';
 
@@ -27,6 +29,11 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
   const [detailLoadingKey, setDetailLoadingKey] = useState('');
   const [selectedKey, setSelectedKey] = useState('');
   const [drafts, setDrafts] = useState({});
+  const [claimId, setClaimId] = useState('');
+  const [instruction, setInstruction] = useState('약관 조항과 필수 서류 유형만 확인하세요. 지급 승인·거절 판단은 하지 마세요.');
+  const [generating, setGenerating] = useState(false);
+  const [retryRequest, setRetryRequest] = useState(null);
+  const [latestHistory, setLatestHistory] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -60,6 +67,8 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
     setNotice('');
     try {
       await updateClaimCopilotReview(item.claimId, item.requestId, status);
+      const history = await getClaimCopilotReviewHistory(item.claimId, item.requestId);
+      setLatestHistory({ claimId: item.claimId, requestId: item.requestId, events: history });
       setNotice(status === 'CONFIRMED'
         ? '초안 검토 확인을 기록했습니다. 보험금 지급·거절은 별도 심사 절차에서 처리해야 합니다.'
         : '초안을 반려로 기록했습니다. 보험금 청구 상태는 변경되지 않습니다.');
@@ -69,6 +78,45 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
       setError(requestError.message || '심사 보조 검토 상태를 저장하지 못했습니다.');
     } finally {
       setSavingKey('');
+    }
+  };
+
+  const createDraft = async (event, retry = retryRequest) => {
+    event?.preventDefault();
+    const normalizedClaimId = Number(retry?.claimId ?? claimId);
+    const normalizedInstruction = (retry?.instruction ?? instruction).trim();
+    if (!Number.isInteger(normalizedClaimId) || normalizedClaimId < 1) {
+      setError('초안을 만들 청구 ID를 입력해주세요.');
+      return;
+    }
+    if (!normalizedInstruction) {
+      setError('약관·증빙 확인 목적을 입력해주세요.');
+      return;
+    }
+    setGenerating(true);
+    setError('');
+    setNotice('');
+    try {
+      const requestId = `ops-claim-review-${Date.now()}`;
+      const result = await createClaimCopilotDraft(normalizedClaimId, requestId, normalizedInstruction);
+      if (result.decision === 'GATEWAY_BLOCKED') {
+        setRetryRequest({ claimId: normalizedClaimId, instruction: normalizedInstruction });
+        setError('외부 심사 보조 응답을 받지 못했습니다. 입력 내용은 저장하지 않았으며, 설정을 확인한 뒤 같은 요청을 다시 시도할 수 있습니다.');
+        return;
+      }
+      setRetryRequest(null);
+      if (result.draft && result.review) {
+        const key = `${normalizedClaimId}:${requestId}`;
+        setDrafts((current) => ({ ...current, [key]: result.draft }));
+        setSelectedKey(key);
+      }
+      setNotice('심사 보조 초안을 만들었습니다. 약관 근거와 증빙 확인 항목을 검토한 뒤에만 결과를 기록하세요.');
+      await load(true);
+      onUpdated?.();
+    } catch (requestError) {
+      setError(requestError.message || '심사 보조 초안을 만들지 못했습니다.');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -134,6 +182,54 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
           공급자 설정: {readiness.provider}. {readiness.blockers[0] || '외부 호출은 아직 준비되지 않았습니다.'}
         </p>
       )}
+
+      <form onSubmit={createDraft} className="mt-4 rounded-2xl border border-violet-200/15 bg-slate-950/35 p-3">
+        <p className="text-xs font-black text-violet-100">새 심사 보조 초안</p>
+        <p className="mt-1 text-[10px] leading-4 text-slate-500">
+          청구 ID와 약관·증빙 확인 목적만 입력하세요. 고객 식별정보, 진단 상세, 계좌 정보는 입력하지 않습니다.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-[140px_1fr]">
+          <label className="text-[10px] font-bold text-slate-500">
+            청구 ID
+            <input
+              value={claimId}
+              onChange={(event) => setClaimId(event.target.value)}
+              inputMode="numeric"
+              placeholder="예: 1"
+              className="mt-1.5 w-full rounded-xl border border-slate-800 bg-[#09111F] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-200/50"
+            />
+          </label>
+          <label className="text-[10px] font-bold text-slate-500">
+            확인 목적
+            <input
+              value={instruction}
+              onChange={(event) => setInstruction(event.target.value)}
+              maxLength={300}
+              className="mt-1.5 w-full rounded-xl border border-slate-800 bg-[#09111F] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-200/50"
+            />
+          </label>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="submit"
+            disabled={generating || (readiness && !readiness.ready)}
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-violet-300/15 px-3 py-2.5 text-xs font-black text-violet-100 disabled:opacity-50"
+          >
+            {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSearch className="h-3.5 w-3.5" />}
+            초안 만들기
+          </button>
+          {retryRequest && (
+            <button
+              type="button"
+              onClick={() => createDraft(null, retryRequest)}
+              disabled={generating}
+              className="rounded-xl border border-amber-300/20 px-3 py-2.5 text-xs font-black text-amber-100 disabled:opacity-50"
+            >
+              같은 요청 재시도
+            </button>
+          )}
+        </div>
+      </form>
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-slate-800 bg-[#09111F]">
         {loading ? (
@@ -214,6 +310,20 @@ const ClaimReviewCopilotPanel = ({ onUpdated }) => {
           );
         })}
       </div>
+      {latestHistory && (
+        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/35 p-3 text-[11px] leading-5 text-slate-400">
+          <p className="font-black text-violet-100">방금 기록한 검토 이력 · 청구 #{latestHistory.claimId}</p>
+          {latestHistory.events.length === 0 ? (
+            <p className="mt-1">기록된 검토 이력이 없습니다.</p>
+          ) : (
+            <ul className="mt-2 space-y-1">
+              {latestHistory.events.map((event) => (
+                <li key={`${event.eventType}:${event.occurredAt}`}>{event.status} · {formatDateTime(event.occurredAt)}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <p className="mt-3 flex items-start gap-2 text-[10px] leading-4 text-slate-500">
         <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-200" />
         대기열에는 청구 ID, 요청 ID, 검토 상태와 시각만 표시됩니다.

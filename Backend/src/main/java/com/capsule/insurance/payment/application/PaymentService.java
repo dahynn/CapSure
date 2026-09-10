@@ -266,6 +266,17 @@ public class PaymentService {
         return toResponse(completed);
     }
 
+    /** 일반결제 webhook은 본문 상태를 신뢰하지 않고, 저장된 결제 키로 공급자 조회 후 반영합니다. */
+    public PaymentOrderResponse reconcileByProviderPaymentKey(String provider, String providerPaymentKey) {
+        PaymentAttempt attempt = paymentRepository
+                .findAttemptByProviderPaymentKey(provider, providerPaymentKey)
+                .orElseThrow(() -> notFound("webhook 대상 결제 시도를 찾을 수 없습니다."));
+        if (!provider.equals(paymentGateway.providerCode())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "현재 결제 공급자와 webhook 공급자가 일치하지 않습니다.");
+        }
+        return reconcile(attempt.paymentOrderId());
+    }
+
     public PaymentOrderResponse applyProviderNotification(
             String provider,
             String providerPaymentKey,
