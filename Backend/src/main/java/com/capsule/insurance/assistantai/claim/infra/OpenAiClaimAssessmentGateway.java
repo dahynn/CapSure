@@ -91,7 +91,7 @@ public class OpenAiClaimAssessmentGateway implements ClaimAssessmentAssistantGat
                                 "required", List.of("termsSourceIds", "possibleMissingEvidence", "additionalQuestions", "evidenceInsufficient")))));
     }
 
-    private ClaimAssessmentAssistantModelDraft parse(String body, ClaimAssessmentAssistantModelRequest request) throws Exception {
+    ClaimAssessmentAssistantModelDraft parse(String body, ClaimAssessmentAssistantModelRequest request) throws Exception {
         JsonNode json = objectMapper.readTree(outputText(body));
         List<String> ids = objectMapper.convertValue(json.path("termsSourceIds"), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { });
         List<ClaimAssessmentSourceReference> terms = request.allowedSources().stream().filter(source -> ids.contains(source.sourceId())).toList();
@@ -106,7 +106,7 @@ public class OpenAiClaimAssessmentGateway implements ClaimAssessmentAssistantGat
      * {@code output_text} is an SDK convenience property. The raw Responses API payload carries
      * text in {@code output[].content[]} instead, so this adapter extracts only output_text parts.
      */
-    private String outputText(String body) throws Exception {
+    String outputText(String body) throws Exception {
         JsonNode output = objectMapper.readTree(body).path("output");
         if (!output.isArray()) throw new ExternalModelCallBlockedException();
         StringBuilder text = new StringBuilder();
