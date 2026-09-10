@@ -412,7 +412,8 @@ public class JdbcClaimRepository implements ClaimRepository {
         return findPaymentById(Objects.requireNonNull(claimPaymentId)).orElseThrow();
     }
 
-    private Optional<InsuranceClaim> findById(Long claimId) {
+    @Override
+    public Optional<InsuranceClaim> findById(Long claimId) {
         return jdbcTemplate.query(
                 CLAIM_SELECT + " WHERE claim_id = ?",
                 this::mapClaim,

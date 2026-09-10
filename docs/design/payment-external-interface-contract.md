@@ -63,7 +63,7 @@ V15부터 회로 상태는 PostgreSQL `ifc_payment_circuit_state`에 기관 인�
 
 ## 범위
 
-현재 범위는 Toss Payments 테스트 일반결제를 이용한 초회 보험료 승인·조회다. 실결제, 자동결제 빌링키, 취소·환불, 운영 webhook 서명 검증은 포함하지 않는다.
+현재 범위는 Toss Payments 테스트 일반결제를 이용한 초회 보험료 승인·조회와 `PAYMENT_STATUS_CHANGED` webhook inbox다. 일반결제 webhook에는 서명 헤더가 없으므로 webhook 본문을 신뢰하지 않고 결제 조회 API로 재검증한다. 실결제, 자동결제 빌링키, 취소·환불은 포함하지 않는다.
 
 공식 근거:
 

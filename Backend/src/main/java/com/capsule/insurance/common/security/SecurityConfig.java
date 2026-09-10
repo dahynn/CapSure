@@ -40,6 +40,7 @@ public class SecurityConfig {
                                 "/insurers/**",
                                 "/api/v1/cancer-products/**",
                                 "/api/v1/terms/**",
+                                "/webhooks/toss/payments",
                                 "/mock/**",
                                 "/actuator/health",
                                 "/actuator/info",

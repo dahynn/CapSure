@@ -28,6 +28,15 @@ insurer:
     path: ${INSURER_TERMS_PDF_PATH:classpath:terms/fixed-terms.pdf}
     max-chars: ${INSURER_TERMS_PDF_MAX_CHARS:30000}
 
+copilot:
+  claim-review:
+    provider: ${CLAIM_REVIEW_COPILOT_PROVIDER:blocked}
+    base-url: ${CLAIM_REVIEW_COPILOT_BASE_URL:}
+    model: ${CLAIM_REVIEW_COPILOT_MODEL:}
+    api-key: ${CLAIM_REVIEW_COPILOT_API_KEY:}
+    timeout: ${CLAIM_REVIEW_COPILOT_TIMEOUT:10s}
+    allow-external-calls: ${CLAIM_REVIEW_COPILOT_ALLOW_EXTERNAL_CALLS:false}
+
 mydata:
   mock:
     base-url: ${MYDATA_MOCK_BASE_URL:http://localhost:8081}
