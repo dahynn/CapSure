@@ -91,8 +91,8 @@ export default function CancerInsurancePaymentReturnPage({ result }) {
     return (
         <div className="flex min-h-[620px] flex-col items-center justify-center px-7 text-center">
             <StatusIcon className={statusIconClassName} />
-            <p className="mt-6 text-xs font-black text-[#82D8FC]">TOSS PAYMENTS · TEST</p>
-            <h1 className="mt-2 text-2xl font-black text-white">
+            <p className="mt-6 text-[11px] font-medium text-[#82D8FC]">TOSS PAYMENTS · TEST</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
                 {confirming
                     ? '결제 승인 확인 중'
                     : completed

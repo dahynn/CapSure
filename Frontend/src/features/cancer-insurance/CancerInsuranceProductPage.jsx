@@ -11,7 +11,6 @@ import {
     Loader2,
     LockKeyhole,
     RefreshCw,
-    ShieldCheck,
     Sparkles,
     X,
 } from 'lucide-react';
@@ -260,15 +259,15 @@ const CancerInsuranceProductPage = () => {
                         <ChevronLeft className="h-6 w-6" />
                     </button>
                     <div className="ml-2 min-w-0">
-                        <p className="text-xs font-bold text-[#82D8FC]">STEP 1 · 상품과 약관</p>
-                        <h1 className="mt-0.5 truncate text-xl font-black text-white">가입할 보장을 확인해요</h1>
+                        <p className="text-[11px] font-medium text-slate-400">STEP 1 · 상품과 약관</p>
+                        <h1 className="mt-1 truncate text-xl font-semibold tracking-[-0.02em] text-white">가입할 보장을 확인해요</h1>
                     </div>
                 </div>
                 {hasAdminRole() && (
                     <button
                         type="button"
                         onClick={() => navigate('/cancer-insurance/operations')}
-                        className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[#82D8FC]/25 bg-[#82D8FC]/10 px-3 py-2 text-[11px] font-black text-[#82D8FC]"
+                        className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-[11px] font-semibold text-slate-300"
                     >
                         <ChartNoAxesCombined className="h-3.5 w-3.5" /> 운영 콘솔
                     </button>
@@ -276,32 +275,23 @@ const CancerInsuranceProductPage = () => {
             </header>
 
             <main className="space-y-6 px-6">
-                <section className="relative overflow-hidden rounded-[30px] border border-[#82D8FC]/25 bg-gradient-to-br from-[#172942] via-[#0E192B] to-[#17152A] p-6 shadow-2xl">
-                    <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-[#82D8FC]/15 blur-3xl" />
-                    <div className="relative">
-                        <div className="flex items-center justify-between gap-3">
-                            <span className="rounded-full border border-[#82D8FC]/30 bg-[#82D8FC]/10 px-3 py-1 text-[11px] font-black text-[#82D8FC]">
-                                교육용 가상 상품
-                            </span>
-                            <span className="text-xs font-bold text-slate-400">{summary.version}</span>
-                        </div>
-                        <div className="mt-7 flex items-start gap-4">
-                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#82D8FC] text-[#020715]">
-                                <ShieldCheck className="h-7 w-7" />
-                            </span>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400">{summary.insurerName}</p>
-                                <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">{summary.productName}</h2>
-                            </div>
-                        </div>
-                        <div className="mt-7 flex items-end justify-between border-t border-white/10 pt-5">
+                <section className="rounded-[20px] border border-slate-700/80 bg-[#0A1424] p-6">
+                    <div>
+                        <h2 className="min-w-0 text-[21px] font-semibold leading-tight tracking-[-0.03em] text-white">
+                            {summary.productName === 'CapSure 암케어 시뮬레이션' ? (
+                                <>
+                                    CapSure 암케어<span className="hidden sm:inline"> </span><br className="sm:hidden" />시뮬레이션
+                                </>
+                            ) : summary.productName}
+                        </h2>
+                        <div className="mt-6 flex items-end justify-between border-t border-slate-700/70 pt-5">
                             <div>
                                 <p className="text-xs text-slate-500">월 보험료</p>
-                                <p className="mt-1 text-2xl font-black text-white">{formatWon(summary.baseMonthlyPremium)}</p>
+                                <p className="mt-1 text-2xl font-bold tracking-[-0.03em] text-white">{formatWon(summary.baseMonthlyPremium)}</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-xs text-slate-500">가입 담보</p>
-                                <p className="mt-1 font-black text-[#82D8FC]">{selectedCoverages.length}개 선택</p>
+                                <p className="mt-1 font-semibold text-[#82D8FC]">{selectedCoverages.length}개 선택</p>
                             </div>
                         </div>
                     </div>
@@ -310,8 +300,8 @@ const CancerInsuranceProductPage = () => {
                 <section>
                     <div className="mb-4 flex items-end justify-between">
                         <div>
-                            <p className="text-xs font-bold text-[#82D8FC]">보장 구성</p>
-                            <h2 className="mt-1 text-xl font-black text-white">필요한 담보를 선택하세요</h2>
+                            <p className="text-[11px] font-medium text-[#82D8FC]">보장 구성</p>
+                            <h2 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-white">필요한 담보를 선택하세요</h2>
                         </div>
                         <span className="text-xs text-slate-500">최소 1개</span>
                     </div>
@@ -323,7 +313,7 @@ const CancerInsuranceProductPage = () => {
                                     key={coverage.productCoverageId}
                                     type="button"
                                     onClick={() => toggleCoverage(coverage.productCoverageId)}
-                                    className={`w-full rounded-2xl border p-5 text-left transition-all ${checked ? 'border-[#82D8FC]/50 bg-[#82D8FC]/10' : 'border-slate-800 bg-[#0B1220]'}`}
+                                    className={`w-full rounded-xl border p-5 text-left transition-colors ${checked ? 'border-[#82D8FC]/50 bg-[#82D8FC]/10' : 'border-slate-800 bg-[#09111F]'}`}
                                 >
                                     <div className="flex items-start gap-3">
                                         <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-[#82D8FC] bg-[#82D8FC] text-[#020715]' : 'border-slate-600 text-transparent'}`}>
@@ -331,8 +321,8 @@ const CancerInsuranceProductPage = () => {
                                         </span>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-start justify-between gap-3">
-                                                <h3 className="font-black text-white">{coverage.coverageName}</h3>
-                                                <span className="shrink-0 text-sm font-black text-[#82D8FC]">{formatWon(coverage.insuredAmount)}</span>
+                                                <h3 className="font-semibold text-white">{coverage.coverageName}</h3>
+                                                <span className="shrink-0 text-sm font-semibold text-[#82D8FC]">{formatWon(coverage.insuredAmount)}</span>
                                             </div>
                                             <p className="mt-2 text-sm leading-5 text-slate-400">{coverage.description}</p>
                                             <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-amber-200/80">
@@ -347,14 +337,14 @@ const CancerInsuranceProductPage = () => {
                     </div>
                 </section>
 
-                <section className="rounded-[26px] border border-slate-800 bg-[#09111F] p-5">
+                <section className="rounded-[20px] border border-slate-800 bg-[#09111F] p-5">
                     <div className="flex items-start gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F2BEF7]/10 text-[#F2BEF7]">
+                        <span className="mt-0.5 shrink-0 text-[#F2BEF7]">
                             <Sparkles className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-xs font-bold text-[#F2BEF7]">30초 약관 이해</p>
-                            <h2 className="mt-1 text-lg font-black text-white">가입 전에 이것만은 확인하세요</h2>
+                            <p className="text-[11px] font-medium text-[#F2BEF7]">30초 약관 이해</p>
+                            <h2 className="mt-1 text-lg font-semibold text-white">가입 전에 이것만은 확인하세요</h2>
                         </div>
                     </div>
                     <div className="mt-5 space-y-3">
@@ -363,12 +353,12 @@ const CancerInsuranceProductPage = () => {
                                 key={`${highlight.category}-${highlight.termsClauseId}`}
                                 type="button"
                                 onClick={() => openClause(highlight.termsClauseId)}
-                                className="w-full rounded-2xl bg-slate-900/80 p-4 text-left transition-colors hover:bg-slate-800"
+                                className="w-full rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-left transition-colors hover:border-slate-700"
                             >
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-2">
                                         <FileCheck2 className="h-4 w-4 text-[#82D8FC]" />
-                                        <span className="text-sm font-black text-white">{highlight.title}</span>
+                                        <span className="text-sm font-semibold text-white">{highlight.title}</span>
                                     </div>
                                     <FileText className="h-4 w-4 shrink-0 text-slate-500" />
                                 </div>
@@ -399,9 +389,9 @@ const CancerInsuranceProductPage = () => {
                 <AppButton
                     onClick={handleQuote}
                     disabled={selectedCoverageIds.length === 0 || submitting}
-                    className="text-base font-black"
+                    className="text-base font-semibold"
                 >
-                    {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+                    {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
                     {submitting
                         ? '견적을 고정하고 있어요'
                         : `${hasAccessToken() ? '' : '로그인하고 '}${formatWon(summary.baseMonthlyPremium)}으로 견적 받기`}
@@ -413,11 +403,11 @@ const CancerInsuranceProductPage = () => {
 
             {(clause || clauseLoading) && (
                 <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6">
-                    <div className="max-h-[78vh] w-full max-w-[520px] overflow-y-auto rounded-t-[30px] border border-slate-700 bg-[#0B1322] p-6 shadow-2xl sm:rounded-[30px]">
+                    <div className="max-h-[78vh] w-full max-w-[520px] overflow-y-auto rounded-t-[22px] border border-slate-700 bg-[#0B1322] p-6 shadow-2xl sm:rounded-[22px]">
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <p className="text-xs font-bold text-[#82D8FC]">약관 원문 근거</p>
-                                <h3 className="mt-1 text-lg font-black text-white">{clause?.title || '조항을 불러오는 중입니다'}</h3>
+                                <h3 className="mt-1 text-lg font-semibold text-white">{clause?.title || '조항을 불러오는 중입니다'}</h3>
                             </div>
                             <button
                                 type="button"
