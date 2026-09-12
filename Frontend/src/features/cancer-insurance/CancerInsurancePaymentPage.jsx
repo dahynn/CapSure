@@ -29,6 +29,12 @@ const currency = new Intl.NumberFormat('ko-KR');
 
 const formatWon = (value) => `${currency.format(Number(value || 0))}원`;
 
+const maskOrderNumber = (orderNo) => {
+    if (!orderNo) return '-';
+    const value = String(orderNo);
+    return `${value.slice(0, 4)}-••••-${value.slice(-5)}`;
+};
+
 const formatDateTime = (value) => {
     if (!value) return '-';
     return new Intl.DateTimeFormat('ko-KR', {
@@ -238,10 +244,10 @@ const CancerInsurancePaymentPage = () => {
         const pending = ['UNKNOWN', 'APPROVING'].includes(payment.status);
         return (
             <div className="px-6 pb-36 pt-8">
-                <section className={`rounded-[30px] border p-7 ${terminalCopy.classes}`}>
+                <section className={`rounded-[20px] border p-7 ${terminalCopy.classes}`}>
                     <StatusIcon className={`h-12 w-12 ${payment.status === 'APPROVING' ? 'animate-spin' : ''}`} />
-                    <p className="mt-6 text-xs font-black">결제 상태 · {payment.status}</p>
-                    <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">
+                    <p className="mt-6 text-xs font-semibold">결제 상태 · {payment.status}</p>
+                    <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
                         {terminalCopy.title}
                     </h1>
                     <p className="mt-3 text-sm leading-6 text-slate-300">{terminalCopy.description}</p>
@@ -250,11 +256,11 @@ const CancerInsurancePaymentPage = () => {
                 <section className="mt-5 rounded-2xl border border-slate-800 bg-[#09111F] p-5">
                     <div className="flex items-center justify-between gap-3">
                         <span className="text-sm text-slate-500">결제 주문</span>
-                        <span className="text-sm font-bold text-white">{payment.orderNo}</span>
+                        <span className="text-sm font-bold text-white">{maskOrderNumber(payment.orderNo)}</span>
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3">
                         <span className="text-sm text-slate-500">초회 보험료</span>
-                        <span className="text-sm font-black text-[#82D8FC]">{formatWon(payment.amount)}</span>
+                        <span className="text-sm font-semibold text-[#82D8FC]">{formatWon(payment.amount)}</span>
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3">
                         <span className="text-sm text-slate-500">계약 상태</span>
@@ -309,31 +315,31 @@ const CancerInsurancePaymentPage = () => {
                     <ChevronLeft className="h-6 w-6" />
                 </button>
                 <div className="ml-2">
-                    <p className="text-xs font-bold text-[#82D8FC]">STEP 3 · 초회 보험료</p>
-                    <h1 className="mt-0.5 text-xl font-black text-white">
+                    <p className="text-[11px] font-medium text-slate-400">STEP 3 · 초회 보험료</p>
+                    <h1 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-white">
                         {tossEnabled ? 'Toss 테스트 결제를 진행해주세요' : '가상 결제를 진행해주세요'}
                     </h1>
                 </div>
             </header>
 
             <main className="space-y-6 px-6">
-                <section className="overflow-hidden rounded-[28px] border border-[#82D8FC]/20 bg-gradient-to-br from-[#10253A] to-[#07101C] p-6">
+                <section className="overflow-hidden rounded-[20px] border border-slate-700/80 bg-[#0A1424] p-6">
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-xs font-bold text-[#82D8FC]">INITIAL PREMIUM</p>
-                            <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">
+                            <p className="text-[11px] font-medium text-[#82D8FC]">INITIAL PREMIUM</p>
+                            <p className="mt-2 text-3xl font-bold tracking-[-0.04em] text-white">
                                 {formatWon(payment.amount)}
                             </p>
                             <p className="mt-2 text-xs text-slate-500">주문 만료 {formatDateTime(payment.expiresAt)}</p>
                         </div>
-                        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#82D8FC]/10 text-[#82D8FC]">
+                        <span className="text-[#82D8FC]">
                             <CreditCard className="h-6 w-6" />
                         </span>
                     </div>
                     <div className="mt-6 border-t border-white/10 pt-4">
                         <div className="flex items-center justify-between gap-3 text-xs">
                             <span className="text-slate-500">결제 주문번호</span>
-                            <span className="font-bold text-slate-300">{payment.orderNo}</span>
+                            <span className="font-bold text-slate-300">{maskOrderNumber(payment.orderNo)}</span>
                         </div>
                         <div className="mt-3 flex items-center justify-between gap-3 text-xs">
                             <span className="text-slate-500">결제 전 계약</span>
@@ -346,7 +352,7 @@ const CancerInsurancePaymentPage = () => {
                     <div className="flex items-start gap-3">
                         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" />
                         <div>
-                            <p className="text-sm font-black text-amber-100">
+                            <p className="text-sm font-semibold text-amber-100">
                                 {tossEnabled ? 'Toss Payments 테스트 환경입니다' : '실제 결제정보를 입력하지 않습니다'}
                             </p>
                             <p className="mt-1 text-xs leading-5 text-amber-100/60">
@@ -363,12 +369,12 @@ const CancerInsurancePaymentPage = () => {
                 ) : (
                     <section>
                         <div className="mb-4 flex items-center gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F2BEF7]/10 text-[#F2BEF7]">
+                            <span className="text-[#F2BEF7]">
                                 <ServerCog className="h-5 w-5" />
                             </span>
                             <div>
-                                <p className="text-xs font-bold text-[#F2BEF7]">장애 시나리오</p>
-                                <h2 className="text-lg font-black text-white">PG 응답을 선택해보세요</h2>
+                                <p className="text-[11px] font-medium text-[#F2BEF7]">장애 시나리오</p>
+                                <h2 className="mt-1 text-lg font-semibold text-white">PG 응답을 선택해보세요</h2>
                             </div>
                         </div>
                         <div className="space-y-3">
@@ -380,13 +386,13 @@ const CancerInsurancePaymentPage = () => {
                                         key={item.id}
                                         type="button"
                                         onClick={() => setScenario(item.id)}
-                                        className={`flex w-full items-start gap-4 rounded-2xl border p-4 text-left transition-all ${selected ? 'border-[#82D8FC] bg-[#82D8FC]/10' : 'border-slate-800 bg-[#09111F]'}`}
+                                        className={`flex w-full items-start gap-4 rounded-xl border p-4 text-left transition-colors ${selected ? 'border-[#82D8FC]/70 bg-[#82D8FC]/10' : 'border-slate-800 bg-[#09111F]'}`}
                                     >
-                                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-[#82D8FC] text-[#020715]' : 'bg-slate-800 text-slate-500'}`}>
+                                        <span className={`mt-0.5 shrink-0 ${selected ? 'text-[#82D8FC]' : 'text-slate-500'}`}>
                                             <ScenarioIcon className="h-5 w-5" />
                                         </span>
                                         <span className="min-w-0 flex-1">
-                                            <span className="block text-sm font-black text-white">{item.title}</span>
+                                            <span className="block text-sm font-semibold text-white">{item.title}</span>
                                             <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
                                         </span>
                                         <span className={`mt-1 flex h-5 w-5 items-center justify-center rounded-full border ${selected ? 'border-[#82D8FC] bg-[#82D8FC] text-[#020715]' : 'border-slate-700 text-transparent'}`}>

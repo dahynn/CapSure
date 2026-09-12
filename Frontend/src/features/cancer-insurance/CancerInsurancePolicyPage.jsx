@@ -31,6 +31,15 @@ const formatDate = (value) => {
     }).format(new Date(value));
 };
 
+// 증권번호는 계약을 식별해야 하지만, UUID 전체를 고객 화면에 그대로 노출할 필요는 없습니다.
+// 원본 값은 API·계약 원장에 보존하고 화면에는 읽기 쉬운 식별자만 표시합니다.
+const formatPolicyNo = (value) => {
+    if (!value) return '-';
+    const normalized = String(value).replace(/[^a-zA-Z0-9]/g, '');
+    if (normalized.length <= 12) return value;
+    return `${normalized.slice(0, 8)} ··· ${normalized.slice(-4)}`;
+};
+
 const conditionText = (coverage, snapshotCoverage) => {
     const parts = [];
     if (snapshotCoverage?.waitingPeriodDays > 0) {
@@ -134,31 +143,33 @@ const CancerInsurancePolicyPage = () => {
     }
 
     return (
-        <div className="px-6 pb-36 pt-8">
-            <section className="overflow-hidden rounded-[32px] border border-[#82D8FC]/25 bg-gradient-to-br from-[#173A54] via-[#0C2133] to-[#07101C] p-7 shadow-2xl shadow-[#82D8FC]/5">
+        <div className="min-w-0 overflow-x-clip px-5 pb-36 pt-6 sm:px-6 sm:pt-8">
+            <section className="overflow-hidden rounded-[20px] border border-slate-700/80 bg-[#0A1424] p-7">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <p className="text-xs font-black text-[#82D8FC]">INSURANCE POLICY</p>
-                        <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">
+                        <p className="text-[11px] font-medium text-[#82D8FC]">INSURANCE POLICY</p>
+                        <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
                             암보험 가입이 완료됐습니다
                         </h1>
                         <p className="mt-3 max-w-sm text-sm leading-6 text-slate-300">
                             보험증권은 보험계약의 성립과 약속된 보장내용을 증명하는 계약 문서입니다.
                         </p>
                     </div>
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#82D8FC] text-[#020715]">
+                    <span className="shrink-0 text-[#82D8FC]">
                         <FileCheck2 className="h-7 w-7" />
                     </span>
                 </div>
 
                 <div className="mt-7 grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl bg-white/5 p-4">
+                    <div className="min-w-0 rounded-xl border border-slate-700/70 bg-slate-900/40 p-3.5 sm:p-4">
                         <p className="text-[11px] font-bold text-slate-500">증권번호</p>
-                        <p className="mt-2 break-all text-sm font-black text-white">{policy.policyNo}</p>
+                        <p className="mt-2 truncate text-xs font-semibold tracking-[0.02em] text-white sm:text-sm" title={policy.policyNo}>
+                            {formatPolicyNo(policy.policyNo)}
+                        </p>
                     </div>
-                    <div className="rounded-2xl bg-white/5 p-4">
+                    <div className="min-w-0 rounded-xl border border-slate-700/70 bg-slate-900/40 p-3.5 sm:p-4">
                         <p className="text-[11px] font-bold text-slate-500">계약 상태</p>
-                        <p className="mt-2 flex items-center gap-1.5 text-sm font-black text-[#82D8FC]">
+                        <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-[#82D8FC]">
                             <CheckCircle2 className="h-4 w-4" /> {policy.status}
                         </p>
                     </div>
@@ -167,12 +178,12 @@ const CancerInsurancePolicyPage = () => {
 
             <section className="mt-6 rounded-2xl border border-slate-800 bg-[#09111F] p-5">
                 <div className="mb-5 flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F2BEF7]/10 text-[#F2BEF7]">
+                    <span className="text-[#F2BEF7]">
                         <UserRoundCheck className="h-5 w-5" />
                     </span>
                     <div>
-                        <p className="text-xs font-bold text-[#F2BEF7]">계약 기본정보</p>
-                        <h2 className="text-lg font-black text-white">가입 당시 내용</h2>
+                        <p className="text-[11px] font-medium text-[#F2BEF7]">계약 기본정보</p>
+                        <h2 className="mt-1 text-lg font-semibold text-white">가입 당시 내용</h2>
                     </div>
                 </div>
                 <dl className="space-y-3 text-sm">
@@ -182,7 +193,7 @@ const CancerInsurancePolicyPage = () => {
                     </div>
                     <div className="flex items-center justify-between gap-4">
                         <dt className="text-slate-500">월 보험료</dt>
-                        <dd className="font-black text-[#82D8FC]">{formatWon(quoteSnapshot?.monthlyPremium)}</dd>
+                        <dd className="font-semibold text-[#82D8FC]">{formatWon(quoteSnapshot?.monthlyPremium)}</dd>
                     </div>
                     <div className="flex items-center justify-between gap-4">
                         <dt className="text-slate-500">계약 활성일</dt>
@@ -197,27 +208,27 @@ const CancerInsurancePolicyPage = () => {
 
             <section className="mt-6">
                 <div className="mb-4 flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#82D8FC]/10 text-[#82D8FC]">
+                    <span className="text-[#82D8FC]">
                         <ShieldCheck className="h-5 w-5" />
                     </span>
                     <div>
-                        <p className="text-xs font-bold text-[#82D8FC]">가입 담보</p>
-                        <h2 className="text-lg font-black text-white">보장 3개가 증권에 고정됐습니다</h2>
+                        <p className="text-[11px] font-medium text-[#82D8FC]">가입 담보</p>
+                        <h2 className="mt-1 text-lg font-semibold text-white">보장 3개가 증권에 고정됐습니다</h2>
                     </div>
                 </div>
                 <div className="space-y-3">
                     {policy.policyVersion?.coverages?.map((coverage) => {
                         const snapshot = snapshotByCoverageId.get(coverage.productCoverageId);
                         return (
-                            <article key={coverage.policyCoverageId} className="rounded-2xl border border-slate-800 bg-[#09111F] p-5">
+                            <article key={coverage.policyCoverageId} className="rounded-xl border border-slate-800 bg-[#09111F] p-5">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
                                         <p className="text-xs font-bold text-[#82D8FC]">{coverage.coverageCode}</p>
-                                        <h3 className="mt-1 text-base font-black text-white">
+                                        <h3 className="mt-1 text-base font-semibold text-white">
                                             {snapshot?.coverageName || coverage.coverageCode}
                                         </h3>
                                     </div>
-                                    <p className="shrink-0 text-base font-black text-white">
+                                    <p className="shrink-0 text-base font-semibold text-white">
                                         {formatWon(coverage.insuredAmount)}
                                     </p>
                                 </div>
@@ -235,7 +246,7 @@ const CancerInsurancePolicyPage = () => {
                 <div className="flex items-start gap-3">
                     <FileKey2 className="mt-0.5 h-5 w-5 shrink-0 text-[#82D8FC]" />
                     <div>
-                        <p className="text-sm font-black text-white">계약 당시 약관을 기준으로 심사합니다</p>
+                        <p className="text-sm font-semibold text-white">계약 당시 약관을 기준으로 심사합니다</p>
                         <p className="mt-1 text-xs leading-5 text-slate-500">
                             이후 상품이 변경돼도 이 계약에는 증권 발행 당시의 상품 버전과 약관 해시가 유지됩니다.
                         </p>

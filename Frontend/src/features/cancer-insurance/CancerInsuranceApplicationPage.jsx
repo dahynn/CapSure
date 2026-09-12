@@ -226,10 +226,10 @@ const CancerInsuranceApplicationPage = () => {
         };
         return (
             <div className="px-6 pb-36 pt-8">
-                <section className={`rounded-[30px] border p-7 ${toneClasses[result.tone]}`}>
+                <section className={`rounded-[20px] border p-7 ${toneClasses[result.tone]}`}>
                     <ResultIcon className="h-12 w-12" />
-                    <p className="mt-6 text-xs font-black">{result.eyebrow}</p>
-                    <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">{result.title}</h1>
+                    <p className="mt-6 text-xs font-semibold">{result.eyebrow}</p>
+                    <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">{result.title}</h1>
                     <p className="mt-3 text-sm leading-6 text-slate-300">{result.description}</p>
                 </section>
 
@@ -276,8 +276,8 @@ const CancerInsuranceApplicationPage = () => {
                     <ChevronLeft className="h-6 w-6" />
                 </button>
                 <div className="ml-2">
-                    <p className="text-xs font-bold text-[#82D8FC]">STEP 2 · 청약과 인수심사</p>
-                    <h1 className="mt-0.5 text-xl font-black text-white">가상 고지사항에 답해주세요</h1>
+                    <p className="text-[11px] font-medium text-slate-400">STEP 2 · 청약과 인수심사</p>
+                    <h1 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-white">가상 고지사항에 답해주세요</h1>
                 </div>
             </header>
 
@@ -286,7 +286,7 @@ const CancerInsuranceApplicationPage = () => {
                     <div className="flex items-start gap-3">
                         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" />
                         <div>
-                            <p className="text-sm font-black text-amber-100">실제 병력은 입력하지 마세요</p>
+                            <p className="text-sm font-semibold text-amber-100">실제 병력은 입력하지 마세요</p>
                             <p className="mt-1 text-xs leading-5 text-amber-100/60">
                                 인수심사 상태 전이를 확인하는 교육용 선택지입니다. 개인정보나 의료정보를 저장하지 않습니다.
                             </p>
@@ -296,23 +296,23 @@ const CancerInsuranceApplicationPage = () => {
 
                 <section>
                     <div className="mb-4 flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#82D8FC]/10 text-[#82D8FC]">
+                        <span className="text-[#82D8FC]">
                             <HeartPulse className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-xs font-bold text-[#82D8FC]">계약 전 알릴 의무</p>
-                            <h2 className="text-lg font-black text-white">고지사항 3개</h2>
+                            <p className="text-[11px] font-medium text-[#82D8FC]">계약 전 알릴 의무</p>
+                            <h2 className="mt-1 text-lg font-semibold text-white">고지사항 3개</h2>
                         </div>
                     </div>
                     <div className="space-y-3">
                         {QUESTIONS.map((question, index) => (
-                            <div key={question.key} className="rounded-2xl border border-slate-800 bg-[#09111F] p-5">
+                            <div key={question.key} className="rounded-xl border border-slate-800 bg-[#09111F] p-5">
                                 <div className="flex items-start gap-3">
-                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[11px] font-black text-slate-300">
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[11px] font-semibold text-slate-500">
                                         {index + 1}
                                     </span>
                                     <div>
-                                        <h3 className="text-sm font-black leading-6 text-white">{question.title}</h3>
+                                        <h3 className="text-sm font-semibold leading-6 text-white">{question.title}</h3>
                                         <p className="mt-1 text-xs leading-5 text-slate-500">{question.description}</p>
                                     </div>
                                 </div>
@@ -324,7 +324,7 @@ const CancerInsuranceApplicationPage = () => {
                                                 key={String(value)}
                                                 type="button"
                                                 onClick={() => answerQuestion(question.key, value)}
-                                                className={`rounded-xl border py-3 text-sm font-black transition-all ${selected ? 'border-[#82D8FC] bg-[#82D8FC] text-[#020715]' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                                                className={`rounded-lg border py-3 text-sm font-semibold transition-colors ${selected ? 'border-[#82D8FC] bg-[#82D8FC] text-[#020715]' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
                                             >
                                                 {value ? '예' : '아니오'}
                                             </button>
@@ -338,15 +338,15 @@ const CancerInsuranceApplicationPage = () => {
 
                 <section>
                     <div className="mb-4 flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F2BEF7]/10 text-[#F2BEF7]">
+                        <span className="text-[#F2BEF7]">
                             <FileSignature className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-xs font-bold text-[#F2BEF7]">동의 증거</p>
-                            <h2 className="text-lg font-black text-white">필수 문서를 확인해주세요</h2>
+                            <p className="text-[11px] font-medium text-[#F2BEF7]">동의 증거</p>
+                            <h2 className="mt-1 text-lg font-semibold text-white">필수 문서를 확인해주세요</h2>
                         </div>
                     </div>
-                    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-[#09111F]">
+                    <div className="overflow-hidden rounded-xl border border-slate-800 bg-[#09111F]">
                         {CONSENTS.map((consent, index) => (
                             <button
                                 key={consent.key}
@@ -358,7 +358,7 @@ const CancerInsuranceApplicationPage = () => {
                                     <Check className="h-3.5 w-3.5" strokeWidth={3} />
                                 </span>
                                 <span>
-                                    <span className="block text-sm font-black text-white">{consent.title}</span>
+                                    <span className="block text-sm font-semibold text-white">{consent.title}</span>
                                     <span className="mt-1 block text-xs leading-5 text-slate-500">{consent.description}</span>
                                 </span>
                             </button>
