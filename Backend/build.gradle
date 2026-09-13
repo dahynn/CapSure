@@ -64,7 +64,7 @@ tasks.register('reliabilityMeasurement', Test) {
 }
 
 tasks.register('largeScaleDelinquencyBenchmark', Test) {
-    description = 'Opt-in synthetic PostgreSQL premium-delinquency benchmark (1,000/10,000 targets)'
+    description = 'Opt-in synthetic PostgreSQL delinquency and payment-reconciliation benchmarks (1,000/10,000 targets)'
     group = 'verification'
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
@@ -73,6 +73,9 @@ tasks.register('largeScaleDelinquencyBenchmark', Test) {
     outputs.upToDateWhen { false }
     systemProperty 'capsure.large-benchmark.output',
             providers.gradleProperty('largeBenchmarkOutput').getOrElse('build/large-scale-delinquency-benchmark.json')
+    systemProperty 'capsure.large-reconciliation-benchmark.output',
+            providers.gradleProperty('largeReconciliationBenchmarkOutput')
+                    .getOrElse('build/large-scale-payment-reconciliation-benchmark.json')
     testLogging { showStandardStreams = true }
 }
 
