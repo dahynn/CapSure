@@ -38,6 +38,7 @@ public class JdbcCancerProductQueryRepository implements CancerProductQueryRepos
             LEFT JOIN public.ins_product_coverage product_coverage
               ON product_coverage.product_version_id = product.product_version_id
             WHERE product.status = 'ON_SALE'
+              AND product.release_status = 'APPROVED'
               AND product.sale_from <= CURRENT_DATE
               AND (product.sale_to IS NULL OR product.sale_to >= CURRENT_DATE)
             """;

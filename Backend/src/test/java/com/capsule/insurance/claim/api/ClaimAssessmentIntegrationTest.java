@@ -14,6 +14,8 @@ import com.capsule.insurance.application.dto.ReplaceDisclosuresRequest;
 import com.capsule.insurance.application.infra.JdbcApplicationRepository;
 import com.capsule.insurance.catalog.infra.JdbcCancerProductQueryRepository;
 import com.capsule.insurance.claim.application.ClaimService;
+import com.capsule.insurance.claim.application.ClaimEvidencePrivacyPolicy;
+import com.capsule.insurance.claim.infra.JdbcClaimEvidenceAccessAuditRecorder;
 import com.capsule.insurance.claim.infra.JdbcClaimRepository;
 import com.capsule.insurance.common.exception.GlobalExceptionHandler;
 import com.capsule.insurance.payment.adapter.FakePremiumPaymentGateway;
@@ -136,9 +138,12 @@ class ClaimAssessmentIntegrationTest {
                 new DataSourceTransactionManager(dataSource),
                 OBJECT_MAPPER
         );
+        DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
         ClaimService claimService = new ClaimService(
                 new JdbcClaimRepository(jdbcTemplate, OBJECT_MAPPER),
-                new DataSourceTransactionManager(dataSource)
+                transactionManager,
+                new ClaimEvidencePrivacyPolicy(),
+                new JdbcClaimEvidenceAccessAuditRecorder(jdbcTemplate, transactionManager)
         );
         mockMvc = MockMvcBuilders
                 .standaloneSetup(new ClaimController(claimService))
@@ -339,6 +344,16 @@ class ClaimAssessmentIntegrationTest {
                         .principal(authentication(otherUserId)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM public.ops_claim_evidence_access_event
+                WHERE actor_user_id = ?
+                  AND claim_id = ?
+                  AND target_type = 'CLAIM'
+                  AND target_id = ?
+                  AND access_action = 'CLAIM_DETAIL_READ'
+                  AND access_result = 'DENIED_NOT_FOUND'
+                """, Integer.class, otherUserId, claimId, claimId)).isEqualTo(1);
         for (String action : List.of("submit", "payments")) {
             mockMvc.perform(post("/api/v1/claims/{claimId}/" + action, claimId)
                             .principal(authentication(otherUserId)).header("Idempotency-Key", "stranger-" + action))
@@ -358,6 +373,108 @@ class ClaimAssessmentIntegrationTest {
                 .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/v1/claims/{claimId}", claimId).principal(authentication(userId)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("MANUAL_REVIEW"));
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM public.ops_claim_evidence_access_event
+                WHERE actor_user_id = ?
+                  AND claim_id = ?
+                  AND access_result = 'ALLOWED'
+                """, Integer.class, userId, claimId)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(DISTINCT access_request_id)
+                FROM public.ops_claim_evidence_access_event
+                WHERE actor_user_id = ?
+                  AND claim_id = ?
+                  AND access_result = 'ALLOWED'
+                """, Integer.class, userId, claimId)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM public.ops_claim_evidence_access_event access_event
+                JOIN public.clm_evidence evidence
+                  ON evidence.claim_evidence_id = access_event.target_id
+                 AND evidence.claim_id = access_event.claim_id
+                WHERE access_event.actor_user_id = ?
+                  AND access_event.claim_id = ?
+                  AND access_event.target_type = 'EVIDENCE'
+                  AND access_event.access_result = 'ALLOWED'
+                """, Integer.class, userId, claimId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("청구 증빙의 민감 메타데이터는 저장 전에 차단하고 내부 참조는 응답에서 숨긴다")
+    void blocksSensitiveEvidenceMetadataAndMasksInternalReference() throws Exception {
+        Long userId = userIds.get(4);
+        PolicyFixture policy = activatePolicy(userId, "evidence-privacy");
+        setCoverageStart(policy.policyCoverageId(), Instant.now().minus(450, ChronoUnit.DAYS));
+        Long claimId = createClaim(
+                userId,
+                policy,
+                Instant.now().minus(1, ChronoUnit.DAYS),
+                "DEMO_GENERAL_CANCER"
+        );
+
+        mockMvc.perform(put("/api/v1/claims/{claimId}/evidence", claimId)
+                        .principal(authentication(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(Map.of(
+                                "evidenceType", "DEMO_DIAGNOSIS_CERTIFICATE",
+                                "syntheticReference", "synthetic://claim/secret-object-key",
+                                "checksum", DIAGNOSIS_CHECKSUM,
+                                "metadata", Map.of("patientName", "민감한 이름"),
+                                "verified", true
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_INPUT"));
+        assertThat(count("clm_evidence", "claim_id", claimId)).isZero();
+
+        mockMvc.perform(put("/api/v1/claims/{claimId}/evidence", claimId)
+                        .principal(authentication(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(Map.of(
+                                "evidenceType", "DEMO_DIAGNOSIS_CERTIFICATE",
+                                "syntheticReference", "synthetic://claim/secret-object-key",
+                                "checksum", DIAGNOSIS_CHECKSUM,
+                                "metadata", Map.of(
+                                        "documentType", "DIAGNOSIS_CERTIFICATE",
+                                        "issuerCategory", "SYNTHETIC_HOSPITAL",
+                                        "pageCount", 1
+                                ),
+                                "verified", true
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.evidence[0].syntheticReference")
+                        .value("synthetic://redacted"))
+                .andExpect(jsonPath("$.data.evidence[0].metadata.documentType")
+                        .value("DIAGNOSIS_CERTIFICATE"))
+                .andExpect(jsonPath("$.data.evidence[0].metadata.patientName").doesNotExist());
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT synthetic_reference
+                FROM public.clm_evidence
+                WHERE claim_id = ?
+                """, String.class, claimId)).isEqualTo("synthetic://claim/secret-object-key");
+
+        jdbcTemplate.update("""
+                UPDATE public.clm_evidence
+                SET metadata_json = metadata_json || '{"patientName":"과거 저장 민감정보"}'::jsonb
+                WHERE claim_id = ?
+                """, claimId);
+        mockMvc.perform(get("/api/v1/claims/{claimId}", claimId)
+                        .principal(authentication(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.evidence[0].metadata.documentType")
+                        .value("DIAGNOSIS_CERTIFICATE"))
+                .andExpect(jsonPath("$.data.evidence[0].metadata.patientName").doesNotExist());
+        String auditRows = jdbcTemplate.queryForObject("""
+                SELECT jsonb_agg(to_jsonb(event))::TEXT
+                FROM public.ops_claim_evidence_access_event event
+                WHERE actor_user_id = ?
+                  AND claim_id = ?
+                """, String.class, userId, claimId);
+        assertThat(auditRows)
+                .doesNotContain("secret-object-key")
+                .doesNotContain("과거 저장 민감정보")
+                .doesNotContain(DIAGNOSIS_CHECKSUM);
     }
 
     @Test

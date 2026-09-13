@@ -17,6 +17,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -109,7 +111,7 @@ public class PaymentService {
             }
 
             InsurancePolicy policy = policyRepository.createPending(
-                    "P-" + UUID.randomUUID(),
+                    createPolicyNumber(),
                     application.applicationId(),
                     application.applicantUserId(),
                     application.insuredUserId(),
@@ -127,6 +129,14 @@ public class PaymentService {
             );
         }));
         return toResponse(order);
+    }
+
+    private String createPolicyNumber() {
+        String issuedDate = LocalDate.now(clock.withZone(ZoneOffset.UTC))
+                .toString()
+                .replace("-", "");
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        return "CS-" + issuedDate + "-" + suffix;
     }
 
     public PaymentOrderResponse confirm(

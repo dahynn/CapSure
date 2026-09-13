@@ -1,6 +1,7 @@
 package com.capsule.insurance.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -48,7 +49,7 @@ class CancerInsuranceMigrationTest {
                 .load();
 
         MigrateResult result = flyway.migrate();
-        assertThat(result.migrationsExecuted).isEqualTo(18);
+        assertThat(result.migrationsExecuted).isEqualTo(21);
     }
 
     @Test
@@ -62,6 +63,7 @@ class CancerInsuranceMigrationTest {
                     'ins_product_version', 'ins_terms_document', 'ins_application', 'ins_policy',
                     'pay_order', 'clm_claim', 'clm_decision', 'ops_job_execution', 'ops_outbox_event',
                     'ops_financial_event_audit', 'ops_recovery_action', 'ifc_financial_message',
+                    'ops_product_version_approval_event', 'ops_claim_evidence_access_event',
                     'ins_premium_receivable', 'pay_collection_instruction',
                     'pay_premium_settlement', 'pay_refund_case', 'ops_premium_delinquency_run',
                     'ops_premium_delinquency_target', 'ops_premium_delinquency_attempt',
@@ -69,7 +71,7 @@ class CancerInsuranceMigrationTest {
                     'ops_premium_billing_run', 'ops_premium_billing_target', 'ops_premium_billing_attempt',
                     'ops_claim_copilot_review', 'ops_claim_copilot_review_event', 'ops_claim_copilot_draft_snapshot'
                   )
-                """)).isEqualTo(28);
+                """)).isEqualTo(30);
 
         assertThat(queryLong("""
                 SELECT COUNT(*)
@@ -90,6 +92,14 @@ class CancerInsuranceMigrationTest {
                 WHERE table_schema = 'public'
                   AND table_name = 'usr_user'
                   AND column_name = 'access_role'
+                """)).isEqualTo(1);
+
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'ins_product_version'
+                  AND column_name = 'release_status'
                 """)).isEqualTo(1);
 
         assertThat(queryLong("""
@@ -128,6 +138,13 @@ class CancerInsuranceMigrationTest {
                 WHERE product_code = 'CAPSURE-DEMO-CANCER'
                   AND version = '1.0.0'
                 """)).isEqualTo("29900.00");
+
+        assertThat(queryString("""
+                SELECT release_status
+                FROM ins_product_version
+                WHERE product_code = 'CAPSURE-DEMO-CANCER'
+                  AND version = '1.0.0'
+                """)).isEqualTo("APPROVED");
     }
 
     @Test
@@ -159,6 +176,44 @@ class CancerInsuranceMigrationTest {
         assertThat(queryLong("SELECT COUNT(*) FROM ins_product_version")).isEqualTo(1);
         assertThat(queryLong("SELECT COUNT(*) FROM ins_product_coverage")).isEqualTo(3);
         assertThat(queryLong("SELECT COUNT(*) FROM ins_terms_clause")).isEqualTo(15);
+    }
+
+    @Test
+    @DisplayName("청구 증빙 접근 이력은 민감 데이터 열 없이 append-only로 보존한다")
+    void keepsClaimEvidenceAccessEventsAppendOnly() throws SQLException {
+        execute("""
+                INSERT INTO public.ops_claim_evidence_access_event (
+                    access_request_id, actor_user_id, claim_id, target_type, target_id,
+                    access_action, access_result, occurred_at
+                ) VALUES (
+                    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 101, 202, 'CLAIM', 202,
+                    'CLAIM_DETAIL_READ', 'DENIED_NOT_FOUND', NOW()
+                )
+                """);
+
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'ops_claim_evidence_access_event'
+                  AND column_name IN (
+                    'synthetic_reference', 'checksum', 'metadata_json', 'diagnosis_category',
+                    'before_json', 'after_json'
+                  )
+                """)).isZero();
+        assertThatThrownBy(() -> execute("""
+                UPDATE public.ops_claim_evidence_access_event
+                SET access_result = 'ALLOWED'
+                WHERE access_request_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+                """))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("append-only");
+        assertThatThrownBy(() -> execute("""
+                DELETE FROM public.ops_claim_evidence_access_event
+                WHERE access_request_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+                """))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("append-only");
     }
 
     @Test
