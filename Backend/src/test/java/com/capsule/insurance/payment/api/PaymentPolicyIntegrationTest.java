@@ -520,6 +520,71 @@ class PaymentPolicyIntegrationTest {
     }
 
     @Test
+    @DisplayName("PG 승인 후 JVM을 강제 종료해도 새 JVM에서 재승인 없이 계약을 복구한다")
+    void recoversAfterProcessIsKilledFollowingProviderApproval() throws Exception {
+        Long userId=userIds.get(0);
+        JsonNode order=createOrder(userId,approveApplication(userId),"kill-create");
+        Long orderId=order.path("paymentOrderId").asLong();
+        Long policyId=order.path("policyId").asLong();
+        // Test-only provider ledger survives application JVM death. Separate connections commit it independently.
+        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS test_provider_ledger(provider_key TEXT PRIMARY KEY,confirm_calls INTEGER NOT NULL)");
+        var marker=java.nio.file.Files.createTempFile("capsure-pg-approved-",".marker");
+        java.nio.file.Files.delete(marker);
+        var log=java.nio.file.Files.createTempFile("capsure-payment-worker-",".log");
+        Process child=startWorker("confirm",userId,orderId,marker,log);
+        try {
+            long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
+            while(!java.nio.file.Files.exists(marker) && child.isAlive() && System.nanoTime()<deadline) Thread.sleep(25);
+            assertThat(java.nio.file.Files.exists(marker)).withFailMessage(java.nio.file.Files.readString(log)).isTrue();
+            child.destroyForcibly(); assertThat(child.waitFor(10,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(paymentStatus(orderId)).isEqualTo("APPROVING");
+            assertThat(count("ins_policy_version","policy_id",policyId)).isZero();
+            Process restarted=startWorker("reconcile",userId,orderId,marker,log);
+            try {
+                assertThat(restarted.waitFor(20,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                assertThat(restarted.exitValue()).withFailMessage(java.nio.file.Files.readString(log)).isZero();
+            } finally {if(restarted.isAlive()) restarted.destroyForcibly();}
+            assertThat(paymentStatus(orderId)).isEqualTo("PAID");
+            assertThat(policyStatus(policyId)).isEqualTo("ACTIVE");
+            assertThat(count("ins_policy_version","policy_id",policyId)).isEqualTo(1);
+            assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
+            assertThat(jdbcTemplate.queryForObject("SELECT confirm_calls FROM test_provider_ledger WHERE provider_key=?",Integer.class,"fake-paid-kill-"+orderId)).isEqualTo(1);
+        } finally {if(child.isAlive())child.destroyForcibly();java.nio.file.Files.deleteIfExists(marker);}
+    }
+
+    private static Process startWorker(String mode,Long userId,Long orderId,java.nio.file.Path marker,java.nio.file.Path log) throws Exception {
+        return new ProcessBuilder(java.nio.file.Path.of(System.getProperty("java.home"),"bin","java").toString(),
+                "-cp",System.getProperty("capsure.test.classpath"),ForkedPaymentWorker.class.getName(),
+                mode,POSTGRES.getJdbcUrl(),POSTGRES.getUsername(),POSTGRES.getPassword(),userId.toString(),orderId.toString(),marker.toString())
+                .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile())).start();
+    }
+
+    public static class ForkedPaymentWorker {
+        public static void main(String[] args) throws Exception {
+            var source=new DriverManagerDataSource(args[1],args[2],args[3]);
+            var db=new JdbcTemplate(source);
+            var gateway=new com.capsule.insurance.payment.application.port.PremiumPaymentGateway(){
+                public com.capsule.insurance.payment.domain.GatewayPaymentResult confirm(ConfirmCommand command){
+                    db.update("INSERT INTO test_provider_ledger VALUES(?,1) ON CONFLICT(provider_key) DO UPDATE SET confirm_calls=test_provider_ledger.confirm_calls+1",command.providerPaymentKey());
+                    try{java.nio.file.Files.writeString(java.nio.file.Path.of(args[6]),"APPROVED");Thread.sleep(60000);}
+                    catch(Exception ex){throw new IllegalStateException(ex);}
+                    return com.capsule.insurance.payment.domain.GatewayPaymentResult.paid(command.providerPaymentKey(),"TEST-DURABLE-PG");
+                }
+                public com.capsule.insurance.payment.domain.GatewayPaymentResult inquire(String key){
+                    if(db.queryForObject("SELECT COUNT(*) FROM test_provider_ledger WHERE provider_key=?",Integer.class,key)!=1) throw new IllegalStateException("missing approval");
+                    return com.capsule.insurance.payment.domain.GatewayPaymentResult.paid(key,"TEST-DURABLE-PG");
+                }
+            };
+            var service=new PaymentService(new JdbcPaymentRepository(db),new JdbcPolicyRepository(db,OBJECT_MAPPER),gateway,
+                    new DataSourceTransactionManager(source),OBJECT_MAPPER);
+            Long userId=Long.valueOf(args[4]),orderId=Long.valueOf(args[5]);
+            if("confirm".equals(args[0])) service.confirm(userId,orderId,"kill-confirm-"+orderId,
+                    new com.capsule.insurance.payment.dto.ConfirmPaymentRequest("fake-paid-kill-"+orderId,new java.math.BigDecimal("29900.00")));
+            else service.reconcile(orderId);
+        }
+    }
+
+    @Test
     @DisplayName("선택 보장 보험료가 결제 금액·계약에 반영되고 다음 달 변경과 청구가 일치한다")
     void pricesSelectionsAndSchedulesNextMonthCoverage() throws Exception {
         Long userId=userIds.get(0);
