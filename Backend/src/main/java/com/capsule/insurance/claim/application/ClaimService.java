@@ -1,9 +1,11 @@
 package com.capsule.insurance.claim.application;
 
 import com.capsule.insurance.claim.application.port.ClaimRepository;
+import com.capsule.insurance.claim.application.port.ClaimEvidenceAccessAuditRecorder;
 import com.capsule.insurance.claim.domain.ClaimAssessmentContext;
 import com.capsule.insurance.claim.domain.ClaimDecision;
 import com.capsule.insurance.claim.domain.ClaimEvidence;
+import com.capsule.insurance.claim.domain.ClaimEvidenceAccessAttempt;
 import com.capsule.insurance.claim.domain.ClaimPayment;
 import com.capsule.insurance.claim.domain.InsuranceClaim;
 import com.capsule.insurance.claim.dto.ClaimResponse;
@@ -36,23 +38,37 @@ public class ClaimService {
 
     private final ClaimRepository claimRepository;
     private final TransactionTemplate transactionTemplate;
+    private final ClaimEvidencePrivacyPolicy evidencePrivacyPolicy;
+    private final ClaimEvidenceAccessAuditRecorder evidenceAccessAuditRecorder;
     private final Clock clock;
 
     @Autowired
     public ClaimService(
             ClaimRepository claimRepository,
-            PlatformTransactionManager transactionManager
+            PlatformTransactionManager transactionManager,
+            ClaimEvidencePrivacyPolicy evidencePrivacyPolicy,
+            ClaimEvidenceAccessAuditRecorder evidenceAccessAuditRecorder
     ) {
-        this(claimRepository, transactionManager, Clock.systemUTC());
+        this(
+                claimRepository,
+                transactionManager,
+                evidencePrivacyPolicy,
+                evidenceAccessAuditRecorder,
+                Clock.systemUTC()
+        );
     }
 
     ClaimService(
             ClaimRepository claimRepository,
             PlatformTransactionManager transactionManager,
+            ClaimEvidencePrivacyPolicy evidencePrivacyPolicy,
+            ClaimEvidenceAccessAuditRecorder evidenceAccessAuditRecorder,
             Clock clock
     ) {
         this.claimRepository = claimRepository;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.evidencePrivacyPolicy = evidencePrivacyPolicy;
+        this.evidenceAccessAuditRecorder = evidenceAccessAuditRecorder;
         this.clock = clock;
     }
 
@@ -121,7 +137,7 @@ public class ClaimService {
                     request.evidenceType(),
                     request.syntheticReference(),
                     request.checksum(),
-                    request.metadata(),
+                    evidencePrivacyPolicy.validateAndCopyMetadata(request.metadata()),
                     request.verified()
             );
             return locked;
@@ -228,9 +244,30 @@ public class ClaimService {
     }
 
     public ClaimResponse get(Long userId, Long claimId) {
-        return claimRepository.findOwned(claimId, userId)
-                .map(this::toResponse)
-                .orElseThrow(() -> notFound("보험금 청구를 찾을 수 없습니다."));
+        UUID accessRequestId = UUID.randomUUID();
+        Instant occurredAt = Instant.now(clock);
+        InsuranceClaim claim = claimRepository.findOwned(claimId, userId).orElse(null);
+        if (claim == null) {
+            evidenceAccessAuditRecorder.record(ClaimEvidenceAccessAttempt.deniedNotFound(
+                    accessRequestId,
+                    userId,
+                    claimId,
+                    occurredAt
+            ));
+            throw notFound("보험금 청구를 찾을 수 없습니다.");
+        }
+
+        ClaimResponse response = toResponse(claim);
+        evidenceAccessAuditRecorder.record(ClaimEvidenceAccessAttempt.allowed(
+                accessRequestId,
+                userId,
+                claimId,
+                response.evidence().stream()
+                        .map(evidence -> evidence.claimEvidenceId())
+                        .toList(),
+                occurredAt
+        ));
+        return response;
     }
 
     private AssessmentResult assess(
@@ -337,7 +374,9 @@ public class ClaimService {
                 claim.incidentAt(),
                 claim.diagnosisCategory(),
                 claim.status(),
-                claimRepository.findEvidence(claim.claimId()),
+                claimRepository.findEvidence(claim.claimId()).stream()
+                        .map(evidencePrivacyPolicy::toResponse)
+                        .toList(),
                 decision,
                 payment,
                 claim.submittedAt(),

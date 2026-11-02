@@ -74,12 +74,13 @@ export const createInitialPremiumOrder = async (applicationId, idempotencyKey) =
 export const confirmInitialPremiumPayment = async (
     paymentOrderId,
     providerPaymentKey,
+    providerOrderId,
     amount,
     idempotencyKey,
 ) => (
     unwrap(await httpClient.post(
         `/api/v1/payments/${paymentOrderId}/confirm`,
-        { providerPaymentKey, amount },
+        { providerPaymentKey, providerOrderId, amount },
         { headers: { 'Idempotency-Key': idempotencyKey } },
     ))
 );

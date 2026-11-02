@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import PremiumBillingPanel from './PremiumBillingPanel';
 import PremiumDelinquencyPanel from './PremiumDelinquencyPanel';
+import ClaimReviewCopilotPanel from './ClaimReviewCopilotPanel';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -879,7 +881,11 @@ const CancerInsuranceOperationsPage = () => {
           <p className="mt-3 text-xs text-slate-400">실효 계약 {formatCount(premiumTimeline?.lapsedPolicyCount)}건 · 실효 후 수납 검토 {formatCount(premiumTimeline?.lateSettlementReviewCount)}건</p>
         </section>
 
+        <PremiumBillingPanel onUpdated={() => loadDashboard(true)} />
+
         <PremiumDelinquencyPanel onUpdated={() => loadDashboard(true)} />
+
+        <ClaimReviewCopilotPanel onUpdated={() => loadDashboard(true)} />
 
         <section className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
           <ServerCog className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />

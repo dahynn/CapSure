@@ -1,15 +1,4 @@
 spring:
-  ai:
-    model:
-      chat: openai
-    openai:
-      api-key: "here"
-      base-url: ${OPENAI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com}
-      chat:
-        completions-path: /v1/chat/completions
-        options:
-          model: ${OPENAI_MODEL:gpt-5.2}
-          temperature: 0.2
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:${CAPSURE_POSTGRES_PORT:5433}/${CAPSURE_POSTGRES_DB:capsure}}
     username: ${DB_USERNAME:capsure}
@@ -39,9 +28,18 @@ insurer:
     path: ${INSURER_TERMS_PDF_PATH:classpath:terms/fixed-terms.pdf}
     max-chars: ${INSURER_TERMS_PDF_MAX_CHARS:30000}
 
+copilot:
+  claim-review:
+    provider: ${CLAIM_REVIEW_COPILOT_PROVIDER:blocked}
+    base-url: ${CLAIM_REVIEW_COPILOT_BASE_URL:}
+    model: ${CLAIM_REVIEW_COPILOT_MODEL:}
+    api-key: ${CLAIM_REVIEW_COPILOT_API_KEY:}
+    timeout: ${CLAIM_REVIEW_COPILOT_TIMEOUT:10s}
+    allow-external-calls: ${CLAIM_REVIEW_COPILOT_ALLOW_EXTERNAL_CALLS:false}
+
 mydata:
   mock:
-    base-url: http://localhost:8081
+    base-url: ${MYDATA_MOCK_BASE_URL:http://localhost:8081}
     client-id: capsule-main-client
     provider-code: CAPSULE-MOCK
     timeout: 5s
@@ -51,3 +49,19 @@ mydata:
     token-audience: capsule-main-client
     access-token-ttl: 10m
     refresh-token-ttl: 7d
+
+payment:
+  gateway: ${PAYMENT_GATEWAY:fake}
+  toss:
+    base-url: ${TOSS_PAYMENTS_BASE_URL:https://api.tosspayments.com}
+    secret-key: ${TOSS_PAYMENTS_SECRET_KEY:}
+    timeout: ${TOSS_PAYMENTS_TIMEOUT:10s}
+    allow-live-key: ${TOSS_PAYMENTS_ALLOW_LIVE_KEY:false}
+
+# Audit retention is opt-in because the required legal/operational period depends on the deployment.
+audit:
+  retention:
+    enabled: ${AUDIT_RETENTION_ENABLED:false}
+    days: ${AUDIT_RETENTION_DAYS:365}
+    cron: "${AUDIT_RETENTION_CRON:0 30 3 * * *}"
+    zone: ${AUDIT_RETENTION_ZONE:Asia/Seoul}

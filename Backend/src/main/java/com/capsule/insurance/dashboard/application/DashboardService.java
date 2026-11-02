@@ -3,6 +3,7 @@ package com.capsule.insurance.dashboard.application;
 
 import com.capsule.insurance.dashboard.dto.DashboardSummary;
 import com.capsule.insurance.dashboard.dto.HomeDashboardResponse;
+import com.capsule.insurance.dashboard.infra.JdbcDashboardRepository;
 import com.capsule.insurance.subscription.infra.SubscriptionMapper;
 import com.capsule.insurance.subscription.infra.projection.RecentSubscriptionHomeProjection;
 import com.capsule.insurance.subscription.infra.projection.RenewalSoonInsuranceProjection;
@@ -26,15 +27,21 @@ public class DashboardService {
     private static final String DEFAULT_CAPSULE_NAME = "나만의 캡슐";
 
     private final SubscriptionMapper subscriptionMapper;
+    private final JdbcDashboardRepository dashboardRepository;
 
     @Autowired
-    public DashboardService(SubscriptionMapper subscriptionMapper) {
+    public DashboardService(SubscriptionMapper subscriptionMapper, JdbcDashboardRepository dashboardRepository) {
         this.subscriptionMapper = subscriptionMapper;
+        this.dashboardRepository = dashboardRepository;
     }
 
-    public DashboardSummary getSummary() {
-        // TODO: 실제 대시보드 집계용 조회 로직을 구현해야 합니다.
-        return new DashboardSummary(2, 1, 0);
+    public DashboardSummary getSummary(Long userId) {
+        return dashboardRepository.summary(userId);
+    }
+
+    public DashboardSummary markAuditsRead(Long userId) {
+        dashboardRepository.markAuditsRead(userId);
+        return dashboardRepository.summary(userId);
     }
 
     public HomeDashboardResponse getHomeDashboard(Long userId) {

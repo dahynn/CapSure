@@ -90,14 +90,30 @@ public class JdbcPremiumCollectionRepository {
     }
 
     public int createDuplicateDebitRefundCases() {
-        return jdbcTemplate.update("""
+        // Serialize against settlement and other refund workers. Each subsequent statement
+        // sees committed refund reservations, including completed and retryable failed cases.
+        List<Long> receivableIds = jdbcTemplate.query("""
+                SELECT premium_receivable_id FROM ins_premium_receivable
+                WHERE status = 'OVERPAID' ORDER BY premium_receivable_id
+                FOR UPDATE SKIP LOCKED
+                """, (rs, row) -> rs.getLong(1));
+        int created = 0;
+        for (Long receivableId : receivableIds) {
+            created += jdbcTemplate.update("""
                 INSERT INTO pay_refund_case (premium_receivable_id, refund_no, amount, reason_code, status, idempotency_key)
-                SELECT r.premium_receivable_id, 'REF-' || r.premium_receivable_id || '-' || r.amount_settled, r.amount_settled - r.amount_due,
+                SELECT r.premium_receivable_id, 'REF-' || r.premium_receivable_id || '-' || r.amount_settled,
+                       r.amount_settled - r.amount_due - f.reserved,
                        'DUPLICATE_DEBIT', 'AUTO_REFUND_ELIGIBLE', 'duplicate-debit:' || r.premium_receivable_id || ':' || r.amount_settled
                 FROM ins_premium_receivable r
-                WHERE r.status = 'OVERPAID'
+                CROSS JOIN LATERAL (
+                    SELECT COALESCE(SUM(amount), 0) AS reserved FROM pay_refund_case
+                    WHERE premium_receivable_id = r.premium_receivable_id
+                ) f
+                WHERE r.premium_receivable_id = ? AND r.amount_settled - r.amount_due > f.reserved
                 ON CONFLICT (idempotency_key) DO NOTHING
-                """);
+                """, receivableId);
+        }
+        return created;
     }
 
     public PremiumCollectionTimelineResponse loadTimeline(int limit) {

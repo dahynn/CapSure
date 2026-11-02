@@ -135,8 +135,9 @@ public class CoverageChangeService {
                     SELECT policy_version_id FROM ins_policy_version
                     WHERE policy_id=? AND valid_from<=? AND (valid_to IS NULL OR ?<valid_to)
                     """,Long.class,policyId,Timestamp.from(cycle.atStartOfDay(ZONE).toInstant()),Timestamp.from(cycle.atStartOfDay(ZONE).toInstant()));
+            LocalDate dueDate=cycle.withDayOfMonth(Math.min(policy.activatedAt().atZone(ZONE).getDayOfMonth(),cycle.lengthOfMonth()));
             PremiumCollectionSnapshot due=premiums.createDueWithAutomaticInstruction(
-                    new CreatePremiumReceivableRequest(policyId,cycle,cycle,cycle.plusDays(14),amount),"COL-"+UUID.randomUUID());
+                    new CreatePremiumReceivableRequest(policyId,cycle,dueDate,dueDate.plusDays(14),amount),"COL-"+UUID.randomUUID());
             db.update("UPDATE ins_premium_receivable SET policy_version_id=? WHERE premium_receivable_id=?",versionId,due.premiumReceivableId());
             return due;
         });

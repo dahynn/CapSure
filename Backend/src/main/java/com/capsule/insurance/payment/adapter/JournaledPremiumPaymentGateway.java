@@ -3,6 +3,8 @@ package com.capsule.insurance.payment.adapter;
 import com.capsule.insurance.payment.application.port.FinancialInterfaceJournalRepository;
 import com.capsule.insurance.payment.application.port.PaymentInterfaceCircuitStatusProvider;
 import com.capsule.insurance.payment.application.port.PremiumPaymentGateway;
+import com.capsule.insurance.payment.application.port.PaymentCircuitStateStore;
+import com.capsule.insurance.payment.application.PaymentCircuitBreaker;
 import com.capsule.insurance.payment.domain.FinancialInterfaceMessage;
 import com.capsule.insurance.payment.domain.GatewayPaymentResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -10,6 +12,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +34,6 @@ import org.springframework.stereotype.Component;
 public class JournaledPremiumPaymentGateway
         implements PremiumPaymentGateway, PaymentInterfaceCircuitStatusProvider {
 
-    private static final String INTERFACE_NAME = "FAKE_PREMIUM_PAYMENT";
     private static final int CIRCUIT_FAILURE_THRESHOLD = 3;
     private static final Duration CIRCUIT_OPEN_DURATION = Duration.ofSeconds(30);
 
@@ -35,17 +41,14 @@ public class JournaledPremiumPaymentGateway
     private final FinancialInterfaceJournalRepository journalRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
-    private final int circuitFailureThreshold;
-    private final Duration circuitOpenDuration;
-
-    private int consecutiveTimeouts;
-    private Instant circuitOpenedUntil;
+    private final PaymentCircuitBreaker circuit;
 
     @Autowired
     public JournaledPremiumPaymentGateway(
-            @Qualifier("fakePremiumPaymentGateway") PremiumPaymentGateway delegate,
+            @Qualifier("selectedPremiumPaymentGateway") PremiumPaymentGateway delegate,
             FinancialInterfaceJournalRepository journalRepository,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            PaymentCircuitStateStore circuitStore
     ) {
         this(
                 delegate,
@@ -53,8 +56,14 @@ public class JournaledPremiumPaymentGateway
                 objectMapper,
                 Clock.systemUTC(),
                 CIRCUIT_FAILURE_THRESHOLD,
-                CIRCUIT_OPEN_DURATION
+                CIRCUIT_OPEN_DURATION,
+                circuitStore
         );
+    }
+
+    @Override
+    public String providerCode() {
+        return delegate.providerCode();
     }
 
     public JournaledPremiumPaymentGateway(
@@ -65,12 +74,20 @@ public class JournaledPremiumPaymentGateway
             int circuitFailureThreshold,
             Duration circuitOpenDuration
     ) {
+        this(delegate, journalRepository, objectMapper, clock, circuitFailureThreshold, circuitOpenDuration,
+                new InMemoryPaymentCircuitStateStore(clock));
+    }
+
+    public JournaledPremiumPaymentGateway(
+            PremiumPaymentGateway delegate, FinancialInterfaceJournalRepository journalRepository,
+            ObjectMapper objectMapper, Clock clock, int circuitFailureThreshold,
+            Duration circuitOpenDuration, PaymentCircuitStateStore circuitStore
+    ) {
         this.delegate = delegate;
         this.journalRepository = journalRepository;
         this.objectMapper = objectMapper;
         this.clock = clock;
-        this.circuitFailureThreshold = circuitFailureThreshold;
-        this.circuitOpenDuration = circuitOpenDuration;
+        this.circuit = new PaymentCircuitBreaker(circuitStore, circuitFailureThreshold, circuitOpenDuration, Duration.ofMinutes(2));
     }
 
     @Override
@@ -85,13 +102,14 @@ public class JournaledPremiumPaymentGateway
                 command.orderNo(),
                 "REQUESTED",
                 null,
-                command,
+                sanitizedCommand(command),
                 requestedAt
         );
 
-        GatewayPaymentResult result = isCircuitOpen(requestedAt)
+        var permit = circuit.acquire(interfaceName());
+        GatewayPaymentResult result = permit == null
                 ? GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_CIRCUIT_OPEN")
-                : invokeConfirmation(command);
+                : invokeConfirmation(command, permit);
         append(
                 "PREMIUM_PAYMENT_CONFIRM",
                 "INBOUND_RESPONSE",
@@ -100,30 +118,31 @@ public class JournaledPremiumPaymentGateway
                 command.orderNo(),
                 responseStatus(result),
                 result.errorCode(),
-                result,
+                sanitizedResult(result),
                 Instant.now(clock)
         );
         return result;
     }
 
     @Override
-    public GatewayPaymentResult inquire(String providerPaymentKey) {
-        String correlationId = "PAYMENT-INQUIRY:" + providerPaymentKey + ":" + UUID.randomUUID();
+    public GatewayPaymentResult inquire(InquiryCommand command) {
+        String providerPaymentKey = command.providerPaymentKey();
+        String correlationId = "PAYMENT-INQUIRY:" + command.orderNo() + ":" + UUID.randomUUID();
         Instant requestedAt = Instant.now(clock);
         append(
                 "PREMIUM_PAYMENT_INQUIRY",
                 "OUTBOUND_REQUEST",
                 correlationId,
                 null,
-                providerPaymentKey,
+                command.orderNo(),
                 "REQUESTED",
                 null,
-                Map.of("providerPaymentKey", providerPaymentKey),
+                Map.of("providerPaymentKeyHash", hash(providerPaymentKey)),
                 requestedAt
         );
         GatewayPaymentResult result;
         try {
-            result = delegate.inquire(providerPaymentKey);
+            result = delegate.inquire(command);
         } catch (RuntimeException exception) {
             result = GatewayPaymentResult.unknown(providerPaymentKey, "PAYMENT_INTERFACE_INQUIRY_ERROR");
         }
@@ -132,60 +151,29 @@ public class JournaledPremiumPaymentGateway
                 "INBOUND_RESPONSE",
                 correlationId,
                 null,
-                providerPaymentKey,
+                command.orderNo(),
                 responseStatus(result),
                 result.errorCode(),
-                result,
+                sanitizedResult(result),
                 Instant.now(clock)
         );
         return result;
     }
 
-    private synchronized GatewayPaymentResult invokeConfirmation(ConfirmCommand command) {
+    private GatewayPaymentResult invokeConfirmation(ConfirmCommand command, PaymentCircuitBreaker.Permit permit) {
+        GatewayPaymentResult result;
         try {
-            GatewayPaymentResult result = delegate.confirm(command);
-            if ("FAKE_GATEWAY_TIMEOUT".equals(result.errorCode())) {
-                consecutiveTimeouts++;
-                if (consecutiveTimeouts >= circuitFailureThreshold) {
-                    circuitOpenedUntil = Instant.now(clock).plus(circuitOpenDuration);
-                }
-            } else {
-                consecutiveTimeouts = 0;
-                circuitOpenedUntil = null;
-            }
-            return result;
+            result = delegate.confirm(command);
         } catch (RuntimeException exception) {
-            consecutiveTimeouts++;
-            if (consecutiveTimeouts >= circuitFailureThreshold) {
-                circuitOpenedUntil = Instant.now(clock).plus(circuitOpenDuration);
-            }
-            return GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_CONFIRM_ERROR");
+            result = GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_CONFIRM_ERROR");
         }
-    }
-
-    private synchronized boolean isCircuitOpen(Instant now) {
-        if (circuitOpenedUntil == null) {
-            return false;
-        }
-        if (now.isBefore(circuitOpenedUntil)) {
-            return true;
-        }
-        circuitOpenedUntil = null;
-        consecutiveTimeouts = 0;
-        return false;
+        circuit.complete(permit, "UNKNOWN".equals(result.status()));
+        return result;
     }
 
     @Override
-    public synchronized CircuitStatus currentStatus() {
-        Instant now = Instant.now(clock);
-        boolean open = isCircuitOpen(now);
-        return new CircuitStatus(
-                INTERFACE_NAME,
-                open,
-                consecutiveTimeouts,
-                circuitFailureThreshold,
-                open ? circuitOpenedUntil : null
-        );
+    public CircuitStatus currentStatus() {
+        return circuit.status(interfaceName());
     }
 
     private String responseStatus(GatewayPaymentResult result) {
@@ -212,7 +200,7 @@ public class JournaledPremiumPaymentGateway
             Instant occurredAt
     ) {
         journalRepository.append(new FinancialInterfaceMessage(
-                INTERFACE_NAME,
+                interfaceName(),
                 messageType,
                 direction,
                 correlationId,
@@ -223,6 +211,43 @@ public class JournaledPremiumPaymentGateway
                 toJson(payload),
                 occurredAt
         ));
+    }
+
+    private String interfaceName() {
+        return providerCode() + "_PREMIUM_PAYMENT";
+    }
+
+    private Map<String, Object> sanitizedCommand(ConfirmCommand command) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("orderNo", command.orderNo());
+        payload.put("providerPaymentKeyHash", hash(command.providerPaymentKey()));
+        payload.put("amount", command.amount());
+        payload.put("currencyCode", command.currencyCode());
+        payload.put("idempotencyKey", command.idempotencyKey());
+        return payload;
+    }
+
+    private Map<String, Object> sanitizedResult(GatewayPaymentResult result) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("status", result.status());
+        payload.put("providerPaymentKeyHash", hash(result.providerPaymentKey()));
+        payload.put("providerTransactionIdHash", hash(result.providerTransactionId()));
+        payload.put("errorCode", result.errorCode());
+        payload.put("message", result.message());
+        return payload;
+    }
+
+    private String hash(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256을 사용할 수 없습니다.", exception);
+        }
     }
 
     private String toJson(Object value) {

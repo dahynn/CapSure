@@ -231,10 +231,10 @@ const CancerInsuranceClaimResultPage = () => {
 
     return (
         <div className="px-6 pb-36 pt-8">
-            <section className={`rounded-[30px] border p-7 ${statusDetail.classes}`}>
+            <section className={`rounded-[20px] border p-7 ${statusDetail.classes}`}>
                 <StatusIcon className="h-12 w-12" />
-                <p className="mt-6 text-xs font-black">{statusDetail.eyebrow}</p>
-                <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">
+                <p className="mt-6 text-xs font-semibold">{statusDetail.eyebrow}</p>
+                <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
                     {statusDetail.title}
                 </h1>
                 <p className="mt-3 text-sm leading-6 text-slate-300">{statusDetail.description}</p>
@@ -251,7 +251,7 @@ const CancerInsuranceClaimResultPage = () => {
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-3">
                     <span className="text-sm text-slate-500">심사 결정 금액</span>
-                    <span className="text-base font-black text-[#82D8FC]">
+                    <span className="text-base font-semibold text-[#82D8FC]">
                         {decision?.benefitAmount == null ? '-' : formatWon(decision.benefitAmount)}
                     </span>
                 </div>
@@ -271,18 +271,18 @@ const CancerInsuranceClaimResultPage = () => {
 
             <section className="mt-6">
                 <div className="mb-4 flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F2BEF7]/10 text-[#F2BEF7]">
+                    <span className="text-[#F2BEF7]">
                         <Scale className="h-5 w-5" />
                     </span>
                     <div>
-                        <p className="text-xs font-bold text-[#F2BEF7]">결정 이유</p>
-                        <h2 className="text-lg font-black text-white">코드와 약관 근거</h2>
+                        <p className="text-[11px] font-medium text-[#F2BEF7]">결정 이유</p>
+                        <h2 className="mt-1 text-lg font-semibold text-white">코드와 약관 근거</h2>
                     </div>
                 </div>
                 <div className="space-y-3">
                     {decision?.reasonCodes?.map((reasonCode) => (
-                        <div key={reasonCode} className="rounded-2xl border border-slate-800 bg-[#09111F] p-4">
-                            <p className="text-xs font-black text-[#82D8FC]">{reasonCode}</p>
+                        <div key={reasonCode} className="rounded-xl border border-slate-800 bg-[#09111F] p-4">
+                            <p className="text-xs font-semibold text-[#82D8FC]">{reasonCode}</p>
                             <p className="mt-2 text-sm leading-6 text-slate-300">
                                 {REASON_LABELS[reasonCode] || '지급심사 규칙에 기록된 결정 사유입니다.'}
                             </p>
@@ -296,8 +296,8 @@ const CancerInsuranceClaimResultPage = () => {
                     <div className="flex items-start gap-3">
                         <FileCheck2 className="mt-0.5 h-5 w-5 shrink-0 text-[#82D8FC]" />
                         <div>
-                            <p className="text-xs font-black text-[#82D8FC]">{clause.clauseCode} · 약관 v{clause.documentVersion}</p>
-                            <h2 className="mt-1 text-base font-black text-white">{clause.title}</h2>
+                            <p className="text-xs font-semibold text-[#82D8FC]">{clause.clauseCode} · 약관 v{clause.documentVersion}</p>
+                            <h2 className="mt-1 text-base font-semibold text-white">{clause.title}</h2>
                             <p className="mt-3 whitespace-pre-line text-xs leading-5 text-slate-400">{clause.content}</p>
                         </div>
                     </div>
@@ -308,7 +308,7 @@ const CancerInsuranceClaimResultPage = () => {
                 <div className="flex items-start gap-3">
                     <Fingerprint className="mt-0.5 h-5 w-5 shrink-0 text-[#82D8FC]" />
                     <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-white">같은 입력이면 같은 결정을 재현합니다</p>
+                        <p className="text-sm font-semibold text-white">같은 입력이면 같은 결정을 재현합니다</p>
                         <p className="mt-1 text-xs leading-5 text-slate-500">
                             AI가 결정하지 않고 계약 Snapshot과 규칙 엔진이 결과를 만들며, 입력 해시로 판단 근거를 추적합니다.
                         </p>
@@ -331,8 +331,8 @@ const CancerInsuranceClaimResultPage = () => {
 
             <section className="mt-6 rounded-2xl border border-slate-800 bg-[#09111F] p-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
-                    <p className="text-sm font-black text-white">합성 증빙 원장</p>
-                    <span className="text-xs font-black text-[#82D8FC]">{claim?.evidence?.length || 0}건</span>
+                    <p className="text-sm font-semibold text-white">합성 증빙 원장</p>
+                    <span className="text-xs font-semibold text-[#82D8FC]">{claim?.evidence?.length || 0}건</span>
                 </div>
                 <div className="space-y-2">
                     {claim?.evidence?.length > 0 ? claim.evidence.map((item) => (
@@ -340,7 +340,7 @@ const CancerInsuranceClaimResultPage = () => {
                             <span className="text-xs font-bold text-slate-300">
                                 {EVIDENCE_LABELS[item.evidenceType] || item.evidenceType}
                             </span>
-                            <span className="flex items-center gap-1 text-xs font-black text-[#82D8FC]">
+                            <span className="flex items-center gap-1 text-xs font-semibold text-[#82D8FC]">
                                 <Check className="h-3.5 w-3.5" /> 검증됨
                             </span>
                         </div>

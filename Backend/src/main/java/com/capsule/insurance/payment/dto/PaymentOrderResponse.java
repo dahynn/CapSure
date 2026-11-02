@@ -25,7 +25,7 @@ public record PaymentOrderResponse(
             Long paymentAttemptId,
             int attemptNo,
             String provider,
-            String providerPaymentKey,
+            @com.fasterxml.jackson.annotation.JsonIgnore String providerPaymentKey,
             String status,
             String errorCode,
             Instant requestedAt,

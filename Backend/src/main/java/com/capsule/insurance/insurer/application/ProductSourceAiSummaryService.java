@@ -12,16 +12,11 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Slf4j
 @Service
 public class ProductSourceAiSummaryService {
 
@@ -32,20 +27,12 @@ public class ProductSourceAiSummaryService {
 
     private final ProductSourceMapper productSourceMapper;
     private final ObjectMapper objectMapper;
-    private final ChatClient chatClient;
-    private final String openAiApiKey;
-
     public ProductSourceAiSummaryService(
             ProductSourceMapper productSourceMapper,
-            ObjectMapper objectMapper,
-            ObjectProvider<ChatClient.Builder> chatClientBuilderProvider,
-            @Value("${spring.ai.openai.api-key:}") String openAiApiKey
+            ObjectMapper objectMapper
     ) {
         this.productSourceMapper = productSourceMapper;
         this.objectMapper = objectMapper;
-        ChatClient.Builder chatClientBuilder = chatClientBuilderProvider.getIfAvailable();
-        this.chatClient = chatClientBuilder == null ? null : chatClientBuilder.build();
-        this.openAiApiKey = openAiApiKey;
     }
 
     public ProductSourceAiSummaryResponse getProductSourceAiSummary(Long productSourceId) {
@@ -81,44 +68,8 @@ public class ProductSourceAiSummaryService {
     }
 
     private AiJsonSummary generateAiSummary(JsonNode summaryJson, AiJsonSummary fallback) {
-        if (chatClient == null || !StringUtils.hasText(openAiApiKey)) {
-            return fallback;
-        }
-
-        try {
-            AiJsonSummary result = chatClient.prompt()
-                    .system("""
-                            너는 보험 상품 요약 도우미다.
-                            입력으로 들어온 ai_summary_json만 근거로 삼아서 짧고 자연스러운 한국어 요약을 작성한다.
-                            추측하지 말고, JSON에 없는 정보는 없다고 표현한다.
-                            응답은 반드시 coreCoverage, feature, premium 세 필드만 채운다.
-                            """)
-                    .user("""
-                            아래 보험 요약 JSON을 읽고 세 문단으로 정리해라.
-
-                            1. coreCoverage: 핵심 보장 내용을 2~4문장으로 요약
-                            2. feature: 상품의 특징, 갱신/재가입 구조, 주요 제한사항을 2~4문장으로 요약
-                            3. premium: 보험료, 납입주기, 할인, 적용이율 정보를 2~4문장으로 요약
-
-                            [ai_summary_json]
-                            %s
-                            """.formatted(limitText(toPrettyJson(summaryJson), MAX_JSON_CHARS)))
-                    .call()
-                    .entity(AiJsonSummary.class);
-
-            if (result == null) {
-                return fallback;
-            }
-
-            return new AiJsonSummary(
-                    valueOrFallback(result.coreCoverage(), fallback.coreCoverage()),
-                    valueOrFallback(result.feature(), fallback.feature()),
-                    valueOrFallback(result.premium(), fallback.premium())
-            );
-        } catch (Exception exception) {
-            log.warn("AI JSON summary generation failed for productSourceId fallback", exception);
-            return fallback;
-        }
+        // 외부 모델 호출은 안전한 AI 연동 PoC 경계 밖이다. 현재 상품 요약은 검증 가능한 원본 데이터만 사용한다.
+        return fallback;
     }
 
     private AiJsonSummary buildFallbackSummary(JsonNode summaryJson) {
@@ -310,14 +261,6 @@ public class ProductSourceAiSummaryService {
         return values.isEmpty() ? null : String.join(", ", values);
     }
 
-    private String toPrettyJson(JsonNode summaryJson) {
-        try {
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(summaryJson);
-        } catch (Exception exception) {
-            return summaryJson.toString();
-        }
-    }
-
     private String textOrNull(JsonNode node, String fieldName) {
         JsonNode child = node.path(fieldName);
         if (child.isMissingNode() || child.isNull()) {
@@ -345,13 +288,6 @@ public class ProductSourceAiSummaryService {
 
     private String valueOrFallback(String value, String fallback) {
         return StringUtils.hasText(value) ? value.trim() : fallback;
-    }
-
-    private String limitText(String value, int maxLength) {
-        if (!StringUtils.hasText(value) || value.length() <= maxLength) {
-            return value;
-        }
-        return value.substring(0, maxLength) + "...";
     }
 
     private BigDecimal parseDecimal(String value) {

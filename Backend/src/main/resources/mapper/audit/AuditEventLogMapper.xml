@@ -82,4 +82,9 @@
         )
     </insert>
 
+    <delete id="deleteOccurredBefore">
+        delete from audit_event_log
+        where occurred_at &lt; #{cutoff}
+    </delete>
+
 </mapper>

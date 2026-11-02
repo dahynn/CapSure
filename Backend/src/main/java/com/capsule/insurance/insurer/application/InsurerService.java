@@ -27,9 +27,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -48,22 +45,14 @@ public class InsurerService {
     private final ProductSourceMapper productSourceMapper;
     private final InsurerCatalogMapper insurerCatalogMapper;
     private final UserAccountMapper userAccountMapper;
-    private final ChatClient chatClient;
-    private final String openAiApiKey;
-
     public InsurerService(
             ProductSourceMapper productSourceMapper,
             InsurerCatalogMapper insurerCatalogMapper,
-            UserAccountMapper userAccountMapper,
-            ObjectProvider<ChatClient.Builder> chatClientBuilderProvider,
-            @Value("${spring.ai.openai.api-key:}") String openAiApiKey
+            UserAccountMapper userAccountMapper
     ) {
         this.productSourceMapper = productSourceMapper;
         this.insurerCatalogMapper = insurerCatalogMapper;
         this.userAccountMapper = userAccountMapper;
-        ChatClient.Builder chatClientBuilder = chatClientBuilderProvider.getIfAvailable();
-        this.chatClient = chatClientBuilder == null ? null : chatClientBuilder.build();
-        this.openAiApiKey = openAiApiKey;
     }
 
     public ProductSummaryPageResponse getProducts(String category, Integer budget, String sortBy, Integer page, Integer size, Long userId) {
@@ -345,33 +334,8 @@ public class InsurerService {
             ProductSourceTermsSummaryResponse.PriceComparison priceComparison
     ) {
         AiTermsSummary fallback = buildFallbackSummary(productSource, priceComparison);
-
-        if (chatClient == null || !StringUtils.hasText(openAiApiKey)) {
-            return fallback;
-        }
-
-        try {
-            AiTermsSummary aiTermsSummary = chatClient.prompt()
-                    .system("""
-                            너는 보험 약관 요약 도우미다.
-                            입력으로 전달된 product_source 컬럼 값만 사용해서 작성한다.
-                            존재하지 않는 보장, 면책, 예외, 세부 지급조건은 추정하지 않는다.
-                            문장은 약관 요약처럼 차분하고 간결하게 작성한다.
-                            clauseHighlights는 반드시 3개 항목으로 작성한다.
-                            premiumAndPriceIndex에는 남성/여성 보험료와 보험가격지수를 모두 언급하고,
-                            보험가격지수가 더 낮은 쪽이 상대적으로 유리하다는 설명을 반영한다.
-                            specialNotes에는 상품특징, 특이사항, 갱신형 여부, 유니버설 여부, 문의처 중 있는 정보만 반영한다.
-                            모든 필드는 한국어로 작성하고, 값이 없으면 '정보 없음'이라고 적는다.
-                            """)
-                    .user(buildPrompt(productSource, priceComparison))
-                    .call()
-                    .entity(AiTermsSummary.class);
-
-            return mergeWithFallback(aiTermsSummary, fallback, productSource, priceComparison);
-        } catch (Exception exception) {
-            log.warn("AI terms summary generation failed for productSourceId={}", productSource.getProductSourceId(), exception);
-            return fallback;
-        }
+        // 기본 경로에서 외부 모델을 호출하지 않는다. 원본 상품 데이터 기반 fallback만 반환한다.
+        return fallback;
     }
 
     private AiLightSummary generateLightSummary(
@@ -379,41 +343,8 @@ public class InsurerService {
             ProductSourceTermsSummaryResponse.PriceComparison priceComparison
     ) {
         AiLightSummary fallback = buildFallbackLightSummary(productSource, priceComparison);
-
-        if (chatClient == null || !StringUtils.hasText(openAiApiKey)) {
-            return fallback;
-        }
-
-        try {
-            AiLightSummary aiLightSummary = chatClient.prompt()
-                    .system("""
-                            너는 보험 핵심 요약 도우미다.
-                            입력으로 전달된 product_source 컬럼 값만 사용해서 작성한다.
-                            이미지에 나온 3가지 질문에만 답한다.
-                            1. 결국 얼마를 내는지
-                            2. 언제, 무엇을 보장해 주는지
-                            3. 이 상품의 특징이 무엇인지
-                            각 항목은 1~2문장 이내로 짧고 명확하게 작성한다.
-                            존재하지 않는 보장, 면책, 예외, 세부 조건은 추정하지 않는다.
-                            모든 필드는 한국어로 작성하고, 값이 없으면 '정보 없음'이라고 적는다.
-                            """)
-                    .user(buildLightPrompt(productSource, priceComparison))
-                    .call()
-                    .entity(AiLightSummary.class);
-
-            if (aiLightSummary == null) {
-                return fallback;
-            }
-
-            return new AiLightSummary(
-                    valueOrDefault(aiLightSummary.paymentSummary(), fallback.paymentSummary()),
-                    valueOrDefault(aiLightSummary.coverageSummary(), fallback.coverageSummary()),
-                    valueOrDefault(aiLightSummary.featureSummary(), fallback.featureSummary())
-            );
-        } catch (Exception exception) {
-            log.warn("AI light summary generation failed for productSourceId={}", productSource.getProductSourceId(), exception);
-            return fallback;
-        }
+        // 기본 경로에서 외부 모델을 호출하지 않는다. 원본 상품 데이터 기반 fallback만 반환한다.
+        return fallback;
     }
 
     private String buildPrompt(

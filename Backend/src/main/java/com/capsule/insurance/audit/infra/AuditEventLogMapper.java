@@ -1,6 +1,7 @@
 package com.capsule.insurance.audit.infra;
 
 import com.capsule.insurance.audit.domain.AuditEventLog;
+import java.time.Instant;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
@@ -19,4 +20,6 @@ public interface AuditEventLogMapper {
     int countByOutboxTrackingKey(@Param("requestId") String requestId, @Param("eventType") String eventType, @Param("targetId") Long targetId);
 
     void saveAuditLog(AuditEventLog eventLog);
+
+    int deleteOccurredBefore(@Param("cutoff") Instant cutoff);
 }

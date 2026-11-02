@@ -6,40 +6,29 @@ import com.capsule.insurance.insurer.dto.FixedTermsPdfSummaryResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-@Slf4j
 @Service
 public class FixedTermsPdfSummaryService {
 
     private static final String DISCLAIMER = "이 요약은 resources의 고정 PDF를 읽어 생성한 참고용 안내이며, 해석 차이가 있을 수 있으므로 최종 판단은 원문 약관을 확인해야 합니다.";
 
     private final ResourceLoader resourceLoader;
-    private final ChatClient chatClient;
-    private final String openAiApiKey;
     private final String fixedPdfPath;
     private final int maxChars;
 
     public FixedTermsPdfSummaryService(
             ResourceLoader resourceLoader,
-            ObjectProvider<ChatClient.Builder> chatClientBuilderProvider,
-            @Value("${spring.ai.openai.api-key:}") String openAiApiKey,
             @Value("${insurer.terms-pdf.path:classpath:terms/fixed-terms.pdf}") String fixedPdfPath,
             @Value("${insurer.terms-pdf.max-chars:30000}") int maxChars
     ) {
         this.resourceLoader = resourceLoader;
-        ChatClient.Builder chatClientBuilder = chatClientBuilderProvider.getIfAvailable();
-        this.chatClient = chatClientBuilder == null ? null : chatClientBuilder.build();
-        this.openAiApiKey = openAiApiKey;
         this.fixedPdfPath = fixedPdfPath;
         this.maxChars = maxChars;
     }
@@ -91,42 +80,8 @@ public class FixedTermsPdfSummaryService {
     }
 
     private PdfAiSummary generateAiSummary(String pdfText, PdfAiSummary fallback) {
-        if (chatClient == null || !StringUtils.hasText(openAiApiKey)) {
-            return fallback;
-        }
-
-        try {
-            PdfAiSummary result = chatClient.prompt()
-                    .system("""
-                            너는 보험 약관 요약 도우미다.
-                            전달된 PDF 텍스트만 근거로 요약한다.
-                            없는 내용을 추정하지 않는다.
-                            특히 보장하지 않는 경우, 면책, 주요 제한 조건은 문서에 실제로 보일 때만 적는다.
-                            찾지 못한 정보는 '문서에서 명시적으로 찾지 못했습니다.'로 작성한다.
-                            각 필드는 짧고 발표용으로 읽기 좋게 한국어로 정리한다.
-                            """)
-                    .user("""
-                            아래는 고정 약관 PDF에서 추출한 텍스트다.
-                            다음 항목으로만 요약해줘.
-
-                            1. headline: 문서 전체를 한 줄로 요약
-                            2. coverageScope: 보장 범위
-                            3. coverageAmount: 보장 금액 또는 지급 기준
-                            4. exclusions: 면책 사항 또는 보장하지 않는 경우
-                            5. keyLimitations: 주요 제한 조건
-                            6. specialNotes: 기타 중요한 사항
-
-                            [PDF TEXT]
-                            %s
-                            """.formatted(pdfText))
-                    .call()
-                    .entity(PdfAiSummary.class);
-
-            return result == null ? fallback : result;
-        } catch (Exception exception) {
-            log.warn("Fixed PDF summary generation failed", exception);
-            return fallback;
-        }
+        // 외부 모델 호출은 안전한 AI 연동 PoC 경계 밖이다. 현재 약관 요약은 PDF 원문만 사용한다.
+        return fallback;
     }
 
     private PdfAiSummary buildFallbackSummary(String pdfText) {

@@ -295,8 +295,8 @@ const CancerInsuranceClaimPage = () => {
                     <ChevronLeft className="h-6 w-6" />
                 </button>
                 <div className="ml-2">
-                    <p className="text-xs font-bold text-[#82D8FC]">STEP 5 · 보험금 청구</p>
-                    <h1 className="mt-0.5 text-xl font-black text-white">지급심사 상황을 선택해보세요</h1>
+                    <p className="text-[11px] font-medium text-slate-400">STEP 5 · 보험금 청구</p>
+                    <h1 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-white">지급심사 상황을 선택해보세요</h1>
                 </div>
             </header>
 
@@ -305,7 +305,7 @@ const CancerInsuranceClaimPage = () => {
                     <div className="flex items-start gap-3">
                         <Stethoscope className="mt-0.5 h-5 w-5 shrink-0 text-[#82D8FC]" />
                         <div>
-                            <p className="text-sm font-black text-white">실제 의료정보를 입력하지 않습니다</p>
+                            <p className="text-sm font-semibold text-white">실제 의료정보를 입력하지 않습니다</p>
                             <p className="mt-1 text-xs leading-5 text-slate-500">
                                 합성 사고일·진단 분류·증빙 metadata만 사용하며 의료파일은 저장하거나 전송하지 않습니다.
                             </p>
@@ -315,12 +315,12 @@ const CancerInsuranceClaimPage = () => {
 
                 <section>
                     <div className="mb-4 flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F2BEF7]/10 text-[#F2BEF7]">
+                        <span className="text-[#F2BEF7]">
                             <Scale className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-xs font-bold text-[#F2BEF7]">규칙 엔진 시나리오</p>
-                            <h2 className="text-lg font-black text-white">지급·수동심사·부지급</h2>
+                            <p className="text-[11px] font-medium text-[#F2BEF7]">규칙 엔진 시나리오</p>
+                            <h2 className="mt-1 text-lg font-semibold text-white">지급·수동심사·부지급</h2>
                         </div>
                     </div>
                     <div className="space-y-3">
@@ -332,15 +332,15 @@ const CancerInsuranceClaimPage = () => {
                                     key={scenario.id}
                                     type="button"
                                     onClick={() => selectScenario(scenario.id)}
-                                    className={`flex w-full items-start gap-4 rounded-2xl border p-4 text-left transition-all ${selected ? TONE_STYLES[scenario.tone] : 'border-slate-800 bg-[#09111F] text-slate-500'}`}
+                                    className={`flex w-full items-start gap-4 rounded-xl border p-4 text-left transition-colors ${selected ? TONE_STYLES[scenario.tone] : 'border-slate-800 bg-[#09111F] text-slate-500'}`}
                                 >
-                                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-white/5' : 'bg-slate-800'}`}>
+                                    <span className="mt-0.5 shrink-0">
                                         <ScenarioIcon className="h-5 w-5" />
                                     </span>
                                     <span className="min-w-0 flex-1">
                                         <span className="flex items-center justify-between gap-3">
-                                            <span className="text-sm font-black text-white">{scenario.title}</span>
-                                            <span className="text-[10px] font-black">{scenario.expected}</span>
+                                            <span className="text-sm font-semibold text-white">{scenario.title}</span>
+                                            <span className="text-[10px] font-semibold">{scenario.expected}</span>
                                         </span>
                                         <span className="mt-1 block text-xs leading-5 text-slate-500">
                                             {scenario.denialFallback
@@ -358,15 +358,15 @@ const CancerInsuranceClaimPage = () => {
                 </section>
 
                 {selectedScenario && (
-                    <section className="rounded-[28px] border border-[#82D8FC]/20 bg-gradient-to-br from-[#10253A] to-[#07101C] p-6">
+                    <section className="rounded-[20px] border border-slate-700/80 bg-[#0A1424] p-6">
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-xs font-bold text-[#82D8FC]">청구 준비도</p>
-                                <h2 className="mt-1 text-lg font-black text-white">
+                                <p className="text-[11px] font-medium text-[#82D8FC]">청구 준비도</p>
+                                <h2 className="mt-1 text-lg font-semibold text-white">
                                     {selectedScenario.quoteCoverage?.coverageName || selectedScenario.coverage?.coverageCode}
                                 </h2>
                             </div>
-                            <span className="rounded-full bg-[#82D8FC]/10 px-3 py-1 text-xs font-black text-[#82D8FC]">
+                            <span className="text-xs font-semibold text-[#82D8FC]">
                                 {selectedScenario.submittedEvidence.length}/{selectedScenario.requiredEvidence.length}
                             </span>
                         </div>
@@ -376,7 +376,7 @@ const CancerInsuranceClaimPage = () => {
                                 return (
                                     <div key={evidenceType} className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3">
                                         <span className="text-sm font-bold text-slate-300">{evidenceLabel(evidenceType)}</span>
-                                        <span className={`text-xs font-black ${included ? 'text-[#82D8FC]' : 'text-amber-200'}`}>
+                                        <span className={`text-xs font-semibold ${included ? 'text-[#82D8FC]' : 'text-amber-200'}`}>
                                             {included ? '검증됨' : '미제출'}
                                         </span>
                                     </div>

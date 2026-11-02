@@ -14,7 +14,7 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getPaymentHistory, getCurrentPaymentMethod, getMyCapsules, registerPaymentMethod, prefetchCapsuleDetail } from './api/mypage.api';
+import { getPaymentHistory, getCurrentPaymentMethod, getMyCapsules, getUserProfile, registerPaymentMethod, prefetchCapsuleDetail } from './api/mypage.api';
 import { getLatestCapsureSubscription } from '@/features/capsure/utils/capsuleStorage';
 import { authApi } from '@/features/auth/api/auth.api';
 
@@ -44,8 +44,7 @@ const MyPage = ({ initialView = 'main' }) => {
     });
 
     useEffect(() => {
-        import('./api/mypage.api')
-            .then(({ getUserProfile }) => getUserProfile())
+        getUserProfile()
             .then(data => {
                 if (data) setUser(prev => ({ ...prev, name: data.name || '고객', email: data.email || prev.email }));
             })

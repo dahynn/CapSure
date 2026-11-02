@@ -46,28 +46,28 @@ public class MyDataProxyService {
     }
 
     public MyDataUserInsurancesResponse getUserInsurances(Long userId) {
-        MyDataInsuranceListResponse insuranceList = get("/mock/v2/insu/insurance", MyDataInsuranceListResponse.class);
+        MyDataInsuranceListResponse insuranceList = get("/mock/v2/insu/insurance?userId=" + userId, MyDataInsuranceListResponse.class);
 
         List<MyDataContractResponse> contracts = insuranceList.contracts().stream()
-                .map(this::toUserContract)
+                .map(contract -> toUserContract(userId, contract))
                 .toList();
 
         return new MyDataUserInsurancesResponse(userId, contracts);
     }
 
-    private MyDataContractResponse toUserContract(MyDataInsuranceListItemResponse contract) {
+    private MyDataContractResponse toUserContract(Long userId, MyDataInsuranceListItemResponse contract) {
         String encodedInsuNum = encode(contract.insuNum());
 
         MyDataContractResponse property = get(
-                "/mock/v2/insu/insurances/" + encodedInsuNum + "/property",
+                "/mock/v2/insu/insurances/" + encodedInsuNum + "/property?userId=" + userId,
                 MyDataContractResponse.class
         );
         MyDataInsuranceContractsResponse contracts = get(
-                "/mock/v2/insu/insurances/contracts?insuNum=" + encodedInsuNum,
+                "/mock/v2/insu/insurances/contracts?insuNum=" + encodedInsuNum + "&userId=" + userId,
                 MyDataInsuranceContractsResponse.class
         );
         MyDataInsuranceCoveragesResponse coverages = get(
-                "/mock/v2/insu/insurances/coverages?insuNum=" + encodedInsuNum,
+                "/mock/v2/insu/insurances/coverages?insuNum=" + encodedInsuNum + "&userId=" + userId,
                 MyDataInsuranceCoveragesResponse.class
         );
 

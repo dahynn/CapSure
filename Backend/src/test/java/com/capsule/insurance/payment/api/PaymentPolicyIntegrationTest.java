@@ -16,6 +16,8 @@ import com.capsule.insurance.common.exception.GlobalExceptionHandler;
 import com.capsule.insurance.payment.adapter.FakePremiumPaymentGateway;
 import com.capsule.insurance.payment.adapter.JournaledPremiumPaymentGateway;
 import com.capsule.insurance.payment.application.PaymentService;
+import com.capsule.insurance.payment.application.port.PremiumPaymentGateway;
+import com.capsule.insurance.payment.domain.GatewayPaymentResult;
 import com.capsule.insurance.payment.dto.PaymentOrderResponse;
 import com.capsule.insurance.payment.infra.JdbcPaymentRepository;
 import com.capsule.insurance.payment.infra.JdbcFinancialInterfaceJournalRepository;
@@ -181,6 +183,81 @@ class PaymentPolicyIntegrationTest {
     }
 
     @Test
+    void otherUsersCannotReadPolicyOrPaymentAndResponsesOmitProviderKeys() throws Exception {
+        Long owner = userIds.get(0);
+        Long stranger = userIds.get(1);
+        Long application = approveApplication(owner);
+        JsonNode order = createOrder(owner, application, "privacy-order");
+        long paymentId = order.path("paymentOrderId").asLong();
+        long policyId = order.path("policyId").asLong();
+        for (String path : List.of("/api/v1/payments/" + paymentId, "/api/v1/policies/" + policyId)) {
+            mockMvc.perform(get(path).principal(authentication(owner))).andExpect(status().isOk());
+            mockMvc.perform(get(path).principal(authentication(stranger))).andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.data").doesNotExist());
+        }
+        var response = paymentService.confirm(owner, paymentId, "privacy-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest("fake-timeout-private-key", new java.math.BigDecimal("29900.00")));
+        assertThat(response.attempts()).hasSize(1);
+        mockMvc.perform(get("/api/v1/payments/{id}", paymentId).principal(authentication(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.attempts[0].providerPaymentKey").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Toss 승인 주문번호가 서버 주문과 다르면 PG 호출 전에 거절한다")
+    void rejectsMismatchedTossOrderIdBeforeGatewayCall() throws Exception {
+        Long userId = userIds.get(0);
+        AtomicBoolean gatewayCalled = new AtomicBoolean(false);
+        PremiumPaymentGateway tossGateway = new PremiumPaymentGateway() {
+            @Override
+            public String providerCode() {
+                return "TOSS";
+            }
+
+            @Override
+            public GatewayPaymentResult confirm(ConfirmCommand command) {
+                gatewayCalled.set(true);
+                return GatewayPaymentResult.paid(command.providerPaymentKey(), "test-transaction");
+            }
+
+            @Override
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                return GatewayPaymentResult.unknown(command.providerPaymentKey(), "TEST_NOT_FOUND");
+            }
+        };
+        PaymentService tossPaymentService = new PaymentService(
+                new JdbcPaymentRepository(jdbcTemplate),
+                policyRepository,
+                tossGateway,
+                new DataSourceTransactionManager(dataSource),
+                OBJECT_MAPPER
+        );
+        MockMvc tossMockMvc = buildMockMvc(tossPaymentService, policyRepository);
+        JsonNode order = createOrder(
+                tossMockMvc,
+                userId,
+                approveApplication(userId),
+                "order-toss-mismatch"
+        );
+        Long orderId = order.path("paymentOrderId").asLong();
+
+        tossMockMvc.perform(post("/api/v1/payments/{paymentOrderId}/confirm", orderId)
+                        .principal(authentication(userId))
+                        .header("Idempotency-Key", "confirm-toss-mismatch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(Map.of(
+                                "providerPaymentKey", "toss-payment-key",
+                                "providerOrderId", "PAY-TAMPERED",
+                                "amount", "29900.00"
+                        ))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errorCode").value("BUSINESS_RULE_VIOLATION"));
+
+        assertThat(gatewayCalled).isFalse();
+        assertThat(count("pay_attempt", "payment_order_id", orderId)).isZero();
+    }
+
+    @Test
     @DisplayName("위변조 금액은 PG 호출 전에 거절하고 동일 confirm 100회는 승인·시도·활성 계약을 한 건만 만든다")
     void confirmsOnePaymentAndPolicyForOneHundredRetries() throws Exception {
         Long userId = userIds.get(1);
@@ -215,6 +292,14 @@ class PaymentPolicyIntegrationTest {
             assertThat(attemptId).isEqualTo(firstAttemptId);
         }
 
+        assertThat(paymentGateway.confirmationInvocationCount()).isEqualTo(invocationsBefore + 1);
+        mockMvc.perform(post("/api/v1/payments/{paymentOrderId}/confirm", orderId)
+                        .principal(authentication(userId))
+                        .header("Idempotency-Key", "confirm-100-same-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmRequest("fake-paid-different-payload", "29900.00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("IDEMPOTENCY_CONFLICT"));
         assertThat(paymentGateway.confirmationInvocationCount()).isEqualTo(invocationsBefore + 1);
         assertThat(count("pay_attempt", "payment_order_id", orderId)).isEqualTo(1);
         assertThat(count("ins_policy_version", "policy_id", policyId)).isEqualTo(1);
@@ -289,6 +374,57 @@ class PaymentPolicyIntegrationTest {
         assertThat(count("ins_policy_version", "policy_id", policyId)).isEqualTo(1);
         assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
         assertThat(count("ops_reconciliation", "target_id", orderId.toString())).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("현재 PG와 다른 provider의 미확정 시도는 외부 조회하지 않는다")
+    void doesNotReconcileAnAttemptThroughAnotherProvider() throws Exception {
+        Long userId = userIds.get(3);
+        JsonNode order = createOrder(
+                userId,
+                approveApplication(userId),
+                "order-provider-boundary"
+        );
+        Long orderId = order.path("paymentOrderId").asLong();
+        mockMvc.perform(post("/api/v1/payments/{paymentOrderId}/confirm", orderId)
+                        .principal(authentication(userId))
+                        .header("Idempotency-Key", "confirm-provider-boundary")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmRequest("fake-timeout-provider-boundary", "29900.00")))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.status").value("UNKNOWN"));
+
+        AtomicBoolean inquiryCalled = new AtomicBoolean(false);
+        PremiumPaymentGateway tossGateway = new PremiumPaymentGateway() {
+            @Override
+            public String providerCode() {
+                return "TOSS";
+            }
+
+            @Override
+            public GatewayPaymentResult confirm(ConfirmCommand command) {
+                return GatewayPaymentResult.unknown(command.providerPaymentKey(), "TEST_UNUSED");
+            }
+
+            @Override
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                inquiryCalled.set(true);
+                return GatewayPaymentResult.failed(command.providerPaymentKey(), "TEST_WRONG_PROVIDER");
+            }
+        };
+        PaymentService tossPaymentService = new PaymentService(
+                new JdbcPaymentRepository(jdbcTemplate),
+                policyRepository,
+                tossGateway,
+                new DataSourceTransactionManager(dataSource),
+                OBJECT_MAPPER
+        );
+
+        PaymentOrderResponse unchanged = tossPaymentService.reconcile(orderId);
+
+        assertThat(unchanged.status()).isEqualTo("UNKNOWN");
+        assertThat(inquiryCalled).isFalse();
+        assertThat(attemptStatus(orderId)).isEqualTo("UNKNOWN");
     }
 
     @Test
@@ -482,7 +618,7 @@ class PaymentPolicyIntegrationTest {
                 catch(InterruptedException ex){Thread.currentThread().interrupt();throw new IllegalStateException(ex);}
                 return result;
             }
-            public com.capsule.insurance.payment.domain.GatewayPaymentResult inquire(String key){return delegate.inquire(key);}
+            public com.capsule.insurance.payment.domain.GatewayPaymentResult inquire(InquiryCommand command){return delegate.inquire(command);}
         };
         var service=new PaymentService(new JdbcPaymentRepository(jdbcTemplate),policyRepository,gateway,
                 new DataSourceTransactionManager(dataSource),OBJECT_MAPPER);
@@ -570,7 +706,8 @@ class PaymentPolicyIntegrationTest {
                     catch(Exception ex){throw new IllegalStateException(ex);}
                     return com.capsule.insurance.payment.domain.GatewayPaymentResult.paid(command.providerPaymentKey(),"TEST-DURABLE-PG");
                 }
-                public com.capsule.insurance.payment.domain.GatewayPaymentResult inquire(String key){
+                public com.capsule.insurance.payment.domain.GatewayPaymentResult inquire(InquiryCommand command){
+                    String key=command.providerPaymentKey();
                     if(db.queryForObject("SELECT COUNT(*) FROM test_provider_ledger WHERE provider_key=?",Integer.class,key)!=1) throw new IllegalStateException("missing approval");
                     return com.capsule.insurance.payment.domain.GatewayPaymentResult.paid(key,"TEST-DURABLE-PG");
                 }

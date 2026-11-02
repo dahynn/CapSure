@@ -242,6 +242,156 @@ class PaymentReconciliationBatchServiceIntegrationTest {
         );
     }
 
+    @Test
+    void otherProviderApprovingOrdersRemainUnresolved() {
+        var ids = insertUnknownOrders(createFixture("provider-boundary"), "provider-boundary", 1, false);
+        jdbcTemplate.update("UPDATE pay_order SET status = 'APPROVING' WHERE payment_order_id = ?", ids.getFirst());
+        jdbcTemplate.update("UPDATE pay_attempt SET provider = 'TOSS_PREMIUM_PAYMENT' WHERE payment_order_id = ?", ids.getFirst());
+        var result = service.run("OTHER-PROVIDER", PaymentReconciliationRunOptions.production(5, Duration.ZERO));
+        assertThat(result.resolvedCount()).isZero();
+        assertThat(result.stillUnknownCount()).isEqualTo(1);
+        assertThat(countOrders(ids, "APPROVING")).isEqualTo(1);
+    }
+
+    @Test
+    void inquiryFailureStoresOnlySafeTypeAndActualProvider() {
+        var ids = insertUnknownOrders(createFixture("private-failure"), "private-failure", 1, false);
+        jdbcTemplate.update("UPDATE pay_attempt SET provider = 'TEST_PROVIDER' WHERE payment_order_id = ?", ids.getFirst());
+        PremiumPaymentGateway failing = new PremiumPaymentGateway() {
+            public String providerCode() { return "TEST_PROVIDER"; }
+            public GatewayPaymentResult confirm(ConfirmCommand command) { throw new AssertionError("No charge in inquiry test"); }
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                throw new IllegalStateException("paymentKey=synthetic-private-key email=private@example.test");
+            }
+        };
+        var result = newService(failing).run("SAFE-FAILURE", PaymentReconciliationRunOptions.production(5, Duration.ZERO));
+        assertThat(result.failedCount()).isEqualTo(1);
+        var row = jdbcTemplate.queryForMap("SELECT provider, details_json::text AS details FROM ops_reconciliation WHERE target_id = ?", ids.getFirst().toString());
+        assertThat(row.get("provider")).isEqualTo("TEST_PROVIDER");
+        assertThat(row.get("details").toString()).contains("IllegalStateException")
+                .doesNotContain("synthetic-private-key", "private@example.test");
+        assertThat(countOrders(ids, "UNKNOWN")).isEqualTo(1);
+    }
+
+    @Test
+    @org.junit.jupiter.api.Tag("measurement")
+    void measureFixedLatencyAndCheckpointRecovery() throws Exception {
+        // A pooled datasource for BOTH configurations; this is not a pool optimization claim.
+        var config = new com.zaxxer.hikari.HikariConfig();
+        config.setJdbcUrl(POSTGRES.getJdbcUrl()); config.setUsername(POSTGRES.getUsername());
+        config.setPassword(POSTGRES.getPassword()); config.setMaximumPoolSize(8); config.setMinimumIdle(8);
+        var samples = new java.util.ArrayList<java.util.Map<String, Object>>();
+        try (var pool = new com.zaxxer.hikari.HikariDataSource(config)) {
+            jdbcTemplate = new JdbcTemplate(pool);
+            transactionManager = new DataSourceTransactionManager(pool);
+            repository = new JdbcPaymentReconciliationJobRepository(jdbcTemplate);
+            for (int repetition = 0; repetition <= 5; repetition++) {
+                // Alternate order to reduce a systematic cache/thermal order advantage.
+                int[] order = repetition % 2 == 0 ? new int[]{1, 2} : new int[]{2, 1};
+                for (int workers : order) {
+                    samples.add(measureSample(repetition, workers, false));
+                    samples.add(measureSample(repetition, workers, true));
+                }
+            }
+        }
+        var report = new java.util.LinkedHashMap<String, Object>();
+        report.put("schemaVersion", 1); report.put("measuredAt", java.time.Instant.now().toString());
+        report.put("clock", "System.nanoTime"); report.put("java", System.getProperty("java.version"));
+        report.put("os", System.getProperty("os.name") + " " + System.getProperty("os.arch"));
+        report.put("databaseImage", "postgres:16-alpine"); report.put("connectionPoolSize", 8);
+        report.put("comparison", "same implementation; workers=1 versus workers=2; not production throughput");
+        report.put("samples", samples);
+        var output = java.nio.file.Path.of(System.getProperty("capsure.measurement.output"));
+        java.nio.file.Files.createDirectories(output.toAbsolutePath().getParent());
+        java.nio.file.Files.writeString(output, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(report));
+        System.out.println("CAPSURE_MEASUREMENT samples=" + samples.size() + " output=" + output);
+    }
+
+    private java.util.Map<String, Object> measureSample(int repetition, int workers, boolean interrupted) throws Exception {
+        setUp();
+        String prefix = "measured-" + repetition + "-" + workers + "-" + interrupted;
+        var ids = insertUnknownOrders(createFixture(prefix), prefix, 40, true);
+        var counts = new java.util.concurrent.ConcurrentHashMap<String, AtomicInteger>();
+        var durations = new java.util.concurrent.ConcurrentLinkedQueue<Double>();
+        PremiumPaymentGateway delayed = new PremiumPaymentGateway() {
+            public GatewayPaymentResult confirm(ConfirmCommand command) { throw new AssertionError("Never charge during measurement"); }
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                long start = System.nanoTime();
+                counts.computeIfAbsent(command.providerPaymentKey(), key -> new AtomicInteger()).incrementAndGet();
+                try { Thread.sleep(10); } catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+                durations.add((System.nanoTime() - start) / 1_000_000.0);
+                int index = Integer.parseInt(command.providerPaymentKey().substring(command.providerPaymentKey().lastIndexOf('-') + 1));
+                return !interrupted && index % 4 == 0
+                        ? GatewayPaymentResult.unknown(command.providerPaymentKey(), "FIXED_UNKNOWN")
+                        : GatewayPaymentResult.failed(command.providerPaymentKey(), "FIXED_DECLINED");
+            }
+        };
+        long start = System.nanoTime();
+        double downtimeMs = 0;
+        double recoveryMs = 0;
+        if (interrupted) {
+            runMeasuredWorkers(prefix, workers, delayed, 2 / workers);
+            assertThat(jdbcTemplate.queryForObject("SELECT SUM(processed_count) FROM ops_job_execution", Long.class)).isEqualTo(10);
+            long stopped = System.nanoTime();
+            Thread.sleep(100); // Real injected application downtime, never a fixed Clock offset.
+            long resumed = System.nanoTime();
+            downtimeMs = (resumed - stopped) / 1_000_000.0;
+            runMeasuredWorkers(prefix, workers, delayed, null);
+            recoveryMs = (System.nanoTime() - resumed) / 1_000_000.0;
+        } else {
+            runMeasuredWorkers(prefix, workers, delayed, null);
+        }
+        double processingMs = (System.nanoTime() - start) / 1_000_000.0;
+        int failed = countOrders(ids, "FAILED");
+        int unknown = countOrders(ids, "UNKNOWN");
+        assertThat(failed).isEqualTo(interrupted ? 40 : 30);
+        assertThat(unknown).isEqualTo(interrupted ? 0 : 10);
+        assertThat(countOrders(ids, "PAID")).isZero();
+        assertThat(countReconciliations(ids)).isEqualTo(40);
+        assertThat(sumReconciliationAttempts(ids)).isEqualTo(40);
+        assertThat(counts).hasSize(40);
+        assertThat(counts.values()).allSatisfy(value -> assertThat(value.get()).isEqualTo(1));
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ops_job_execution WHERE status <> 'COMPLETED' OR processed_count <> resolved_count + still_unknown_count + failed_count", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT SUM(processed_count) FROM ops_job_execution", Long.class)).isEqualTo(40);
+        // Same instance replay is a no-op, including after a reconstructed service resumes.
+        runMeasuredWorkers(prefix, workers, delayed, null);
+        assertThat(counts.values()).allSatisfy(value -> assertThat(value.get()).isEqualTo(1));
+        var sample = new java.util.LinkedHashMap<String, Object>();
+        sample.put("scenario", interrupted ? "checkpoint-recovery" : "mixed-provider-results");
+        sample.put("repetition", repetition); sample.put("warmup", repetition == 0);
+        sample.put("workers", workers); sample.put("orders", 40); sample.put("chunkSize", 5);
+        sample.put("configuredPgDelayMs", 10); sample.put("elapsedMs", processingMs);
+        sample.put("injectedDowntimeMs", downtimeMs); sample.put("recoveryAfterResumeMs", recoveryMs);
+        sample.put("paid", 0); sample.put("failed", failed); sample.put("unknown", unknown);
+        sample.put("inquiryCalls", 40); sample.put("duplicates", 0); sample.put("controlTotalMatched", true);
+        sample.put("pgCallElapsedMs", new java.util.ArrayList<>(durations));
+        return sample;
+    }
+
+    private void runMeasuredWorkers(String prefix, int workers, PremiumPaymentGateway delayed, Integer failAfterChunks) throws Exception {
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(workers)) {
+            CountDownLatch ready = new CountDownLatch(workers);
+            CountDownLatch release = new CountDownLatch(1);
+            var futures = new java.util.ArrayList<java.util.concurrent.Future<?>>();
+            for (int worker = 0; worker < workers; worker++) {
+                String instance = prefix + "-worker-" + worker;
+                futures.add(executor.submit(() -> {
+                    ready.countDown();
+                    try { if (!release.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("start barrier timeout"); }
+                    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+                    try {
+                        newService(delayed).run(instance, new PaymentReconciliationRunOptions(5, Duration.ZERO, failAfterChunks));
+                        if (failAfterChunks != null) throw new AssertionError("Expected interruption");
+                    } catch (PaymentReconciliationInterruptedException e) {
+                        if (failAfterChunks == null) throw e;
+                    }
+                }));
+            }
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue(); release.countDown();
+            for (var future : futures) future.get(60, TimeUnit.SECONDS);
+        }
+    }
+
     private Fixture createFixture(String suffix) {
         Long userId = jdbcTemplate.queryForObject("""
                 INSERT INTO public.usr_user (email, name, phone, user_status)
@@ -420,7 +570,7 @@ class PaymentReconciliationBatchServiceIntegrationTest {
         }
 
         @Override
-        public GatewayPaymentResult inquire(String providerPaymentKey) {
+        public GatewayPaymentResult inquire(InquiryCommand command) {
             if (coordinatedCalls.getAndIncrement() < 2) {
                 firstTwoInquiries.countDown();
                 try {
@@ -432,7 +582,7 @@ class PaymentReconciliationBatchServiceIntegrationTest {
                     throw new IllegalStateException("경쟁 작업자 동기화가 중단되었습니다.", exception);
                 }
             }
-            return delegate.inquire(providerPaymentKey);
+            return delegate.inquire(command);
         }
     }
 }

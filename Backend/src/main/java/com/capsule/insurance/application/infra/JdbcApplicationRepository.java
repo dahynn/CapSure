@@ -64,6 +64,7 @@ public class JdbcApplicationRepository implements ApplicationRepository {
                   ON product.product_version_id = quote.product_version_id
                 WHERE quote.quote_id = ?
                   AND quote.user_id = ?
+                  AND product.release_status = 'APPROVED'
                 FOR UPDATE OF quote
                 """, this::mapApplicationQuote, quoteId, userId).stream().findFirst();
     }

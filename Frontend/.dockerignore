@@ -7,9 +7,7 @@ dist/
 build/
 
 # 환경 변수 파일 (보안을 위해 복사 제외, docker-compose나 CI/CD를 통해 주입)
-.env
-.env.local
-.env.*.local
+.env*
 
 # Git 설정 파일
 .git

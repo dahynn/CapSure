@@ -1,13 +1,23 @@
 services:
   # [Production] Mock
   mock:
-    image: ${DOCKER_USER}/mydata-mock:latest
+    image: ${DOCKER_USER}/mydata-mock:${IMAGE_TAG:-latest}
+    build:
+      context: ../../Backend
     container_name: mydata-mock-prod
     ports:
-      - "58000:8000"
+      - "127.0.0.1:${MOCK_API_PORT:-58001}:8081"
     restart: always
     environment:
-      - NODE_ENV=production
+      - SPRING_PROFILES_ACTIVE=mock,production
+      - SERVER_PORT=8081
+      - DB_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-capsure}
+      - DB_USERNAME=${POSTGRES_USER:-capsure}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET:?set a shared JWT_SECRET of at least 32 bytes}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # [Production] PostgreSQL
   postgres:
@@ -31,6 +41,7 @@ services:
       start_period: 30s
 
   promtail:
+    profiles: [monitoring]
     image: grafana/promtail:3.6.7
     container_name: mock-promtail
     restart: always
@@ -47,6 +58,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   node-exporter:
+    profiles: [monitoring]
     image: prom/node-exporter:v1.10.2
     container_name: mock-node-exporter
     restart: always
@@ -63,6 +75,7 @@ services:
       - "--path.rootfs=/rootfs"
 
   cadvisor:
+    profiles: [monitoring]
     image: ghcr.io/google/cadvisor:0.56.2
     container_name: mock-cadvisor
     restart: always

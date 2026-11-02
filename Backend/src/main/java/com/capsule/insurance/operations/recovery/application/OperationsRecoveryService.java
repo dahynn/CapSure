@@ -196,11 +196,6 @@ public class OperationsRecoveryService {
     }
 
     private String compactError(Throwable throwable) {
-        Throwable root = throwable;
-        while (root.getCause() != null) {
-            root = root.getCause();
-        }
-        String message = root.getClass().getSimpleName() + ": " + root.getMessage();
-        return message.length() <= 1000 ? message : message.substring(0, 1000);
+        return com.capsule.insurance.common.exception.SafeFailure.describe(throwable);
     }
 }

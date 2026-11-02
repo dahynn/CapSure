@@ -36,6 +36,7 @@ public class AuthController {
     private final AuthService authService;
     private final EmailService emailService;
     private final SmsService smsService;
+    private final com.capsule.insurance.common.security.jwt.JwtTokenProvider tokens;
 
     @PostMapping("/login")
     public ApiResponse<AuthResult> login(@Valid @RequestBody LoginRequest request) {
@@ -55,12 +56,12 @@ public class AuthController {
     }
 
     @PostMapping("/email/verify-code")
-    public ApiResponse<String> verifyEmailCode(@Valid @RequestBody EmailAuthVerifyRequest request) {
+    public ApiResponse<java.util.Map<String, String>> verifyEmailCode(@Valid @RequestBody EmailAuthVerifyRequest request) {
         boolean verified = emailService.verifyCode(request.email(), request.authCode());
         if (!verified) {
             throw new BusinessException(ErrorCode.INVALID_AUTH_CODE);
         }
-        return ApiResponse.success("인증 번호가 일치합니다.");
+        return ApiResponse.success(java.util.Map.of("emailVerificationToken", tokens.createEmailVerificationToken(request.email())));
     }
 
     @GetMapping("/profile")

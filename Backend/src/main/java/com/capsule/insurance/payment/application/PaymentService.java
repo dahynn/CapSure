@@ -17,6 +17,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -30,8 +32,6 @@ import org.springframework.util.StringUtils;
 public class PaymentService {
 
     private static final Duration ORDER_VALIDITY = Duration.ofMinutes(30);
-    private static final String PROVIDER = "FAKE";
-
     private final PaymentRepository paymentRepository;
     private final PolicyRepository policyRepository;
     private final PremiumPaymentGateway paymentGateway;
@@ -111,7 +111,7 @@ public class PaymentService {
             }
 
             InsurancePolicy policy = policyRepository.createPending(
-                    "P-" + UUID.randomUUID(),
+                    createPolicyNumber(),
                     application.applicationId(),
                     application.applicantUserId(),
                     application.insuredUserId(),
@@ -131,6 +131,14 @@ public class PaymentService {
         return toResponse(order);
     }
 
+    private String createPolicyNumber() {
+        String issuedDate = LocalDate.now(clock.withZone(ZoneOffset.UTC))
+                .toString()
+                .replace("-", "");
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        return "CS-" + issuedDate + "-" + suffix;
+    }
+
     public PaymentOrderResponse confirm(
             Long userId,
             Long paymentOrderId,
@@ -147,15 +155,23 @@ public class PaymentService {
                         "결제 승인 금액이 서버 주문 금액과 다릅니다."
                 );
             }
+            if ("TOSS".equals(paymentGateway.providerCode())
+                    && !order.orderNo().equals(request.providerOrderId())) {
+                throw new BusinessException(
+                        ErrorCode.BUSINESS_RULE_VIOLATION,
+                        "Toss Payments 주문번호가 서버 주문과 다릅니다."
+                );
+            }
 
             PaymentAttempt sameRequest = paymentRepository
                     .findAttemptByIdempotencyKey(idempotencyKey)
                     .orElse(null);
             if (sameRequest != null) {
-                if (!sameRequest.paymentOrderId().equals(paymentOrderId)) {
+                if (!sameRequest.paymentOrderId().equals(paymentOrderId)
+                        || !sameRequest.providerPaymentKey().equals(request.providerPaymentKey())) {
                     throw new BusinessException(
                             ErrorCode.IDEMPOTENCY_CONFLICT,
-                            "다른 결제 주문에 사용된 Idempotency-Key입니다."
+                            "다른 결제 주문 또는 결제키에 사용된 Idempotency-Key입니다."
                     );
                 }
                 return new ConfirmationReservation(order, sameRequest, false);
@@ -173,7 +189,7 @@ public class PaymentService {
                 );
             }
             PaymentAttempt providerKeyOwner = paymentRepository
-                    .findAttemptByProviderPaymentKey(PROVIDER, request.providerPaymentKey())
+                    .findAttemptByProviderPaymentKey(paymentGateway.providerCode(), request.providerPaymentKey())
                     .orElse(null);
             if (providerKeyOwner != null) {
                 throw new BusinessException(
@@ -191,7 +207,7 @@ public class PaymentService {
             );
             PaymentAttempt attempt = paymentRepository.createProcessingAttempt(
                     order.paymentOrderId(),
-                    PROVIDER,
+                    paymentGateway.providerCode(),
                     request.providerPaymentKey(),
                     idempotencyKey,
                     toJson(command)
@@ -234,7 +250,15 @@ public class PaymentService {
         if (target.attempt() == null) {
             return toResponse(target.order());
         }
-        GatewayPaymentResult result = paymentGateway.inquire(target.attempt().providerPaymentKey());
+        if (!target.attempt().provider().equals(paymentGateway.providerCode())) {
+            return toResponse(target.order());
+        }
+        GatewayPaymentResult result = paymentGateway.inquire(new PremiumPaymentGateway.InquiryCommand(
+                target.order().orderNo(),
+                target.attempt().providerPaymentKey(),
+                target.order().amount(),
+                target.order().currencyCode()
+        ));
         String reconciliationResult = "UNKNOWN".equals(result.status())
                 ? "STILL_UNKNOWN"
                 : (target.order().status().equals(result.status()) ? "MATCHED" : "CORRECTED");
@@ -252,12 +276,24 @@ public class PaymentService {
         return toResponse(completed);
     }
 
+    /** 일반결제 webhook은 본문 상태를 신뢰하지 않고, 저장된 결제 키로 공급자 조회 후 반영합니다. */
+    public PaymentOrderResponse reconcileByProviderPaymentKey(String provider, String providerPaymentKey) {
+        PaymentAttempt attempt = paymentRepository
+                .findAttemptByProviderPaymentKey(provider, providerPaymentKey)
+                .orElseThrow(() -> notFound("webhook 대상 결제 시도를 찾을 수 없습니다."));
+        if (!provider.equals(paymentGateway.providerCode())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "현재 결제 공급자와 webhook 공급자가 일치하지 않습니다.");
+        }
+        return reconcile(attempt.paymentOrderId());
+    }
+
     public PaymentOrderResponse applyProviderNotification(
+            String provider,
             String providerPaymentKey,
             GatewayPaymentResult result
     ) {
         PaymentAttempt attempt = paymentRepository
-                .findAttemptByProviderPaymentKey(PROVIDER, providerPaymentKey)
+                .findAttemptByProviderPaymentKey(provider, providerPaymentKey)
                 .orElseThrow(() -> notFound("webhook 대상 결제 시도를 찾을 수 없습니다."));
         PaymentOrder completed = finalizeResult(
                 attempt.paymentOrderId(),
@@ -300,7 +336,7 @@ public class PaymentService {
             if (reconciliation != null) {
                 paymentRepository.recordReconciliation(
                         paymentOrderId,
-                        PROVIDER,
+                        paymentGateway.providerCode(),
                         reconciliation.localStatus(),
                         reconciliation.providerStatus(),
                         reconciliation.result(),

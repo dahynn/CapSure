@@ -29,6 +29,8 @@ public interface ClaimRepository {
 
     Optional<InsuranceClaim> findOwned(Long claimId, Long userId);
 
+    Optional<InsuranceClaim> findById(Long claimId);
+
     Optional<InsuranceClaim> lockOwned(Long claimId, Long userId);
 
     ClaimEvidence saveEvidence(

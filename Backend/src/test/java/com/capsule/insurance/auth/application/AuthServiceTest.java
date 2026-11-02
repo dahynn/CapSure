@@ -11,6 +11,8 @@ import com.capsule.insurance.auth.domain.UserAccount;
 import com.capsule.insurance.auth.domain.UserStatus;
 import com.capsule.insurance.auth.dto.AuthResult;
 import com.capsule.insurance.auth.dto.LoginRequest;
+import com.capsule.insurance.auth.dto.SignupRequest;
+import com.capsule.insurance.auth.dto.TokenRefreshRequest;
 import com.capsule.insurance.auth.dto.UserProfileResponse;
 import com.capsule.insurance.auth.dto.UserProfileUpdateRequest;
 import com.capsule.insurance.auth.infra.UserAccountMapper;
@@ -48,6 +50,39 @@ class AuthServiceTest {
 
     @InjectMocks
     private AuthService authService;
+
+    @Test
+    void signupRequiresOneTimeEmailVerificationButNotSms() {
+        var request = new SignupRequest("signup@example.test", "Passw0rd!", "테스트", "Passw0rd!",
+                "01000000000", LocalDate.of(1990, 1, 1), Gender.M, "verification-proof");
+        assertThatThrownBy(() -> authService.signup(request)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("이메일 인증");
+        org.mockito.Mockito.verify(userAccountMapper, org.mockito.Mockito.never()).insert(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verifyNoInteractions(emailService);
+        given(jwtTokenProvider.validateEmailVerificationToken(request.emailVerificationToken(), request.email())).willReturn(true);
+        assertThatThrownBy(() -> authService.signup(request)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("이메일 인증");
+        given(emailService.consumeVerified(request.email())).willReturn(true);
+        authService.signup(request);
+        verify(userAccountMapper).insert(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verifyNoInteractions(smsService);
+    }
+
+    @Test
+    void consumedRefreshCannotIssueASecondSession() {
+        given(jwtTokenProvider.validateRefreshToken("old-refresh")).willReturn(true);
+        given(jwtTokenProvider.getUserIdFromToken("old-refresh")).willReturn("7");
+        given(userAccountMapper.findByUserId(7L)).willReturn(UserAccount.builder().userId(7L)
+                .email("demo@example.test").userStatus(UserStatus.ACTIVE).accessRole(AccessRole.ROLE_USER).build());
+        given(jwtTokenProvider.createAccessToken("7", "demo@example.test", "ROLE_USER")).willReturn("new-access");
+        given(jwtTokenProvider.createRefreshToken("7")).willReturn("new-refresh");
+        assertThatThrownBy(() -> authService.refresh(new TokenRefreshRequest("old-refresh")))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("이미 갱신");
+        org.mockito.Mockito.verify(refreshTokenRepository, org.mockito.Mockito.never())
+                .save(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+        given(refreshTokenRepository.replaceIfMatches("7", "old-refresh", "new-refresh")).willReturn(true);
+        assertThat(authService.refresh(new TokenRefreshRequest("old-refresh")).refreshToken()).isEqualTo("new-refresh");
+    }
 
     @Test
     @DisplayName("운영자 로그인은 DB에 저장된 관리자 역할로 토큰을 발급한다")
