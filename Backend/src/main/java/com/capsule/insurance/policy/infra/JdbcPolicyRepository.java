@@ -38,8 +38,15 @@ public class JdbcPolicyRepository implements PolicyRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final java.time.Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public JdbcPolicyRepository(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+        this(jdbcTemplate, objectMapper, java.time.Clock.systemUTC());
+    }
+
+    public JdbcPolicyRepository(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper, java.time.Clock clock) {
+        this.clock = clock;
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
     }
@@ -203,6 +210,7 @@ public class JdbcPolicyRepository implements PolicyRepository {
     }
 
     private InsurancePolicy withLatestVersion(InsurancePolicy policy) {
+        Instant effectiveAt = Instant.now(clock);
         InsurancePolicy.PolicyVersion version = jdbcTemplate.query("""
                 SELECT policy_version_id,
                        version,
@@ -213,9 +221,12 @@ public class JdbcPolicyRepository implements PolicyRepository {
                        snapshot_json::TEXT AS snapshot_json
                 FROM public.ins_policy_version
                 WHERE policy_id = ?
+                  AND valid_from <= ?
+                  AND (valid_to IS NULL OR ? < valid_to)
                 ORDER BY version DESC
                 LIMIT 1
-                """, this::mapPolicyVersion, policy.policyId()).stream().findFirst().orElse(null);
+                """, this::mapPolicyVersion, policy.policyId(),
+                Timestamp.from(effectiveAt), Timestamp.from(effectiveAt)).stream().findFirst().orElse(null);
         if (version != null) {
             version = new InsurancePolicy.PolicyVersion(
                     version.policyVersionId(),
@@ -333,6 +344,10 @@ public class JdbcPolicyRepository implements PolicyRepository {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("견적 snapshot JSON을 역직렬화하지 못했습니다.", exception);
         }
+    }
+
+    public PolicySnapshot snapshotForQuote(QuoteSnapshot quote) {
+        return new PolicySnapshot(quote, loadClaimRuleSnapshots(quote));
     }
 
     private List<PolicySnapshot.ClaimRuleSnapshot> loadClaimRuleSnapshots(QuoteSnapshot quoteSnapshot) {

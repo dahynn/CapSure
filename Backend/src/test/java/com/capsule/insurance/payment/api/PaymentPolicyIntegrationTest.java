@@ -463,6 +463,109 @@ class PaymentPolicyIntegrationTest {
         );
     }
 
+    @Test
+    @DisplayName("선택 보장 보험료가 결제 금액·계약에 반영되고 다음 달 변경과 청구가 일치한다")
+    void pricesSelectionsAndSchedulesNextMonthCoverage() throws Exception {
+        Long userId=userIds.get(0);
+        var single=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,List.of(productCoverageIds.get(0))));
+        assertThat(single.monthlyPremium()).isEqualByComparingTo("19900.00");
+        assertThat(single.snapshot().coverages()).hasSize(1);
+        var pair=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,productCoverageIds.subList(0,2)));
+        assertThat(pair.monthlyPremium()).isEqualByComparingTo("26900.00");
+        // Activate a full plan, then reserve a reduction. Quote and order retain server-owned prices.
+        JsonNode order=createOrder(userId,approveApplication(userId),"coverage-create");
+        Long orderId=order.path("paymentOrderId").asLong();
+        confirm(userId,orderId,"coverage-confirm","fake-paid-coverage");
+        Long policyId=order.path("policyId").asLong();
+        var changes=new com.capsule.insurance.policy.change.CoverageChangeService(jdbcTemplate,policyRepository,
+                new JdbcQuoteRepository(jdbcTemplate,OBJECT_MAPPER),new com.capsule.insurance.premiumcollection.infra.JdbcPremiumCollectionRepository(jdbcTemplate),
+                OBJECT_MAPPER,new DataSourceTransactionManager(dataSource));
+        var request=new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(single.quoteId(),TERMS_HASH,true);
+        var reserved=changes.schedule(userId,policyId,"coverage-schedule",request);
+        assertThat(changes.schedule(userId,policyId,"coverage-schedule",request).policyChangeId()).isEqualTo(reserved.policyChangeId());
+        assertThat(reserved.quote().monthlyPremium()).isEqualByComparingTo("19900.00");
+        assertThat(policyRepository.findOwned(policyId,userId).orElseThrow().policyVersion().version()).isEqualTo(1);
+        assertThat(policyRepository.findOwned(policyId,userId).orElseThrow().policyVersion().coverages()).hasSize(3);
+        var beforeRepository=new JdbcPolicyRepository(jdbcTemplate,OBJECT_MAPPER,Clock.fixed(reserved.effectiveAt().minusNanos(1000),java.time.ZoneOffset.UTC));
+        assertThat(beforeRepository.findOwned(policyId,userId).orElseThrow().policyVersion().version()).isEqualTo(1);
+        var afterRepository=new JdbcPolicyRepository(jdbcTemplate,OBJECT_MAPPER,Clock.fixed(reserved.effectiveAt(),java.time.ZoneOffset.UTC));
+        var after=afterRepository.findOwned(policyId,userId).orElseThrow();
+        assertThat(after.policyVersion().version()).isEqualTo(2);
+        assertThat(after.policyVersion().coverages()).hasSize(1);
+        assertThat(after.policyVersion().snapshot().quote().monthlyPremium()).isEqualByComparingTo("19900.00");
+        var billing=changes.createNextPremium(userId,policyId);
+        assertThat(billing.amountDue()).isEqualByComparingTo("19900.00");
+        assertThat(jdbcTemplate.queryForObject("SELECT policy_version_id FROM ins_premium_receivable WHERE premium_receivable_id=?",Long.class,billing.premiumReceivableId()))
+                .isEqualTo(after.policyVersion().policyVersionId());
+        assertThat(changes.createNextPremium(userId,policyId).premiumReceivableId()).isEqualTo(billing.premiumReceivableId());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userIds.get(1),policyId,"coverage-other-user",request))
+                .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userId,policyId,"coverage-schedule",
+                new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(pair.quoteId(),TERMS_HASH,true)))
+                .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
+        // A historical coverage remains bounded by its version end, even if its own end is null.
+        Long oldCoverage=jdbcTemplate.queryForObject("""
+                SELECT c.policy_coverage_id FROM ins_policy_coverage c JOIN ins_policy_version v USING(policy_version_id)
+                WHERE v.policy_id=? AND v.version=1 ORDER BY c.policy_coverage_id LIMIT 1
+                """,Long.class,policyId);
+        var claims=new com.capsule.insurance.claim.infra.JdbcClaimRepository(jdbcTemplate,OBJECT_MAPPER);
+        var claim=claims.createDraft("C-BOUNDARY-"+policyId,policyId,oldCoverage,userId,reserved.effectiveAt(),"DEMO_GENERAL_CANCER","a".repeat(64));
+        assertThat(claims.findAssessmentContext(claim.claimId()).coverageEndAt()).isEqualTo(reserved.effectiveAt());
+    }
+
+    @Test
+    @DisplayName("선택 보장만 결제·계약에 반영하며 보장 추가의 면책과 변경 요청 검증을 유지한다")
+    void checksSelectedCheckoutAndCoverageChangeGuards() throws Exception {
+        Long userId=userIds.get(0);
+        var selected=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,List.of(productCoverageIds.getFirst())));
+        Long appId=applicationService.create(userId,new CreateApplicationRequest(selected.quoteId())).applicationId();
+        applicationService.replaceDisclosures(userId,appId,new ReplaceDisclosuresRequest(false,false,false));
+        applicationService.recordConsent(userId,appId,new CreateConsentRequest("PRODUCT_TERMS",TERMS_HASH,true));
+        applicationService.recordConsent(userId,appId,new CreateConsentRequest("PRODUCT_EXPLANATION",TERMS_HASH,true));
+        applicationService.submit(userId,appId,"selected-submit-"+appId);
+        var order=paymentService.createInitialPremiumOrder(userId,appId,"selected-order-"+appId);
+        assertThat(order.amount()).isEqualByComparingTo("19900.00");
+        paymentService.confirm(userId,order.paymentOrderId(),"selected-confirm-"+appId,
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest("fake-paid-selected-"+appId,order.amount()));
+        Long policyId=order.policyId();
+        var policy=policyRepository.findOwned(policyId,userId).orElseThrow();
+        assertThat(policy.policyVersion().coverages()).hasSize(1);
+        assertThat(policy.policyVersion().snapshot().quote().monthlyPremium()).isEqualByComparingTo("19900.00");
+        var changes=new com.capsule.insurance.policy.change.CoverageChangeService(jdbcTemplate,policyRepository,
+                new JdbcQuoteRepository(jdbcTemplate,OBJECT_MAPPER),new com.capsule.insurance.premiumcollection.infra.JdbcPremiumCollectionRepository(jdbcTemplate),
+                OBJECT_MAPPER,new DataSourceTransactionManager(dataSource));
+        var quote=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,productCoverageIds));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userId,policyId,"no-consent",
+                new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(quote.quoteId(),TERMS_HASH,false)))
+                .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
+        jdbcTemplate.update("UPDATE ins_quote SET expires_at=NOW()-INTERVAL '1 minute' WHERE quote_id=?",quote.quoteId());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userId,policyId,"expired-change",
+                new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(quote.quoteId(),TERMS_HASH,true)))
+                .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
+        var valid=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,productCoverageIds));
+        var reservation=changes.schedule(userId,policyId,"valid-change",
+                new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(valid.quoteId(),TERMS_HASH,true));
+        var futureRepository=new JdbcPolicyRepository(jdbcTemplate,OBJECT_MAPPER,Clock.fixed(reservation.effectiveAt(),java.time.ZoneOffset.UTC));
+        var future=futureRepository.findOwned(policyId,userId).orElseThrow();
+        assertThat(future.policyVersion().coverages().stream().filter(c -> c.productCoverageId().equals(productCoverageIds.get(1))).findFirst().orElseThrow().coverageStartAt())
+                .isEqualTo(reservation.effectiveAt().plusSeconds(90*86400L));
+        assertThat(future.policyVersion().coverages().stream().filter(c -> c.productCoverageId().equals(productCoverageIds.getFirst())).findFirst().orElseThrow().coverageStartAt())
+                .isEqualTo(policy.policyVersion().coverages().getFirst().coverageStartAt());
+        var extra=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,productCoverageIds.subList(0,2)));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userId,policyId,"second-change",
+                new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(extra.quoteId(),TERMS_HASH,true)))
+                .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
+        jdbcTemplate.update("UPDATE ins_policy_coverage SET paid_benefit_count=1 WHERE policy_coverage_id=?",policy.policyVersion().coverages().getFirst().policyCoverageId());
+        var claims=new com.capsule.insurance.claim.infra.JdbcClaimRepository(jdbcTemplate,OBJECT_MAPPER);
+        assertThat(claims.lockPaidBenefitCount(future.policyVersion().coverages().getFirst().policyCoverageId())).isEqualTo(1);
+        var api=MockMvcBuilders.standaloneSetup(new com.capsule.insurance.policy.change.CoverageChangeController(changes))
+                .setControllerAdvice(new GlobalExceptionHandler()).build();
+        api.perform(get("/api/v1/policies/{policyId}/coverage-changes",policyId).principal(authentication(userIds.get(1))))
+                .andExpect(status().isNotFound());
+        api.perform(get("/api/v1/policies/{policyId}/coverage-changes",policyId))
+                .andExpect(status().isUnauthorized());
+    }
+
     private static MockMvc buildMockMvc(
             PaymentService selectedPaymentService,
             PolicyRepository selectedPolicyRepository
