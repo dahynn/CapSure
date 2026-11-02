@@ -464,6 +464,62 @@ class PaymentPolicyIntegrationTest {
     }
 
     @Test
+    @DisplayName("confirm 재요청·webhook·대사가 경합해도 승인과 계약 활성화는 한 번이다")
+    void racesConfirmationWebhookAndReconciliation() throws Exception {
+        Long userId=userIds.get(0);
+        Long applicationId=approveApplication(userId);
+        JsonNode order=createOrder(userId,applicationId,"race-create");
+        Long orderId=order.path("paymentOrderId").asLong();
+        Long policyId=order.path("policyId").asLong();
+        String providerKey="fake-paid-race";
+        var approved=new java.util.concurrent.CountDownLatch(1);
+        var release=new java.util.concurrent.CountDownLatch(1);
+        var delegate=new FakePremiumPaymentGateway();
+        var gateway=new com.capsule.insurance.payment.application.port.PremiumPaymentGateway(){
+            public com.capsule.insurance.payment.domain.GatewayPaymentResult confirm(ConfirmCommand command){
+                var result=delegate.confirm(command); approved.countDown();
+                try {if(!release.await(20,java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("release timed out");}
+                catch(InterruptedException ex){Thread.currentThread().interrupt();throw new IllegalStateException(ex);}
+                return result;
+            }
+            public com.capsule.insurance.payment.domain.GatewayPaymentResult inquire(String key){return delegate.inquire(key);}
+        };
+        var service=new PaymentService(new JdbcPaymentRepository(jdbcTemplate),policyRepository,gateway,
+                new DataSourceTransactionManager(dataSource),OBJECT_MAPPER);
+        var webhook=new PaymentWebhookService(new JdbcPaymentWebhookRepository(jdbcTemplate),service,
+                OBJECT_MAPPER,new DataSourceTransactionManager(dataSource));
+        var pool=java.util.concurrent.Executors.newFixedThreadPool(16);
+        try {
+            var first=pool.submit(() -> service.confirm(userId,orderId,"race-confirm",
+                    new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(providerKey,new java.math.BigDecimal("29900.00"))));
+            assertThat(approved.await(10,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            var start=new java.util.concurrent.CountDownLatch(1);
+            var futures=new ArrayList<java.util.concurrent.Future<?>>();
+            for(int i=0;i<30;i++){
+                int path=i%3;
+                futures.add(pool.submit(() -> {
+                    start.await();
+                    if(path==0) service.confirm(userId,orderId,"race-confirm",
+                            new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(providerKey,new java.math.BigDecimal("29900.00")));
+                    if(path==1) webhook.receiveFakeWebhook(new com.capsule.insurance.payment.webhook.dto.FakePaymentWebhookRequest(
+                            "race-event",providerKey,"PAYMENT_STATUS_CHANGED","PAID"));
+                    if(path==2) service.reconcile(orderId);
+                    return null;
+                }));
+            }
+            start.countDown();
+            for(var future:futures) future.get(15,java.util.concurrent.TimeUnit.SECONDS);
+            release.countDown(); first.get(10,java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(delegate.confirmationInvocationCount()).isEqualTo(1);
+            assertThat(paymentStatus(orderId)).isEqualTo("PAID");
+            assertThat(count("pay_attempt","payment_order_id",orderId)).isEqualTo(1);
+            assertThat(count("ins_policy_version","policy_id",policyId)).isEqualTo(1);
+            assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
+            assertThat(count("pay_webhook_event","provider_event_id","race-event")).isEqualTo(1);
+        } finally { release.countDown();pool.shutdownNow(); }
+    }
+
+    @Test
     @DisplayName("선택 보장 보험료가 결제 금액·계약에 반영되고 다음 달 변경과 청구가 일치한다")
     void pricesSelectionsAndSchedulesNextMonthCoverage() throws Exception {
         Long userId=userIds.get(0);
