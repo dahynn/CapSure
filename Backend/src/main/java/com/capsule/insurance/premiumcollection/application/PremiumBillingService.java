@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.sql.Timestamp;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
@@ -175,14 +176,17 @@ public class PremiumBillingService {
         YearMonth cycle = YearMonth.from(billingCycle);
         List<BillingCandidate> candidates = jdbc.query("""
                 SELECT p.policy_id,
+                       v.policy_version_id,
                        (p.activated_at AT TIME ZONE 'Asia/Seoul')::DATE AS activated_on,
                        (v.snapshot_json #>> '{quote,monthlyPremium}')::NUMERIC AS amount_due,
                        COALESCE(v.snapshot_json #>> '{quote,currencyCode}', 'KRW') AS currency_code
                 FROM ins_policy p
                 JOIN LATERAL (
-                    SELECT snapshot_json
+                    SELECT policy_version_id, snapshot_json
                     FROM ins_policy_version
                     WHERE policy_id = p.policy_id
+                      AND valid_from <= ?
+                      AND (valid_to IS NULL OR ? < valid_to)
                     ORDER BY version DESC
                     LIMIT 1
                 ) v ON TRUE
@@ -195,8 +199,10 @@ public class PremiumBillingService {
                 resultSet.getLong("policy_id"),
                 resultSet.getObject("activated_on", LocalDate.class),
                 resultSet.getBigDecimal("amount_due"),
-                resultSet.getString("currency_code")
-        ));
+                resultSet.getString("currency_code"),
+                resultSet.getLong("policy_version_id")
+        ), Timestamp.from(billingCycle.atStartOfDay(BUSINESS_ZONE).toInstant()),
+           Timestamp.from(billingCycle.atStartOfDay(BUSINESS_ZONE).toInstant()));
 
         for (BillingCandidate candidate : candidates) {
             if (!YearMonth.from(candidate.activatedOn()).isBefore(cycle)) {
@@ -205,10 +211,10 @@ public class PremiumBillingService {
             LocalDate dueDate = cycle.atDay(Math.min(candidate.activatedOn().getDayOfMonth(), cycle.lengthOfMonth()));
             jdbc.update("""
                     INSERT INTO ops_premium_billing_target(
-                        run_id, policy_id, amount_due, currency_code, due_date, grace_ends_on
-                    ) VALUES (?, ?, ?, ?, ?, ?)
+                        run_id, policy_id, amount_due, currency_code, due_date, grace_ends_on, policy_version_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
                     """, runId, candidate.policyId(), candidate.amountDue(), candidate.currencyCode(),
-                    dueDate, dueDate.plusDays(graceDays));
+                    dueDate, dueDate.plusDays(graceDays), candidate.policyVersionId());
         }
         return runId;
     }
@@ -231,7 +237,7 @@ public class PremiumBillingService {
                 """, runId);
 
         List<BillingTarget> targets = jdbc.query("""
-                SELECT policy_id, amount_due, currency_code, due_date, grace_ends_on
+                SELECT policy_id, amount_due, currency_code, due_date, grace_ends_on, policy_version_id
                 FROM ops_premium_billing_target
                 WHERE run_id = ? AND outcome IS NULL
                 ORDER BY policy_id
@@ -241,7 +247,8 @@ public class PremiumBillingService {
                 resultSet.getBigDecimal("amount_due"),
                 resultSet.getString("currency_code"),
                 resultSet.getObject("due_date", LocalDate.class),
-                resultSet.getObject("grace_ends_on", LocalDate.class)
+                resultSet.getObject("grace_ends_on", LocalDate.class),
+                resultSet.getObject("policy_version_id", Long.class)
         ), runId, CHUNK_SIZE);
 
         for (BillingTarget target : targets) {
@@ -286,11 +293,11 @@ public class PremiumBillingService {
         Long receivableId = jdbc.queryForObject("""
                 INSERT INTO ins_premium_receivable(
                     policy_id, billing_cycle, due_date, grace_ends_on,
-                    amount_due, currency_code, status
-                ) VALUES (?, ?, ?, ?, ?, ?, 'DUE')
+                    amount_due, currency_code, status, policy_version_id
+                ) VALUES (?, ?, ?, ?, ?, ?, 'DUE', ?)
                 RETURNING premium_receivable_id
                 """, Long.class, target.policyId(), billingCycle, target.dueDate(),
-                target.graceEndsOn(), target.amountDue(), target.currencyCode());
+                target.graceEndsOn(), target.amountDue(), target.currencyCode(), target.policyVersionId());
         String cycleKey = billingCycle.toString().replace("-", "");
         jdbc.update("""
                 INSERT INTO pay_collection_instruction(
@@ -325,7 +332,8 @@ public class PremiumBillingService {
             long policyId,
             LocalDate activatedOn,
             BigDecimal amountDue,
-            String currencyCode
+            String currencyCode,
+            long policyVersionId
     ) {
     }
 
@@ -334,7 +342,8 @@ public class PremiumBillingService {
             BigDecimal amountDue,
             String currencyCode,
             LocalDate dueDate,
-            LocalDate graceEndsOn
+            LocalDate graceEndsOn,
+            Long policyVersionId
     ) {
     }
 

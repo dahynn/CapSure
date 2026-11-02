@@ -111,6 +111,8 @@ const CancerInsuranceProductPage = () => {
         product?.coverages?.filter((coverage) => selectedCoverageIds.includes(coverage.productCoverageId)) || []
     ), [product, selectedCoverageIds]);
 
+    const selectedPremium = selectedCoverages.reduce((sum, coverage) => sum + Number(coverage.monthlyPremium || 0), 0);
+
     const toggleCoverage = (coverageId) => {
         setSelectedCoverageIds((previous) => (
             previous.includes(coverageId)
@@ -287,7 +289,7 @@ const CancerInsuranceProductPage = () => {
                         <div className="mt-6 flex items-end justify-between border-t border-slate-700/70 pt-5">
                             <div>
                                 <p className="text-xs text-slate-500">월 보험료</p>
-                                <p className="mt-1 text-2xl font-bold tracking-[-0.03em] text-white">{formatWon(summary.baseMonthlyPremium)}</p>
+                                <p className="mt-1 text-2xl font-bold tracking-[-0.03em] text-white">{formatWon(selectedPremium)}</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-xs text-slate-500">가입 담보</p>
@@ -325,6 +327,7 @@ const CancerInsuranceProductPage = () => {
                                                 <span className="shrink-0 text-sm font-semibold text-[#82D8FC]">{formatWon(coverage.insuredAmount)}</span>
                                             </div>
                                             <p className="mt-2 text-sm leading-5 text-slate-400">{coverage.description}</p>
+                                            <p className="mt-2 text-sm text-[#82D8FC]">모의 월 보험료 {formatWon(coverage.monthlyPremium)}</p>
                                             <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-amber-200/80">
                                                 <CalendarClock className="h-3.5 w-3.5" />
                                                 {conditionText(coverage)}
@@ -394,7 +397,7 @@ const CancerInsuranceProductPage = () => {
                     {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
                     {submitting
                         ? '견적을 고정하고 있어요'
-                        : `${hasAccessToken() ? '' : '로그인하고 '}${formatWon(summary.baseMonthlyPremium)}으로 견적 받기`}
+                        : `${hasAccessToken() ? '' : '로그인하고 '}${formatWon(selectedPremium)}으로 견적 받기`}
                 </AppButton>
                 {quote?.quoteNo && (
                     <p className="mt-2 text-center text-[11px] text-slate-600">최근 견적 {quote.quoteNo}</p>

@@ -179,7 +179,7 @@ public class JdbcPremiumCollectionRepository {
                 WHERE r.premium_receivable_id = ?
                 """, receivableId, receivableId);
     }
-    private PremiumCollectionSnapshot find(Long receivableId) {
+    public PremiumCollectionSnapshot find(Long receivableId) {
         return jdbcTemplate.query("SELECT r.*, i.collection_instruction_id, i.status AS collection_status FROM ins_premium_receivable r LEFT JOIN pay_collection_instruction i ON i.premium_receivable_id = r.premium_receivable_id AND i.collection_method = 'AUTO_DEBIT' WHERE r.premium_receivable_id = ?", this::map, receivableId).stream().findFirst().orElseThrow();
     }
     private PremiumCollectionSnapshot map(ResultSet rs, int rowNum) throws SQLException {

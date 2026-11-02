@@ -182,6 +182,31 @@ class PremiumBillingIntegrationTest {
                 .hasMessageContaining("다른 청구월");
     }
 
+    @Test
+    void billsEffectiveVersionWithoutApplyingFutureReservationEarly() {
+        long policyId = policy("ACTIVE", "2025-01-15", "100");
+        Instant boundary = LocalDate.parse("2026-03-01").atStartOfDay(PremiumBillingService.BUSINESS_ZONE).toInstant();
+        jdbc.update("UPDATE ins_policy_version SET valid_to=? WHERE policy_id=?", Timestamp.from(boundary), policyId);
+        jdbc.update("""
+                INSERT INTO ins_policy_version(policy_id,version,product_version_id,terms_document_id,valid_from,snapshot_json)
+                SELECT policy_id,2,product_version_id,terms_document_id,?,
+                    JSONB_BUILD_OBJECT('quote',JSONB_BUILD_OBJECT('monthlyPremium',200,'currencyCode','KRW'))
+                FROM ins_policy_version WHERE policy_id=? AND version=1
+                """, Timestamp.from(boundary), policyId);
+        service = on("2026-02-15");
+        run("before-reserved-change", "2026-02-01");
+        service = on("2026-03-15");
+        run("effective-change", "2026-03-01");
+        assertThat(jdbc.queryForList("SELECT amount_due FROM ins_premium_receivable ORDER BY billing_cycle",BigDecimal.class))
+                .containsExactly(new BigDecimal("100.00"),new BigDecimal("200.00"));
+        assertThat(jdbc.queryForList("""
+                SELECT v.version FROM ins_premium_receivable r JOIN ins_policy_version v USING(policy_version_id)
+                WHERE r.policy_id=? ORDER BY billing_cycle
+                """,Integer.class,policyId)).containsExactly(1,2);
+        assertThat(jdbc.queryForList("SELECT due_date FROM ins_premium_receivable ORDER BY billing_cycle",LocalDate.class))
+                .containsExactly(LocalDate.parse("2026-02-15"),LocalDate.parse("2026-03-15"));
+    }
+
     private PremiumBillingService on(String day) {
         return new PremiumBillingService(
                 jdbc,

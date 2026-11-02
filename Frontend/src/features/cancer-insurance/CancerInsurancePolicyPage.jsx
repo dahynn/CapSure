@@ -14,6 +14,7 @@ import {
     ShieldCheck,
     UserRoundCheck,
 } from 'lucide-react';
+import CoverageChangePanel from './CoverageChangePanel';
 import AppButton from '@/common/components/ui/button/AppButton';
 import { getCancerPolicy } from './api/cancerInsurance.api';
 import { useCancerInsurance } from './context/CancerInsuranceContext';
@@ -76,7 +77,7 @@ const CancerInsurancePolicyPage = () => {
                 return;
             }
             try {
-                const restored = policy || await getCancerPolicy(flowIds.policyId);
+                const restored = await getCancerPolicy(flowIds.policyId);
                 if (active) setPolicy(restored);
             } catch (requestError) {
                 if (active) {
@@ -213,7 +214,7 @@ const CancerInsurancePolicyPage = () => {
                     </span>
                     <div>
                         <p className="text-[11px] font-medium text-[#82D8FC]">가입 담보</p>
-                        <h2 className="mt-1 text-lg font-semibold text-white">보장 3개가 증권에 고정됐습니다</h2>
+                        <h2 className="mt-1 text-lg font-semibold text-white">보장 {policy.policyVersion?.coverages?.length || 0}개가 계약에 반영됐습니다</h2>
                     </div>
                 </div>
                 <div className="space-y-3">
@@ -241,6 +242,8 @@ const CancerInsurancePolicyPage = () => {
                     })}
                 </div>
             </section>
+
+            <CoverageChangePanel policy={policy} />
 
             <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
                 <div className="flex items-start gap-3">

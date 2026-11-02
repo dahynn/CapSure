@@ -17,6 +17,7 @@ public record Coverage(
         String coverageStartRule,
         int displayOrder,
         Long termsClauseId,
-        String termsClauseCode
+        String termsClauseCode,
+            BigDecimal monthlyPremium
 ) {
 }

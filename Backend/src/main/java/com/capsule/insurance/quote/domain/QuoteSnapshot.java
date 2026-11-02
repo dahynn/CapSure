@@ -31,7 +31,8 @@ public record QuoteSnapshot(
             BigDecimal reductionRate,
             String coverageStartRule,
             Long termsClauseId,
-            String termsClauseCode
+            String termsClauseCode,
+            BigDecimal monthlyPremium
     ) {
     }
 }

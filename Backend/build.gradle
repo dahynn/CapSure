@@ -80,6 +80,7 @@ tasks.register('largeScaleDelinquencyBenchmark', Test) {
 }
 
 tasks.withType(Test).configureEach {
+    systemProperty 'capsure.test.classpath', sourceSets.test.runtimeClasspath.asPath
     if (providers.gradleProperty('evidenceDir').isPresent()) {
         reports.junitXml.outputLocation = file("${providers.gradleProperty('evidenceDir').get()}/${name}-xml")
     }

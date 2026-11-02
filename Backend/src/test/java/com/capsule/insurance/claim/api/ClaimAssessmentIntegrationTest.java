@@ -658,6 +658,11 @@ class ClaimAssessmentIntegrationTest {
     }
 
     private static void setCoverageStart(Long policyCoverageId, Instant coverageStartAt) {
+        // Historical-incident fixture: policy version and coverage must both be in force.
+        jdbcTemplate.update("""
+                UPDATE ins_policy_version SET valid_from=LEAST(valid_from, ?)
+                WHERE policy_version_id=(SELECT policy_version_id FROM ins_policy_coverage WHERE policy_coverage_id=?)
+                """, java.sql.Timestamp.from(coverageStartAt), policyCoverageId);
         jdbcTemplate.update("""
                 UPDATE public.ins_policy_coverage
                 SET coverage_start_at = ?

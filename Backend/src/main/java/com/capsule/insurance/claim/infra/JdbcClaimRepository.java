@@ -213,9 +213,11 @@ public class JdbcClaimRepository implements ClaimRepository {
                        coverage.coverage_code_snapshot,
                        coverage.insured_amount,
                        coverage.currency_code,
-                       coverage.coverage_start_at,
-                       LEAST(coverage.coverage_end_at, policy.lapsed_at) AS coverage_end_at,
-                       coverage.paid_benefit_count,
+                       GREATEST(coverage.coverage_start_at, version.valid_from) AS coverage_start_at,
+                       LEAST(coverage.coverage_end_at, version.valid_to, policy.lapsed_at) AS coverage_end_at,
+                       (SELECT COALESCE(SUM(other.paid_benefit_count),0)::INTEGER
+                          FROM ins_policy_coverage other JOIN ins_policy_version ov USING(policy_version_id)
+                         WHERE ov.policy_id=policy.policy_id AND other.product_coverage_id=coverage.product_coverage_id) AS paid_benefit_count,
                        version.snapshot_json::TEXT AS snapshot_json
                 FROM public.clm_claim claim
                 JOIN public.ins_policy policy
@@ -225,7 +227,7 @@ public class JdbcClaimRepository implements ClaimRepository {
                 JOIN public.ins_policy_version version
                   ON version.policy_version_id = coverage.policy_version_id
                 WHERE claim.claim_id = ?
-                FOR SHARE OF policy
+                FOR UPDATE OF policy
                 """, this::mapAssessmentContext, claimId).stream().findFirst().orElseThrow();
     }
 
@@ -334,13 +336,17 @@ public class JdbcClaimRepository implements ClaimRepository {
 
     @Override
     public int lockPaidBenefitCount(Long policyCoverageId) {
-        Integer count = jdbcTemplate.queryForObject("""
-                SELECT paid_benefit_count
-                FROM public.ins_policy_coverage
-                WHERE policy_coverage_id = ?
-                FOR UPDATE
-                """, Integer.class, policyCoverageId);
-        return Objects.requireNonNull(count);
+        Long policyId = jdbcTemplate.queryForObject("""
+                SELECT v.policy_id FROM ins_policy_coverage c JOIN ins_policy_version v USING(policy_version_id)
+                WHERE c.policy_coverage_id = ?
+                """, Long.class, policyCoverageId);
+        jdbcTemplate.queryForObject("SELECT policy_id FROM ins_policy WHERE policy_id = ? FOR UPDATE", Long.class, policyId);
+        return jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(c.paid_benefit_count), 0)::INTEGER
+                FROM ins_policy_coverage c JOIN ins_policy_version v USING(policy_version_id)
+                WHERE v.policy_id = ? AND c.product_coverage_id = (
+                    SELECT product_coverage_id FROM ins_policy_coverage WHERE policy_coverage_id = ?)
+                """, Integer.class, policyId, policyCoverageId);
     }
 
     @Override

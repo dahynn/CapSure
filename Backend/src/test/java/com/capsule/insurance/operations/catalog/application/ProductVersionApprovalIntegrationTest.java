@@ -133,6 +133,8 @@ class ProductVersionApprovalIntegrationTest {
                 new CreateQuoteRequest(pendingV2, productCoverageIds(pendingV2))
         );
         assertThat(newQuote.status()).isEqualTo("ISSUED");
+        assertThat(newQuote.monthlyPremium()).isEqualByComparingTo("30900.00");
+        assertThat(oldQuote.monthlyPremium()).isEqualByComparingTo("29900.00");
         assertThat(newQuote.snapshot().productVersion()).isEqualTo("2.0.0");
         assertThat(newQuote.snapshot().productName()).isEqualTo("승인 대기 보험료 개정안");
 
@@ -221,7 +223,8 @@ class ProductVersionApprovalIntegrationTest {
                     reduction_period_days,
                     reduction_rate,
                     coverage_start_rule,
-                    display_order
+                    display_order,
+                    monthly_premium
                 )
                 SELECT ?,
                        coverage_id,
@@ -231,7 +234,8 @@ class ProductVersionApprovalIntegrationTest {
                        reduction_period_days,
                        reduction_rate,
                        coverage_start_rule,
-                       display_order
+                       display_order,
+                       monthly_premium + CASE WHEN display_order = 1 THEN 1000 ELSE 0 END
                 FROM public.ins_product_coverage
                 WHERE product_version_id = ?
                 """, productVersionId, productVersionId("1.0.0"));

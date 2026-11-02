@@ -23,7 +23,8 @@ public record CancerProductDetailResponse(
             String coverageStartRule,
             int displayOrder,
             Long termsClauseId,
-            String termsClauseCode
+            String termsClauseCode,
+            BigDecimal monthlyPremium
     ) {
     }
 }
