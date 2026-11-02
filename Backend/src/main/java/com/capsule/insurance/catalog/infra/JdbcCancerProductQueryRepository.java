@@ -79,6 +79,7 @@ public class JdbcCancerProductQueryRepository implements CancerProductQueryRepos
                        coverage.benefit_type,
                        coverage.description,
                        product_coverage.insured_amount,
+                       product_coverage.monthly_premium,
                        product_coverage.currency_code,
                        product_coverage.waiting_period_days,
                        product_coverage.reduction_period_days,
@@ -208,7 +209,8 @@ public class JdbcCancerProductQueryRepository implements CancerProductQueryRepos
                 resultSet.getString("coverage_start_rule"),
                 resultSet.getInt("display_order"),
                 termsClauseId,
-                resultSet.getString("terms_clause_code")
+                resultSet.getString("terms_clause_code"),
+                resultSet.getBigDecimal("monthly_premium")
         );
     }
 

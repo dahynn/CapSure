@@ -154,7 +154,8 @@ public class CancerProductService {
                 coverage.coverageStartRule(),
                 coverage.displayOrder(),
                 coverage.termsClauseId(),
-                coverage.termsClauseCode()
+                coverage.termsClauseCode(),
+                coverage.monthlyPremium()
         );
     }
 

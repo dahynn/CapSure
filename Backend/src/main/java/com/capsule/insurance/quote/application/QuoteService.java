@@ -70,12 +70,18 @@ public class QuoteService {
             );
         }
 
+        if (selectedCoverages.isEmpty() || selectedCoverages.stream().anyMatch(c -> c.monthlyPremium() == null
+                || c.monthlyPremium().signum() <= 0)) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "보험료가 설정된 보장을 하나 이상 선택해야 합니다.");
+        }
+        java.math.BigDecimal premium = selectedCoverages.stream().map(Coverage::monthlyPremium)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         QuoteSnapshot snapshot = new QuoteSnapshot(
                 product.productVersionId(),
                 product.productCode(),
                 product.version(),
                 product.productName(),
-                product.baseMonthlyPremium(),
+                premium,
                 product.currencyCode(),
                 product.termsDocumentId(),
                 product.termsVersion(),
@@ -87,7 +93,7 @@ public class QuoteService {
                 "Q-" + UUID.randomUUID(),
                 userId,
                 product.productVersionId(),
-                product.baseMonthlyPremium(),
+                premium,
                 product.currencyCode(),
                 snapshot,
                 product.termsSourceHash(),
@@ -119,7 +125,8 @@ public class QuoteService {
                 coverage.reductionRate(),
                 coverage.coverageStartRule(),
                 coverage.termsClauseId(),
-                coverage.termsClauseCode()
+                coverage.termsClauseCode(),
+                coverage.monthlyPremium()
         );
     }
 
