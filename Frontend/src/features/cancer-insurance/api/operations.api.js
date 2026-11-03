@@ -131,3 +131,14 @@ export const getClaimCopilotReadiness = async () => claimReviewPayload(
   await httpClient.get('/api/v1/ops/claims/review-copilot/readiness'),
   '심사 보조 공급자 설정을 확인하지 못했습니다.'
 );
+
+export const getPendingCoverageChanges = async () => {
+  const response = await httpClient.get('/api/v1/ops/policy-changes');
+  if (!response?.data?.success) throw new Error(response?.data?.message || '변경 심사 목록을 불러오지 못했습니다.');
+  return response.data.data;
+};
+export const decideCoverageChange = async (requestId, decision, reason) => {
+  const response = await httpClient.post(`/api/v1/ops/policy-changes/${requestId}/decisions`, { decision, reason });
+  if (!response?.data?.success) throw new Error(response?.data?.message || '변경 심사 결과를 저장하지 못했습니다.');
+  return response.data.data;
+};
