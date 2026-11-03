@@ -48,7 +48,7 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform { excludeTags 'measurement', 'large-benchmark' }
+    useJUnitPlatform { excludeTags 'measurement', 'large-benchmark', 'payment-latency' }
 }
 
 tasks.register('reliabilityMeasurement', Test) {
@@ -96,4 +96,17 @@ tasks.named('processResources') {
 
 tasks.named('jar') {
     enabled = false
+}
+
+tasks.register('paymentLatencyMeasurement', Test) {
+    description = 'Opt-in loopback HTTPS payment latency isolation experiment'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'payment-latency' }
+    maxParallelForks = 1
+    outputs.upToDateWhen { false }
+    systemProperty 'capsure.payment-latency.capacity', providers.gradleProperty('paymentLatencyCapacity').getOrElse('2')
+    systemProperty 'capsure.payment-latency.output', providers.gradleProperty('paymentLatencyOutput').getOrElse('build/payment-latency-baseline.json')
+    testLogging { showStandardStreams = true }
 }

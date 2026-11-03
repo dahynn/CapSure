@@ -133,7 +133,7 @@ export const payCancerClaim = async (claimId, idempotencyKey) => (
 export const getCoverageChanges = async (policyId) => (
     unwrap(await httpClient.get(`/api/v1/policies/${policyId}/coverage-changes`))
 );
-export const scheduleCoverageChange = async (policyId, quote, idempotencyKey) => (
+export const requestCoverageChange = async (policyId, quote, idempotencyKey) => (
     unwrap(await httpClient.post(`/api/v1/policies/${policyId}/coverage-changes`, {
         quoteId: quote.quoteId, documentHash: quote.termsDocumentHash, agreed: true,
     }, { headers: { 'Idempotency-Key': idempotencyKey } }))

@@ -60,10 +60,16 @@ public class CoverageChangeService {
                 }
                 return existing;
             }
+            var approvedDates=db.query("""
+                    SELECT effective_at FROM ins_policy_change_request
+                    WHERE policy_id=? AND requested_by=? AND quote_id=? AND review_status='APPROVED'
+                    """,(rs,n)->rs.getTimestamp(1).toInstant(),policyId,userId,request.quoteId());
+            if(approvedDates.isEmpty())fail(ErrorCode.INVALID_STATE_TRANSITION,"심사 승인된 변경만 적용 예약할 수 있습니다.");
             var policy = policies.findOwned(policyId,userId).orElseThrow();
             if (!"ACTIVE".equals(policy.status())) fail(ErrorCode.INVALID_STATE_TRANSITION, "정상 유지 중인 계약만 변경할 수 있습니다.");
             Instant now = Instant.now(clock);
-            Instant effective = nextMonth().atStartOfDay(ZONE).toInstant();
+            Instant effective = approvedDates.getFirst();
+            if(!effective.isAfter(now))fail(ErrorCode.INVALID_STATE_TRANSITION,"변경 적용 기한이 지났습니다.");
             if (Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM ins_policy_version WHERE policy_id=? AND valid_from>?)",
                     Boolean.class,policyId,Timestamp.from(now)))) fail(ErrorCode.BUSINESS_RULE_VIOLATION, "이미 예약된 변경이 있습니다.");
             if (Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM ins_premium_receivable WHERE policy_id=? AND billing_cycle>=?)",
@@ -72,7 +78,7 @@ public class CoverageChangeService {
                 fail(ErrorCode.RESOURCE_NOT_FOUND,"변경 견적을 찾을 수 없습니다.");
             var quote = quotes.findOwned(request.quoteId(),userId).orElseThrow(() ->
                     new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,"변경 견적을 찾을 수 없습니다."));
-            if (!"ISSUED".equals(quote.status()) || !quote.expiresAt().isAfter(now)) fail(ErrorCode.INVALID_STATE_TRANSITION,"사용했거나 만료된 견적입니다.");
+            if (!"USED".equals(quote.status())) fail(ErrorCode.INVALID_STATE_TRANSITION,"변경 신청에 확정된 견적이 필요합니다.");
             var current = policy.policyVersion();
             if (!quote.productVersionId().equals(current.productVersionId())) fail(ErrorCode.BUSINESS_RULE_VIOLATION,"동일 상품 안에서 보장을 변경해야 합니다.");
             if (!Boolean.TRUE.equals(request.agreed()) || !quote.termsDocumentHash().equals(request.documentHash())) fail(ErrorCode.BUSINESS_RULE_VIOLATION,"변경 약관 동의가 필요합니다.");
@@ -96,7 +102,6 @@ public class CoverageChangeService {
                             insured_amount,currency_code,coverage_start_at) VALUES(?,?,?,?,?,?)
                         """,versionId,coverage.productCoverageId(),coverage.coverageCode(),coverage.insuredAmount(),coverage.currencyCode(),Timestamp.from(start));
             }
-            db.update("UPDATE ins_quote SET status='USED',used_at=? WHERE quote_id=?",Timestamp.from(now),quote.quoteId());
             Long changeId = db.queryForObject("""
                     INSERT INTO ins_policy_change(policy_id,quote_id,policy_version_id,effective_at,idempotency_key,consent_hash)
                     VALUES(?,?,?,?,?,?) RETURNING policy_change_id
@@ -123,6 +128,9 @@ public class CoverageChangeService {
         return tx.execute(status -> {
             lockOwned(userId,policyId);
             LocalDate cycle=nextMonth();
+            if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM ins_policy_change_request WHERE policy_id=? AND review_status='PENDING_REVIEW' AND effective_at>?)",
+                    Boolean.class,policyId,Timestamp.from(Instant.now(clock)))))
+                fail(ErrorCode.BUSINESS_RULE_VIOLATION,"보장 변경 심사가 끝난 뒤 다음 달 납부 내역을 생성해주세요.");
             List<Long> existing=db.queryForList("SELECT premium_receivable_id FROM ins_premium_receivable WHERE policy_id=? AND billing_cycle=?",Long.class,policyId,cycle);
             if(!existing.isEmpty()) return premiums.find(existing.getFirst());
             var policy=policies.findOwned(policyId,userId).orElseThrow();

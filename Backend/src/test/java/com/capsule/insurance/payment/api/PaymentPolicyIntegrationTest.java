@@ -739,8 +739,8 @@ class PaymentPolicyIntegrationTest {
                 new JdbcQuoteRepository(jdbcTemplate,OBJECT_MAPPER),new com.capsule.insurance.premiumcollection.infra.JdbcPremiumCollectionRepository(jdbcTemplate),
                 OBJECT_MAPPER,new DataSourceTransactionManager(dataSource));
         var request=new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(single.quoteId(),TERMS_HASH,true);
-        var reserved=changes.schedule(userId,policyId,"coverage-schedule",request);
-        assertThat(changes.schedule(userId,policyId,"coverage-schedule",request).policyChangeId()).isEqualTo(reserved.policyChangeId());
+        var reserved=approveCoverageChange(changes,userId,policyId,"coverage-schedule",request);
+        assertThat(coverageReviews(changes).submit(userId,policyId,"coverage-schedule",request).quoteId()).isEqualTo(reserved.quoteId());
         assertThat(reserved.quote().monthlyPremium()).isEqualByComparingTo("19900.00");
         assertThat(policyRepository.findOwned(policyId,userId).orElseThrow().policyVersion().version()).isEqualTo(1);
         assertThat(policyRepository.findOwned(policyId,userId).orElseThrow().policyVersion().coverages()).hasSize(3);
@@ -758,7 +758,7 @@ class PaymentPolicyIntegrationTest {
         assertThat(changes.createNextPremium(userId,policyId).premiumReceivableId()).isEqualTo(billing.premiumReceivableId());
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userIds.get(1),policyId,"coverage-other-user",request))
                 .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userId,policyId,"coverage-schedule",
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> coverageReviews(changes).submit(userId,policyId,"coverage-schedule",
                 new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(pair.quoteId(),TERMS_HASH,true)))
                 .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
         // A historical coverage remains bounded by its version end, even if its own end is null.
@@ -793,15 +793,15 @@ class PaymentPolicyIntegrationTest {
                 new JdbcQuoteRepository(jdbcTemplate,OBJECT_MAPPER),new com.capsule.insurance.premiumcollection.infra.JdbcPremiumCollectionRepository(jdbcTemplate),
                 OBJECT_MAPPER,new DataSourceTransactionManager(dataSource));
         var quote=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,productCoverageIds));
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userId,policyId,"no-consent",
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> coverageReviews(changes).submit(userId,policyId,"no-consent",
                 new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(quote.quoteId(),TERMS_HASH,false)))
                 .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
         jdbcTemplate.update("UPDATE ins_quote SET expires_at=NOW()-INTERVAL '1 minute' WHERE quote_id=?",quote.quoteId());
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userId,policyId,"expired-change",
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> coverageReviews(changes).submit(userId,policyId,"expired-change",
                 new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(quote.quoteId(),TERMS_HASH,true)))
                 .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
         var valid=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,productCoverageIds));
-        var reservation=changes.schedule(userId,policyId,"valid-change",
+        var reservation=approveCoverageChange(changes,userId,policyId,"valid-change",
                 new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(valid.quoteId(),TERMS_HASH,true));
         var futureRepository=new JdbcPolicyRepository(jdbcTemplate,OBJECT_MAPPER,Clock.fixed(reservation.effectiveAt(),java.time.ZoneOffset.UTC));
         var future=futureRepository.findOwned(policyId,userId).orElseThrow();
@@ -810,18 +810,296 @@ class PaymentPolicyIntegrationTest {
         assertThat(future.policyVersion().coverages().stream().filter(c -> c.productCoverageId().equals(productCoverageIds.getFirst())).findFirst().orElseThrow().coverageStartAt())
                 .isEqualTo(policy.policyVersion().coverages().getFirst().coverageStartAt());
         var extra=quoteService.issue(userId,new CreateQuoteRequest(productVersionId,productCoverageIds.subList(0,2)));
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> changes.schedule(userId,policyId,"second-change",
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> coverageReviews(changes).submit(userId,policyId,"second-change",
                 new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(extra.quoteId(),TERMS_HASH,true)))
                 .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
         jdbcTemplate.update("UPDATE ins_policy_coverage SET paid_benefit_count=1 WHERE policy_coverage_id=?",policy.policyVersion().coverages().getFirst().policyCoverageId());
         var claims=new com.capsule.insurance.claim.infra.JdbcClaimRepository(jdbcTemplate,OBJECT_MAPPER);
         assertThat(claims.lockPaidBenefitCount(future.policyVersion().coverages().getFirst().policyCoverageId())).isEqualTo(1);
-        var api=MockMvcBuilders.standaloneSetup(new com.capsule.insurance.policy.change.CoverageChangeController(changes))
+        var api=MockMvcBuilders.standaloneSetup(new com.capsule.insurance.policy.change.CoverageChangeController(changes,coverageReviews(changes)))
                 .setControllerAdvice(new GlobalExceptionHandler()).build();
         api.perform(get("/api/v1/policies/{policyId}/coverage-changes",policyId).principal(authentication(userIds.get(1))))
                 .andExpect(status().isNotFound());
         api.perform(get("/api/v1/policies/{policyId}/coverage-changes",policyId))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"UNKNOWN", "FAILED"})
+    @DisplayName("승인 완료 후 다른 ID로 늦게 도착한 알림은 계약과 결제를 되돌리지 않는다")
+    void lateDifferentEventsCannotRegressPaidPayment(String lateStatus) throws Exception {
+        Long userId = userIds.getFirst();
+        String prefix = "reordered-" + lateStatus;
+        JsonNode order = createOrder(userId, approveApplication(userId), prefix + "-order");
+        long orderId = order.path("paymentOrderId").asLong();
+        long policyId = order.path("policyId").asLong();
+        String paymentKey = "fake-timeout-" + prefix;
+        int callsBefore = paymentGateway.confirmationInvocationCount();
+        paymentService.confirm(userId, orderId, prefix + "-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(paymentKey, new java.math.BigDecimal("29900")));
+        for (String eventStatus : List.of("PAID", lateStatus)) {
+            webhookMockMvc.perform(post("/api/v1/ops/webhooks/fake/payments")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(webhookRequest(prefix + "-event-" + eventStatus, paymentKey, eventStatus)))
+                    .andExpect(status().isOk());
+        }
+        assertThat(paymentStatus(orderId)).isEqualTo("PAID");
+        assertThat(attemptStatus(orderId)).isEqualTo("PAID");
+        assertThat(policyStatus(policyId)).isEqualTo("ACTIVE");
+        assertThat(count("ins_policy_version", "policy_id", policyId)).isEqualTo(1);
+        assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
+        assertThat(paymentGateway.confirmationInvocationCount()).isEqualTo(callsBefore + 1);
+    }
+
+    @Test
+    @DisplayName("대사 중 먼저 읽은 UNKNOWN 응답이 나중에 돌아와도 먼저 반영된 승인 알림을 유지한다")
+    void delayedInquiryCannotOverwriteNewerPaidWebhook() throws Exception {
+        Long userId = userIds.getFirst();
+        JsonNode order = createOrder(userId, approveApplication(userId), "stale-inquiry-order");
+        long orderId = order.path("paymentOrderId").asLong();
+        long policyId = order.path("policyId").asLong();
+        String key = "fake-timeout-stale-inquiry";
+        var captured = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        PremiumPaymentGateway gateway = new PremiumPaymentGateway() {
+            public GatewayPaymentResult confirm(ConfirmCommand command) {
+                return GatewayPaymentResult.unknown(command.providerPaymentKey(), "TEST_TIMEOUT");
+            }
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                GatewayPaymentResult old = GatewayPaymentResult.unknown(command.providerPaymentKey(), "OLD_QUERY_RESULT");
+                captured.countDown();
+                try {
+                    if (!release.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("query release timed out");
+                } catch (InterruptedException ex) { Thread.currentThread().interrupt(); throw new IllegalStateException(ex); }
+                return old;
+            }
+        };
+        var service = new PaymentService(new JdbcPaymentRepository(jdbcTemplate), policyRepository, gateway,
+                new DataSourceTransactionManager(dataSource), OBJECT_MAPPER);
+        service.confirm(userId, orderId, "stale-inquiry-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(key, new java.math.BigDecimal("29900")));
+        try (var workers = java.util.concurrent.Executors.newFixedThreadPool(1)) {
+            var pending = workers.submit(() -> service.reconcile(orderId));
+            try {
+                assertThat(captured.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                service.applyProviderNotification("FAKE", key, GatewayPaymentResult.paid(key, "NEWER-PAID"));
+                release.countDown();
+                assertThat(pending.get(5, java.util.concurrent.TimeUnit.SECONDS).status()).isEqualTo("PAID");
+            } finally { release.countDown(); }
+        }
+        assertThat(paymentStatus(orderId)).isEqualTo("PAID");
+        assertThat(attemptStatus(orderId)).isEqualTo("PAID");
+        assertThat(policyStatus(policyId)).isEqualTo("ACTIVE");
+        assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("서로 모순된 최종 결과는 임의로 덮어쓰지 않고 실패 inbox에 남긴다")
+    void conflictingFinalOutcomeRemainsVisibleForReview() throws Exception {
+        Long userId = userIds.getFirst();
+        JsonNode order = createOrder(userId, approveApplication(userId), "conflicting-final-order");
+        long orderId = order.path("paymentOrderId").asLong();
+        long policyId = order.path("policyId").asLong();
+        String key = "fake-timeout-conflicting-final";
+        paymentService.confirm(userId, orderId, "conflicting-final-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(key, new java.math.BigDecimal("29900")));
+        webhookMockMvc.perform(post("/api/v1/ops/webhooks/fake/payments").contentType(MediaType.APPLICATION_JSON)
+                        .content(webhookRequest("conflicting-final-failed", key, "FAILED"))).andExpect(status().isOk());
+        webhookMockMvc.perform(post("/api/v1/ops/webhooks/fake/payments").contentType(MediaType.APPLICATION_JSON)
+                        .content(webhookRequest("conflicting-final-paid", key, "PAID")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
+        assertThat(paymentStatus(orderId)).isEqualTo("FAILED");
+        assertThat(policyStatus(policyId)).isEqualTo("PENDING_INITIAL_PREMIUM");
+        assertThat(count("ins_policy_version", "policy_id", policyId)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT processing_status FROM pay_webhook_event WHERE provider_event_id=?",
+                String.class, "conflicting-final-paid")).isEqualTo("FAILED");
+    }
+
+    @Test
+    @DisplayName("Toss 알림 payload의 상태와 순서를 믿지 않고 기존 거래 조회 결과만 계약에 반영한다")
+    void tossWebhookUsesAuthoritativeInquiryForReorderedPayloads() throws Exception {
+        Long userId = userIds.getFirst();
+        var inquiries = new java.util.concurrent.atomic.AtomicInteger();
+        PremiumPaymentGateway gateway = new PremiumPaymentGateway() {
+            public String providerCode() { return "TOSS"; }
+            public GatewayPaymentResult confirm(ConfirmCommand command) {
+                return GatewayPaymentResult.unknown(command.providerPaymentKey(), "TEST_TIMEOUT");
+            }
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                inquiries.incrementAndGet();
+                return GatewayPaymentResult.paid(command.providerPaymentKey(), "AUTHORITATIVE-PAID");
+            }
+        };
+        var service = new PaymentService(new JdbcPaymentRepository(jdbcTemplate), policyRepository, gateway,
+                new DataSourceTransactionManager(dataSource), OBJECT_MAPPER);
+        var order = service.createInitialPremiumOrder(userId, approveApplication(userId), "toss-reordered-order");
+        String key = "toss-reordered-key";
+        service.confirm(userId, order.paymentOrderId(), "toss-reordered-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(key, order.orderNo(), order.amount()));
+        var webhook = new com.capsule.insurance.payment.webhook.application.TossPaymentWebhookService(
+                new JdbcPaymentWebhookRepository(jdbcTemplate), service, OBJECT_MAPPER, new DataSourceTransactionManager(dataSource));
+        for (String payloadStatus : List.of("IN_PROGRESS", "DONE", "ABORTED")) {
+            String payload = OBJECT_MAPPER.writeValueAsString(Map.of("eventType", "PAYMENT_STATUS_CHANGED",
+                    "data", Map.of("paymentKey", key, "status", payloadStatus)));
+            assertThat(webhook.receive("toss-reordered-" + payloadStatus, payload).paymentStatus()).isEqualTo("PAID");
+        }
+        assertThat(inquiries.get()).isEqualTo(1);
+        assertThat(policyStatus(order.policyId())).isEqualTo("ACTIVE");
+        assertThat(policyActivationOutboxCount(order.policyId())).isEqualTo(1);
+    }
+
+    private static com.capsule.insurance.policy.change.CoverageChangeReviewService coverageReviews(
+            com.capsule.insurance.policy.change.CoverageChangeService changes) {
+        return new com.capsule.insurance.policy.change.CoverageChangeReviewService(jdbcTemplate,policyRepository,
+                new JdbcQuoteRepository(jdbcTemplate,OBJECT_MAPPER),changes,OBJECT_MAPPER,new DataSourceTransactionManager(dataSource));
+    }
+    private static Long coverageOperator() {
+        var existing=jdbcTemplate.queryForList("SELECT user_id FROM usr_user WHERE email='coverage-reviewer@capsure.test'",Long.class);
+        if(!existing.isEmpty())return existing.getFirst();
+        Long id=insertUser("coverage-reviewer@capsure.test","합성 변경 심사자","010-9999-9999");
+        jdbcTemplate.update("UPDATE usr_user SET access_role='ROLE_ADMIN' WHERE user_id=?",id);return id;
+    }
+    private static com.capsule.insurance.policy.change.CoverageChangeService.ChangeView approveCoverageChange(
+            com.capsule.insurance.policy.change.CoverageChangeService changes,Long userId,Long policyId,String key,
+            com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest request) {
+        var reviews=coverageReviews(changes);
+        var submitted=reviews.submit(userId,policyId,key,request);
+        reviews.decide(coverageOperator(),submitted.changeRequestId(),
+                com.capsule.insurance.policy.change.CoverageChangeReviewService.Decision.APPROVE,"합성 상품 변경 조건 검토 완료");
+        return changes.history(userId,policyId).stream().filter(change->change.quoteId().equals(request.quoteId())).findFirst().orElseThrow();
+    }
+
+    private static com.capsule.insurance.policy.change.CoverageChangeService coverageChanges() {
+        return new com.capsule.insurance.policy.change.CoverageChangeService(jdbcTemplate,policyRepository,
+                new JdbcQuoteRepository(jdbcTemplate,OBJECT_MAPPER),new com.capsule.insurance.premiumcollection.infra.JdbcPremiumCollectionRepository(jdbcTemplate),
+                OBJECT_MAPPER,new DataSourceTransactionManager(dataSource));
+    }
+
+    @Test
+    @DisplayName("변경 신청은 계약을 바꾸지 않으며 운영자 승인과 기한을 거쳐 한 번만 적용 예약된다")
+    void reviewsCoverageChangeBeforeSchedulingAndFreezesRequestedQuote() throws Exception {
+        Long owner=userIds.getFirst();
+        JsonNode order=createOrder(owner,approveApplication(owner),"review-flow-order");
+        Long policyId=order.path("policyId").asLong();
+        confirm(owner,order.path("paymentOrderId").asLong(),"review-flow-confirm","fake-paid-review-flow");
+        var changes=coverageChanges();var reviews=coverageReviews(changes);
+        var quote=quoteService.issue(owner,new CreateQuoteRequest(productVersionId,List.of(productCoverageIds.getFirst())));
+        var request=new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(quote.quoteId(),TERMS_HASH,true);
+        var submitted=reviews.submit(owner,policyId,"review-flow-request",request);
+        assertThat(submitted.status()).isEqualTo("PENDING_REVIEW");
+        assertThat(reviews.submit(owner,policyId,"review-flow-request",request).changeRequestId()).isEqualTo(submitted.changeRequestId());
+        assertThat(count("ins_policy_version","policy_id",policyId)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT valid_to IS NULL FROM ins_policy_version WHERE policy_id=?",Boolean.class,policyId)).isTrue();
+        assertThat(policyRepository.findOwned(policyId,owner).orElseThrow().policyVersion().snapshot().quote().monthlyPremium()).isEqualByComparingTo("29900");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->changes.createNextPremium(owner,policyId))
+                .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class).hasMessageContaining("심사");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->reviews.decide(owner,submitted.changeRequestId(),
+                com.capsule.insurance.policy.change.CoverageChangeReviewService.Decision.APPROVE,"고객 임의 승인"))
+                .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class).hasMessageContaining("운영자");
+        jdbcTemplate.update("UPDATE usr_user SET access_role='ROLE_ADMIN' WHERE user_id=?",owner);
+        try {
+            org.assertj.core.api.Assertions.assertThatThrownBy(()->reviews.decide(owner,submitted.changeRequestId(),
+                    com.capsule.insurance.policy.change.CoverageChangeReviewService.Decision.APPROVE,"본인 신청 승인"))
+                    .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class).hasMessageContaining("본인");
+        } finally {jdbcTemplate.update("UPDATE usr_user SET access_role='ROLE_USER' WHERE user_id=?",owner);}
+        Long actor=coverageOperator();
+        assertThat(reviews.pending(actor)).anyMatch(item->item.changeRequestId().equals(submitted.changeRequestId()));
+        // Quote was valid when submitted; review uses the frozen request even after quote-display expiry.
+        jdbcTemplate.update("UPDATE ins_quote SET expires_at=NOW()-INTERVAL '1 minute' WHERE quote_id=?",quote.quoteId());
+        var start=new java.util.concurrent.CountDownLatch(1);
+        try(var workers=java.util.concurrent.Executors.newFixedThreadPool(2)){
+            var a=workers.submit(()->{start.await();return reviews.decide(actor,submitted.changeRequestId(),
+                    com.capsule.insurance.policy.change.CoverageChangeReviewService.Decision.APPROVE,"변경 가능 조건 검토 완료");});
+            var b=workers.submit(()->{start.await();return reviews.decide(actor,submitted.changeRequestId(),
+                    com.capsule.insurance.policy.change.CoverageChangeReviewService.Decision.APPROVE,"변경 가능 조건 검토 완료");});
+            start.countDown();
+            assertThat(a.get(10,java.util.concurrent.TimeUnit.SECONDS).status()).isEqualTo("SCHEDULED");
+            assertThat(b.get(10,java.util.concurrent.TimeUnit.SECONDS).status()).isEqualTo("SCHEDULED");
+        }
+        assertThat(count("ins_policy_version","policy_id",policyId)).isEqualTo(2);
+        assertThat(count("ins_policy_change","policy_id",policyId)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT reviewed_by FROM ins_policy_change_request WHERE change_request_id=?",Long.class,submitted.changeRequestId())).isEqualTo(actor);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ops_outbox_event WHERE event_id=?",Integer.class,
+                "POLICY-CHANGE-REVIEW-"+submitted.changeRequestId()+"-APPROVED")).isEqualTo(1);
+        assertThat(changes.createNextPremium(owner,policyId).amountDue()).isEqualByComparingTo("19900");
+    }
+
+    @Test
+    @DisplayName("반려 또는 적용 기한 만료 시 기존 보장과 보험료를 유지한다")
+    void rejectsAndExpiresRequestsWithoutChangingCoverage() throws Exception {
+        Long owner=userIds.getFirst();Long actor=coverageOperator();
+        for(String result:List.of("REJECTED","EXPIRED")){
+            String prefix="review-"+result;
+            JsonNode order=createOrder(owner,approveApplication(owner),prefix+"-order");
+            Long policyId=order.path("policyId").asLong();
+            confirm(owner,order.path("paymentOrderId").asLong(),prefix+"-confirm","fake-paid-"+prefix);
+            var changes=coverageChanges();var reviews=coverageReviews(changes);
+            var quote=quoteService.issue(owner,new CreateQuoteRequest(productVersionId,List.of(productCoverageIds.getFirst())));
+            var submitted=reviews.submit(owner,policyId,prefix+"-request",new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(quote.quoteId(),TERMS_HASH,true));
+            if(result.equals("EXPIRED"))reviews=new com.capsule.insurance.policy.change.CoverageChangeReviewService(
+                    jdbcTemplate,policyRepository,new JdbcQuoteRepository(jdbcTemplate,OBJECT_MAPPER),changes,OBJECT_MAPPER,
+                    new DataSourceTransactionManager(dataSource),Clock.fixed(submitted.effectiveAt(),java.time.ZoneOffset.UTC));
+            var decided=reviews.decide(actor,submitted.changeRequestId(),result.equals("REJECTED")?
+                    com.capsule.insurance.policy.change.CoverageChangeReviewService.Decision.REJECT:
+                    com.capsule.insurance.policy.change.CoverageChangeReviewService.Decision.APPROVE,"모의 상품 중도 변경 조건 검토");
+            assertThat(decided.status()).isEqualTo(result);
+            assertThat(count("ins_policy_version","policy_id",policyId)).isEqualTo(1);
+            assertThat(count("ins_policy_change","policy_id",policyId)).isZero();
+            assertThat(jdbcTemplate.queryForObject("SELECT valid_to IS NULL FROM ins_policy_version WHERE policy_id=?",Boolean.class,policyId)).isTrue();
+            assertThat(changes.createNextPremium(owner,policyId).amountDue()).isEqualByComparingTo("29900");
+        }
+    }
+
+    @Test
+    @DisplayName("승인 적용 실패는 심사 결과와 적용 예약을 함께 롤백하고 운영 권한을 검사한다")
+    void rollsBackReviewWhenPolicyBecomesIneligibleAndProtectsOperations() throws Exception {
+        Long owner=userIds.getFirst();Long actor=coverageOperator();
+        JsonNode order=createOrder(owner,approveApplication(owner),"review-rollback-order");
+        Long policyId=order.path("policyId").asLong();
+        confirm(owner,order.path("paymentOrderId").asLong(),"review-rollback-confirm","fake-paid-review-rollback");
+        var changes=coverageChanges();var reviews=coverageReviews(changes);
+        var quote=quoteService.issue(owner,new CreateQuoteRequest(productVersionId,List.of(productCoverageIds.getFirst())));
+        var submitted=reviews.submit(owner,policyId,"review-rollback-request",new com.capsule.insurance.policy.change.CoverageChangeService.ChangeRequest(quote.quoteId(),TERMS_HASH,true));
+        jdbcTemplate.update("UPDATE ins_policy SET status='GRACE' WHERE policy_id=?",policyId);
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->reviews.decide(actor,submitted.changeRequestId(),
+                com.capsule.insurance.policy.change.CoverageChangeReviewService.Decision.APPROVE,"적용 직전 유지 상태 확인"))
+                .isInstanceOf(com.capsule.insurance.common.exception.BusinessException.class);
+        assertThat(jdbcTemplate.queryForObject("SELECT review_status FROM ins_policy_change_request WHERE change_request_id=?",String.class,submitted.changeRequestId())).isEqualTo("PENDING_REVIEW");
+        assertThat(count("ins_policy_version","policy_id",policyId)).isEqualTo(1);
+        var api=MockMvcBuilders.standaloneSetup(new com.capsule.insurance.policy.change.CoverageChangeReviewController(reviews))
+                .setControllerAdvice(new GlobalExceptionHandler()).build();
+        api.perform(get("/api/v1/ops/policy-changes").principal(authentication(owner))).andExpect(status().isForbidden());
+        api.perform(get("/api/v1/ops/policy-changes")).andExpect(status().isUnauthorized());
+        api.perform(get("/api/v1/ops/policy-changes").principal(authentication(actor))).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PG 전송 전 용량 부족은 승인 시도를 만들지 않고 같은 키로 재시도할 수 있다")
+    void localCapacityRejectionDoesNotStrandUnsentPayment() throws Exception {
+        Long owner=userIds.getFirst();
+        var remote=new FakePremiumPaymentGateway();
+        var gateway=new JournaledPremiumPaymentGateway(remote,message->{},OBJECT_MAPPER,Clock.systemUTC(),3,Duration.ofSeconds(30),
+                new com.capsule.insurance.payment.adapter.InMemoryPaymentCircuitStateStore(Clock.systemUTC()),1);
+        var service=new PaymentService(new JdbcPaymentRepository(jdbcTemplate),policyRepository,gateway,new DataSourceTransactionManager(dataSource),OBJECT_MAPPER);
+        var order=service.createInitialPremiumOrder(owner,approveApplication(owner),"capacity-unsent-order");
+        var api=buildMockMvc(service,policyRepository);
+        var held=gateway.tryReserveConfirmation();
+        assertThat(held).isNotNull();
+        try {
+            api.perform(post("/api/v1/payments/{paymentOrderId}/confirm",order.paymentOrderId())
+                            .principal(authentication(owner)).header("Idempotency-Key","capacity-unsent-confirm")
+                            .contentType(MediaType.APPLICATION_JSON).content(confirmRequest("fake-paid-capacity-unsent","29900")))
+                    .andExpect(status().isServiceUnavailable());
+            assertThat(paymentStatus(order.paymentOrderId())).isEqualTo("CREATED");
+            assertThat(policyStatus(order.policyId())).isEqualTo("PENDING_INITIAL_PREMIUM");
+            assertThat(count("pay_attempt","payment_order_id",order.paymentOrderId())).isZero();
+            assertThat(remote.confirmationInvocationCount()).isZero();
+        } finally {held.close();}
+        var paid=service.confirm(owner,order.paymentOrderId(),"capacity-unsent-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest("fake-paid-capacity-unsent",order.amount()));
+        assertThat(paid.status()).isEqualTo("PAID");
+        assertThat(remote.confirmationInvocationCount()).isEqualTo(1);
+        assertThat(count("pay_attempt","payment_order_id",order.paymentOrderId())).isEqualTo(1);
     }
 
     private static MockMvc buildMockMvc(

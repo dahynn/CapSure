@@ -23,6 +23,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
+import com.capsule.insurance.payment.application.port.PaymentConfirmationAdmission;
 
 /**
  * Keeps the core payment service independent from a provider's HTTP protocol while retaining
@@ -32,9 +36,10 @@ import org.springframework.stereotype.Component;
 @Component
 @Primary
 public class JournaledPremiumPaymentGateway
-        implements PremiumPaymentGateway, PaymentInterfaceCircuitStatusProvider {
+        implements PremiumPaymentGateway, PaymentInterfaceCircuitStatusProvider, PaymentConfirmationAdmission {
 
     private static final int CIRCUIT_FAILURE_THRESHOLD = 3;
+    private static final int DEFAULT_MAX_CONCURRENT_CALLS = 16;
     private static final Duration CIRCUIT_OPEN_DURATION = Duration.ofSeconds(30);
 
     private final PremiumPaymentGateway delegate;
@@ -42,13 +47,15 @@ public class JournaledPremiumPaymentGateway
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final PaymentCircuitBreaker circuit;
+    private final Semaphore concurrentCalls;
 
     @Autowired
     public JournaledPremiumPaymentGateway(
             @Qualifier("selectedPremiumPaymentGateway") PremiumPaymentGateway delegate,
             FinancialInterfaceJournalRepository journalRepository,
             ObjectMapper objectMapper,
-            PaymentCircuitStateStore circuitStore
+            PaymentCircuitStateStore circuitStore,
+            @Value("${payment.max-concurrent-calls:16}") int maxConcurrentCalls
     ) {
         this(
                 delegate,
@@ -57,7 +64,8 @@ public class JournaledPremiumPaymentGateway
                 Clock.systemUTC(),
                 CIRCUIT_FAILURE_THRESHOLD,
                 CIRCUIT_OPEN_DURATION,
-                circuitStore
+                circuitStore,
+                maxConcurrentCalls
         );
     }
 
@@ -83,6 +91,17 @@ public class JournaledPremiumPaymentGateway
             ObjectMapper objectMapper, Clock clock, int circuitFailureThreshold,
             Duration circuitOpenDuration, PaymentCircuitStateStore circuitStore
     ) {
+        this(delegate, journalRepository, objectMapper, clock, circuitFailureThreshold, circuitOpenDuration,
+                circuitStore, DEFAULT_MAX_CONCURRENT_CALLS);
+    }
+
+    public JournaledPremiumPaymentGateway(
+            PremiumPaymentGateway delegate, FinancialInterfaceJournalRepository journalRepository,
+            ObjectMapper objectMapper, Clock clock, int circuitFailureThreshold,
+            Duration circuitOpenDuration, PaymentCircuitStateStore circuitStore, int maxConcurrentCalls
+    ) {
+        if (maxConcurrentCalls < 1) throw new IllegalArgumentException("payment.max-concurrent-calls must be positive");
+        this.concurrentCalls = new Semaphore(maxConcurrentCalls);
         this.delegate = delegate;
         this.journalRepository = journalRepository;
         this.objectMapper = objectMapper;
@@ -91,7 +110,27 @@ public class JournaledPremiumPaymentGateway
     }
 
     @Override
+    public PaymentConfirmationAdmission.Permit tryReserveConfirmation() {
+        if (!concurrentCalls.tryAcquire()) return null;
+        return new PaymentConfirmationAdmission.Permit() {
+            private final AtomicBoolean closed = new AtomicBoolean();
+            private final AtomicBoolean used = new AtomicBoolean();
+            public GatewayPaymentResult confirm(ConfirmCommand command) {
+                if (closed.get() || !used.compareAndSet(false, true)) throw new IllegalStateException("Payment admission permit is closed");
+                return confirmWithAdmission(command, true);
+            }
+            public void close() { if (closed.compareAndSet(false, true)) concurrentCalls.release(); }
+        };
+    }
+
+    @Override
     public GatewayPaymentResult confirm(ConfirmCommand command) {
+        var permit = tryReserveConfirmation();
+        if (permit == null) return confirmWithAdmission(command, false);
+        try (permit) { return permit.confirm(command); }
+    }
+
+    private GatewayPaymentResult confirmWithAdmission(ConfirmCommand command, boolean admitted) {
         String correlationId = "PAYMENT-CONFIRM:" + command.orderNo() + ":" + command.idempotencyKey();
         Instant requestedAt = Instant.now(clock);
         append(
@@ -106,10 +145,15 @@ public class JournaledPremiumPaymentGateway
                 requestedAt
         );
 
-        var permit = circuit.acquire(interfaceName());
-        GatewayPaymentResult result = permit == null
-                ? GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_CIRCUIT_OPEN")
-                : invokeConfirmation(command, permit);
+        GatewayPaymentResult result;
+        if (!admitted) {
+            result = GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_BUSY");
+        } else {
+            var permit = circuit.acquire(interfaceName());
+            result = permit == null
+                    ? GatewayPaymentResult.unknown(command.providerPaymentKey(), "PAYMENT_INTERFACE_CIRCUIT_OPEN")
+                    : invokeConfirmation(command, permit);
+        }
         append(
                 "PREMIUM_PAYMENT_CONFIRM",
                 "INBOUND_RESPONSE",
@@ -141,10 +185,16 @@ public class JournaledPremiumPaymentGateway
                 requestedAt
         );
         GatewayPaymentResult result;
-        try {
-            result = delegate.inquire(command);
-        } catch (RuntimeException exception) {
-            result = GatewayPaymentResult.unknown(providerPaymentKey, "PAYMENT_INTERFACE_INQUIRY_ERROR");
+        if (!concurrentCalls.tryAcquire()) {
+            result = GatewayPaymentResult.unknown(providerPaymentKey, "PAYMENT_INTERFACE_BUSY");
+        } else {
+            try {
+                result = delegate.inquire(command);
+            } catch (RuntimeException exception) {
+                result = GatewayPaymentResult.unknown(providerPaymentKey, "PAYMENT_INTERFACE_INQUIRY_ERROR");
+            } finally {
+                concurrentCalls.release();
+            }
         }
         append(
                 "PREMIUM_PAYMENT_INQUIRY",
@@ -177,6 +227,7 @@ public class JournaledPremiumPaymentGateway
     }
 
     private String responseStatus(GatewayPaymentResult result) {
+        if ("PAYMENT_INTERFACE_BUSY".equals(result.errorCode())) return "ERROR";
         if ("PAYMENT_INTERFACE_CIRCUIT_OPEN".equals(result.errorCode())) {
             return "CIRCUIT_OPEN";
         }

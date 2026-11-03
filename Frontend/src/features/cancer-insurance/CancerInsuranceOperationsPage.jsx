@@ -1,3 +1,4 @@
+import CoverageChangeReviewPanel from './CoverageChangeReviewPanel';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import PremiumBillingPanel from './PremiumBillingPanel';
 import PremiumDelinquencyPanel from './PremiumDelinquencyPanel';
@@ -880,6 +881,8 @@ const CancerInsuranceOperationsPage = () => {
           </div>
           <p className="mt-3 text-xs text-slate-400">실효 계약 {formatCount(premiumTimeline?.lapsedPolicyCount)}건 · 실효 후 수납 검토 {formatCount(premiumTimeline?.lateSettlementReviewCount)}건</p>
         </section>
+
+        <CoverageChangeReviewPanel />
 
         <PremiumBillingPanel onUpdated={() => loadDashboard(true)} />
 
