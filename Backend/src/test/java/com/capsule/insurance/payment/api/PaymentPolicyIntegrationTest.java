@@ -824,6 +824,130 @@ class PaymentPolicyIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"UNKNOWN", "FAILED"})
+    @DisplayName("승인 완료 후 다른 ID로 늦게 도착한 알림은 계약과 결제를 되돌리지 않는다")
+    void lateDifferentEventsCannotRegressPaidPayment(String lateStatus) throws Exception {
+        Long userId = userIds.getFirst();
+        String prefix = "reordered-" + lateStatus;
+        JsonNode order = createOrder(userId, approveApplication(userId), prefix + "-order");
+        long orderId = order.path("paymentOrderId").asLong();
+        long policyId = order.path("policyId").asLong();
+        String paymentKey = "fake-timeout-" + prefix;
+        int callsBefore = paymentGateway.confirmationInvocationCount();
+        paymentService.confirm(userId, orderId, prefix + "-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(paymentKey, new java.math.BigDecimal("29900")));
+        for (String eventStatus : List.of("PAID", lateStatus)) {
+            webhookMockMvc.perform(post("/api/v1/ops/webhooks/fake/payments")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(webhookRequest(prefix + "-event-" + eventStatus, paymentKey, eventStatus)))
+                    .andExpect(status().isOk());
+        }
+        assertThat(paymentStatus(orderId)).isEqualTo("PAID");
+        assertThat(attemptStatus(orderId)).isEqualTo("PAID");
+        assertThat(policyStatus(policyId)).isEqualTo("ACTIVE");
+        assertThat(count("ins_policy_version", "policy_id", policyId)).isEqualTo(1);
+        assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
+        assertThat(paymentGateway.confirmationInvocationCount()).isEqualTo(callsBefore + 1);
+    }
+
+    @Test
+    @DisplayName("대사 중 먼저 읽은 UNKNOWN 응답이 나중에 돌아와도 먼저 반영된 승인 알림을 유지한다")
+    void delayedInquiryCannotOverwriteNewerPaidWebhook() throws Exception {
+        Long userId = userIds.getFirst();
+        JsonNode order = createOrder(userId, approveApplication(userId), "stale-inquiry-order");
+        long orderId = order.path("paymentOrderId").asLong();
+        long policyId = order.path("policyId").asLong();
+        String key = "fake-timeout-stale-inquiry";
+        var captured = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        PremiumPaymentGateway gateway = new PremiumPaymentGateway() {
+            public GatewayPaymentResult confirm(ConfirmCommand command) {
+                return GatewayPaymentResult.unknown(command.providerPaymentKey(), "TEST_TIMEOUT");
+            }
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                GatewayPaymentResult old = GatewayPaymentResult.unknown(command.providerPaymentKey(), "OLD_QUERY_RESULT");
+                captured.countDown();
+                try {
+                    if (!release.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("query release timed out");
+                } catch (InterruptedException ex) { Thread.currentThread().interrupt(); throw new IllegalStateException(ex); }
+                return old;
+            }
+        };
+        var service = new PaymentService(new JdbcPaymentRepository(jdbcTemplate), policyRepository, gateway,
+                new DataSourceTransactionManager(dataSource), OBJECT_MAPPER);
+        service.confirm(userId, orderId, "stale-inquiry-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(key, new java.math.BigDecimal("29900")));
+        try (var workers = java.util.concurrent.Executors.newFixedThreadPool(1)) {
+            var pending = workers.submit(() -> service.reconcile(orderId));
+            try {
+                assertThat(captured.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                service.applyProviderNotification("FAKE", key, GatewayPaymentResult.paid(key, "NEWER-PAID"));
+                release.countDown();
+                assertThat(pending.get(5, java.util.concurrent.TimeUnit.SECONDS).status()).isEqualTo("PAID");
+            } finally { release.countDown(); }
+        }
+        assertThat(paymentStatus(orderId)).isEqualTo("PAID");
+        assertThat(attemptStatus(orderId)).isEqualTo("PAID");
+        assertThat(policyStatus(policyId)).isEqualTo("ACTIVE");
+        assertThat(policyActivationOutboxCount(policyId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("서로 모순된 최종 결과는 임의로 덮어쓰지 않고 실패 inbox에 남긴다")
+    void conflictingFinalOutcomeRemainsVisibleForReview() throws Exception {
+        Long userId = userIds.getFirst();
+        JsonNode order = createOrder(userId, approveApplication(userId), "conflicting-final-order");
+        long orderId = order.path("paymentOrderId").asLong();
+        long policyId = order.path("policyId").asLong();
+        String key = "fake-timeout-conflicting-final";
+        paymentService.confirm(userId, orderId, "conflicting-final-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(key, new java.math.BigDecimal("29900")));
+        webhookMockMvc.perform(post("/api/v1/ops/webhooks/fake/payments").contentType(MediaType.APPLICATION_JSON)
+                        .content(webhookRequest("conflicting-final-failed", key, "FAILED"))).andExpect(status().isOk());
+        webhookMockMvc.perform(post("/api/v1/ops/webhooks/fake/payments").contentType(MediaType.APPLICATION_JSON)
+                        .content(webhookRequest("conflicting-final-paid", key, "PAID")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.errorCode").value("INVALID_STATE_TRANSITION"));
+        assertThat(paymentStatus(orderId)).isEqualTo("FAILED");
+        assertThat(policyStatus(policyId)).isEqualTo("PENDING_INITIAL_PREMIUM");
+        assertThat(count("ins_policy_version", "policy_id", policyId)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT processing_status FROM pay_webhook_event WHERE provider_event_id=?",
+                String.class, "conflicting-final-paid")).isEqualTo("FAILED");
+    }
+
+    @Test
+    @DisplayName("Toss 알림 payload의 상태와 순서를 믿지 않고 기존 거래 조회 결과만 계약에 반영한다")
+    void tossWebhookUsesAuthoritativeInquiryForReorderedPayloads() throws Exception {
+        Long userId = userIds.getFirst();
+        var inquiries = new java.util.concurrent.atomic.AtomicInteger();
+        PremiumPaymentGateway gateway = new PremiumPaymentGateway() {
+            public String providerCode() { return "TOSS"; }
+            public GatewayPaymentResult confirm(ConfirmCommand command) {
+                return GatewayPaymentResult.unknown(command.providerPaymentKey(), "TEST_TIMEOUT");
+            }
+            public GatewayPaymentResult inquire(InquiryCommand command) {
+                inquiries.incrementAndGet();
+                return GatewayPaymentResult.paid(command.providerPaymentKey(), "AUTHORITATIVE-PAID");
+            }
+        };
+        var service = new PaymentService(new JdbcPaymentRepository(jdbcTemplate), policyRepository, gateway,
+                new DataSourceTransactionManager(dataSource), OBJECT_MAPPER);
+        var order = service.createInitialPremiumOrder(userId, approveApplication(userId), "toss-reordered-order");
+        String key = "toss-reordered-key";
+        service.confirm(userId, order.paymentOrderId(), "toss-reordered-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest(key, order.orderNo(), order.amount()));
+        var webhook = new com.capsule.insurance.payment.webhook.application.TossPaymentWebhookService(
+                new JdbcPaymentWebhookRepository(jdbcTemplate), service, OBJECT_MAPPER, new DataSourceTransactionManager(dataSource));
+        for (String payloadStatus : List.of("IN_PROGRESS", "DONE", "ABORTED")) {
+            String payload = OBJECT_MAPPER.writeValueAsString(Map.of("eventType", "PAYMENT_STATUS_CHANGED",
+                    "data", Map.of("paymentKey", key, "status", payloadStatus)));
+            assertThat(webhook.receive("toss-reordered-" + payloadStatus, payload).paymentStatus()).isEqualTo("PAID");
+        }
+        assertThat(inquiries.get()).isEqualTo(1);
+        assertThat(policyStatus(order.policyId())).isEqualTo("ACTIVE");
+        assertThat(policyActivationOutboxCount(order.policyId())).isEqualTo(1);
+    }
+
     @Test
     @DisplayName("PG 전송 전 용량 부족은 승인 시도를 만들지 않고 같은 키로 재시도할 수 있다")
     void localCapacityRejectionDoesNotStrandUnsentPayment() throws Exception {
