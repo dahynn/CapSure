@@ -824,6 +824,35 @@ class PaymentPolicyIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    @DisplayName("PG 전송 전 용량 부족은 승인 시도를 만들지 않고 같은 키로 재시도할 수 있다")
+    void localCapacityRejectionDoesNotStrandUnsentPayment() throws Exception {
+        Long owner=userIds.getFirst();
+        var remote=new FakePremiumPaymentGateway();
+        var gateway=new JournaledPremiumPaymentGateway(remote,message->{},OBJECT_MAPPER,Clock.systemUTC(),3,Duration.ofSeconds(30),
+                new com.capsule.insurance.payment.adapter.InMemoryPaymentCircuitStateStore(Clock.systemUTC()),1);
+        var service=new PaymentService(new JdbcPaymentRepository(jdbcTemplate),policyRepository,gateway,new DataSourceTransactionManager(dataSource),OBJECT_MAPPER);
+        var order=service.createInitialPremiumOrder(owner,approveApplication(owner),"capacity-unsent-order");
+        var api=buildMockMvc(service,policyRepository);
+        var held=gateway.tryReserveConfirmation();
+        assertThat(held).isNotNull();
+        try {
+            api.perform(post("/api/v1/payments/{paymentOrderId}/confirm",order.paymentOrderId())
+                            .principal(authentication(owner)).header("Idempotency-Key","capacity-unsent-confirm")
+                            .contentType(MediaType.APPLICATION_JSON).content(confirmRequest("fake-paid-capacity-unsent","29900")))
+                    .andExpect(status().isServiceUnavailable());
+            assertThat(paymentStatus(order.paymentOrderId())).isEqualTo("CREATED");
+            assertThat(policyStatus(order.policyId())).isEqualTo("PENDING_INITIAL_PREMIUM");
+            assertThat(count("pay_attempt","payment_order_id",order.paymentOrderId())).isZero();
+            assertThat(remote.confirmationInvocationCount()).isZero();
+        } finally {held.close();}
+        var paid=service.confirm(owner,order.paymentOrderId(),"capacity-unsent-confirm",
+                new com.capsule.insurance.payment.dto.ConfirmPaymentRequest("fake-paid-capacity-unsent",order.amount()));
+        assertThat(paid.status()).isEqualTo("PAID");
+        assertThat(remote.confirmationInvocationCount()).isEqualTo(1);
+        assertThat(count("pay_attempt","payment_order_id",order.paymentOrderId())).isEqualTo(1);
+    }
+
     private static MockMvc buildMockMvc(
             PaymentService selectedPaymentService,
             PolicyRepository selectedPolicyRepository

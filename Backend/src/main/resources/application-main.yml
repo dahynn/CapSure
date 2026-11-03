@@ -51,6 +51,7 @@ mydata:
     refresh-token-ttl: 7d
 
 payment:
+  max-concurrent-calls: ${PAYMENT_MAX_CONCURRENT_CALLS:16}
   gateway: ${PAYMENT_GATEWAY:fake}
   toss:
     base-url: ${TOSS_PAYMENTS_BASE_URL:https://api.tosspayments.com}

@@ -3,6 +3,7 @@ package com.capsule.insurance.payment.application;
 import com.capsule.insurance.common.exception.BusinessException;
 import com.capsule.insurance.common.exception.ErrorCode;
 import com.capsule.insurance.payment.application.port.PaymentRepository;
+import com.capsule.insurance.payment.application.port.PaymentConfirmationAdmission;
 import com.capsule.insurance.payment.application.port.PremiumPaymentGateway;
 import com.capsule.insurance.payment.domain.ApprovedApplication;
 import com.capsule.insurance.payment.domain.GatewayPaymentResult;
@@ -146,6 +147,18 @@ public class PaymentService {
             ConfirmPaymentRequest request
     ) {
         validateIdempotencyKey(idempotencyKey);
+        if (paymentGateway instanceof PaymentConfirmationAdmission admission) {
+            var permit = admission.tryReserveConfirmation();
+            if (permit == null) throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE,
+                    "결제 요청이 많습니다. 잠시 후 다시 시도해주세요.");
+            try (permit) { return confirmAdmitted(userId, paymentOrderId, idempotencyKey, request, permit::confirm); }
+        }
+        return confirmAdmitted(userId, paymentOrderId, idempotencyKey, request, paymentGateway::confirm);
+    }
+
+    private PaymentOrderResponse confirmAdmitted(Long userId, Long paymentOrderId, String idempotencyKey,
+            ConfirmPaymentRequest request,
+            java.util.function.Function<PremiumPaymentGateway.ConfirmCommand, GatewayPaymentResult> dispatch) {
         ConfirmationReservation reservation = Objects.requireNonNull(transactionTemplate.execute(status -> {
             PaymentOrder order = paymentRepository.lockOwned(paymentOrderId, userId)
                     .orElseThrow(() -> notFound("결제 주문을 찾을 수 없습니다."));
@@ -220,7 +233,7 @@ public class PaymentService {
             return get(userId, paymentOrderId);
         }
 
-        GatewayPaymentResult result = paymentGateway.confirm(new PremiumPaymentGateway.ConfirmCommand(
+        GatewayPaymentResult result = dispatch.apply(new PremiumPaymentGateway.ConfirmCommand(
                 reservation.order().orderNo(),
                 request.providerPaymentKey(),
                 reservation.order().amount(),
